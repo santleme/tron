@@ -753,17 +753,25 @@ def _validate_recovery_budget(registry, registration_event: dict, timeout: int,
     workload_used = actual[kind]
     if workload_used + timeout > cap:
         raise KaggleError("Full registered timeout reservation exceeds the remaining workload GPU budget.")
-    new_total = reservation["campaign_gpu_seconds_before"] + sum(actual.values()) + timeout
-    final_gpu = reservation["reserved_gpu_seconds"]["validation"] + reservation["reserved_gpu_seconds"]["final"]
-    if new_total + final_gpu > 21600 or new_total + final_gpu > 28800:
-        raise KaggleError("Full timeout reservation exceeds project compute budget or protected final reserve.")
     future_train = 7200 if kind == "benchmark" else 0
+    current_projected = reservation["campaign_gpu_seconds_before"] + sum(actual.values()) + timeout
+    experiment_projected = current_projected + future_train
+    final_gpu = reservation["reserved_gpu_seconds"]["validation"] + reservation["reserved_gpu_seconds"]["final"]
+    if experiment_projected > 21600:
+        raise KaggleError("Full timeout reservation exceeds the project experiment allocation.")
+    projected_total = experiment_projected + final_gpu
+    if projected_total > 28800:
+        raise KaggleError("Full timeout reservation exceeds the project total compute budget or protected final reserve.")
     if quota_remaining < timeout + future_train + 7200:
         raise KaggleError("Kaggle GPU quota cannot cover this attempt, remaining training, and final reserve.")
     output_reserved = sum(reservation["reserved_output_bytes"].values())
     if reservation["campaign_output_bytes_before"] + output + output_reserved > 5_000_000_000:
         raise KaggleError("Full registered output reservation exceeds the project output cap.")
-    return {"actual": actual, "output_bytes": output, "campaign_gpu_seconds_projected": new_total,
+    return {"actual": actual, "output_bytes": output,
+            "campaign_gpu_seconds_current_attempt_projected": current_projected,
+            "future_train_reserve_gpu_seconds": future_train,
+            "campaign_gpu_seconds_projected": experiment_projected,
+            "campaign_gpu_seconds_with_final_reserve": projected_total,
             "quota_gpu_seconds_remaining": quota_remaining, "protected_final_reserve_gpu_seconds": 7200}
 
 

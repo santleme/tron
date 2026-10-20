@@ -712,7 +712,7 @@ class FakeRecoveryRegistry:
         return self.append("workload_attempt", data)
 
 
-def make_recovery_registry(tmp_path, *, timeout=30, kind="benchmark"):
+def make_recovery_registry(tmp_path, *, timeout=30, kind="benchmark", campaign_before=8424):
     from tools.kaggle.cli import package_tree_sha256
 
     registry = FakeRecoveryRegistry(tmp_path / "recovery.jsonl")
@@ -745,7 +745,7 @@ def make_recovery_registry(tmp_path, *, timeout=30, kind="benchmark"):
                              "workload_gpu_seconds_cap": 7200 if kind == "benchmark" else 3600}}]
     amendment_event = registry.append("recovery_amendment", {
         "historical_overrun_evidence": {"current_version_number": 10},
-        "reservation_metadata": {"campaign_gpu_seconds_before": 8424, "campaign_output_bytes_before": 0,
+        "reservation_metadata": {"campaign_gpu_seconds_before": campaign_before, "campaign_output_bytes_before": 0,
                                  "reserved_gpu_seconds": {"validation": 0, "final": 7200},
                                  "reserved_output_bytes": {"benchmark": 1000000, "train": 1000000}},
     })
@@ -760,6 +760,69 @@ def make_recovery_registry(tmp_path, *, timeout=30, kind="benchmark"):
         reg_events.append(event)
     selected = next(event for event in reg_events if event["event_data"]["registration_kind"] == kind)
     return registry, selected, variant_id
+
+
+def _recovery_registry_with_completed_benchmark(tmp_path, *, campaign_before=8424):
+    registry, training, _ = make_recovery_registry(
+        tmp_path, timeout=7200, kind="train", campaign_before=campaign_before,
+    )
+    benchmark = next(event for event in registry.events()
+                     if event.get("event_type") == "registration"
+                     and event["event_data"]["registration_kind"] == "benchmark")
+    registry.append("workload_attempt", {
+        "registration_event_index": benchmark["event_index"],
+        "actual_gpu_seconds": 3600,
+        "output_bytes": 0,
+    })
+    return registry, training
+
+
+def test_recovery_budget_keeps_final_reserve_outside_experiment_allocation(tmp_path):
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    registry, training = _recovery_registry_with_completed_benchmark(tmp_path)
+
+    budget = _validate_recovery_budget(registry, training, 7200, quota_remaining=50000)
+
+    assert budget["campaign_gpu_seconds_projected"] == 8424 + 3600 + 7200
+    assert budget["campaign_gpu_seconds_with_final_reserve"] == 8424 + 3600 + 7200 + 7200
+    assert budget["campaign_gpu_seconds_projected"] <= 21600
+    assert budget["campaign_gpu_seconds_with_final_reserve"] <= 28800
+
+
+def test_recovery_budget_rejects_experiment_allocation_overrun(tmp_path):
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    registry, training = _recovery_registry_with_completed_benchmark(tmp_path, campaign_before=12000)
+
+    with pytest.raises(KaggleError, match="project experiment allocation"):
+        _validate_recovery_budget(registry, training, 7200, quota_remaining=50000)
+
+
+def test_benchmark_budget_includes_future_training_and_final_reserves(tmp_path):
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    registry, benchmark, _ = make_recovery_registry(
+        tmp_path, timeout=3600, kind="benchmark", campaign_before=8424,
+    )
+
+    budget = _validate_recovery_budget(registry, benchmark, 3600, quota_remaining=50000)
+
+    assert budget["campaign_gpu_seconds_current_attempt_projected"] == 8424 + 3600
+    assert budget["future_train_reserve_gpu_seconds"] == 7200
+    assert budget["campaign_gpu_seconds_projected"] == 8424 + 3600 + 7200
+    assert budget["campaign_gpu_seconds_with_final_reserve"] == 8424 + 3600 + 7200 + 7200
+
+
+def test_benchmark_budget_rejects_future_training_over_experiment_cap(tmp_path):
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    registry, benchmark, _ = make_recovery_registry(
+        tmp_path, timeout=3600, kind="benchmark", campaign_before=12000,
+    )
+
+    with pytest.raises(KaggleError, match="project experiment allocation"):
+        _validate_recovery_budget(registry, benchmark, 3600, quota_remaining=50000)
 
 
 class FakeRecoveryApi:
@@ -983,7 +1046,7 @@ def test_recovery_resumes_preflight_after_package_drift_without_duplicate_events
     assert terminal["event_data"]["terminal_status"] == "COMPLETE"
     projected_budget = terminal["event_data"]["result"]["projected_budget"]
     assert projected_budget["quota_gpu_seconds_remaining"] == 39980
-    assert projected_budget["campaign_gpu_seconds_projected"] == 8424 + 30
+    assert projected_budget["campaign_gpu_seconds_projected"] == 8424 + 30 + 7200
     assert len(api.push_calls) == 1
 
 
@@ -1126,7 +1189,7 @@ def test_recovery_resumes_accepted_tail_to_terminal_with_original_budget(tmp_pat
     assert terminal["event_data"]["result"]["quota_gpu_seconds_remaining_after"] == 9980
     projected_budget = terminal["event_data"]["result"]["projected_budget"]
     assert projected_budget["quota_gpu_seconds_remaining"] == 40000
-    assert projected_budget["campaign_gpu_seconds_projected"] == 8424 + 30
+    assert projected_budget["campaign_gpu_seconds_projected"] == 8424 + 30 + 7200
 
 
 def test_recovery_explicit_server_rejection_resolves_without_version_assignment(tmp_path):
