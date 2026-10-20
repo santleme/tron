@@ -52,15 +52,17 @@ def _action(value: object) -> int | None:
     return value if type(value) is int and 0 <= value < 4 else None
 
 
-def step(state: State, actions: Sequence[object]) -> Transition:
-    """Resolve a simultaneous tick from a single immutable pre-tick snapshot."""
+def step(state: State, actions: Sequence[object], *,
+         occupied_cells: set[tuple[int, int]] | None = None) -> Transition:
+    """Resolve a tick; an optional occupied-cell cache must match the state's trails."""
     if len(actions) != 2:
         raise ValueError("exactly two actions are required")
     if state.result is not None:
         return Transition(state, ((), ()), (None, None))
 
     agents = state.agents
-    occupied = {cell for agent in agents for cell in agent.trail}
+    occupied = (occupied_cells if occupied_cells is not None else
+                {cell for agent in agents for cell in agent.trail})
     normalized = tuple(_action(action) for action in actions)
     destinations: list[tuple[int, int] | None] = [None, None]
     causes: list[list[str]] = [[], []]

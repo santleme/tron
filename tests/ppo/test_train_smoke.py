@@ -31,6 +31,37 @@ def test_contiguous_observation_batch_matches_public_observation_contract():
     assert actual.tolist() == expected
 
 
+def test_incremental_rollout_cache_matches_rebuilt_observations_and_occupancy():
+    from training.arena.engine import initialize_episode, step
+    from training.ppo.train import (_observation_batch, _observation_cache,
+                                    _update_observation_cache)
+
+    states = [initialize_episode(8, 8, 73, index)[0] for index in range(4)]
+    cache = _observation_cache(states)
+    occupied = [{cell for agent in state.agents for cell in agent.trail} for state in states]
+    for tick in range(12):
+        previous = states
+        states = []
+        for arena, state in enumerate(previous):
+            actions = tuple(agent.heading for agent in state.agents)
+            expected = step(state, actions)
+            actual = step(state, actions, occupied_cells=occupied[arena])
+            assert actual == expected
+            for old_agent, new_agent in zip(state.agents, actual.state.agents):
+                if old_agent.position != new_agent.position:
+                    occupied[arena].add(new_agent.position)
+            if actual.state.result is None:
+                states.append(actual.state)
+            else:
+                reset = initialize_episode(8, 8, 9_000 + tick, arena)[0]
+                states.append(reset)
+                occupied[arena] = {cell for agent in reset.agents for cell in agent.trail}
+        _update_observation_cache(cache, previous, states)
+        expected_batch = _observation_batch([state for state in states for _ in range(2)],
+                                           [seat for _ in states for seat in range(2)])
+        assert cache.reshape(expected_batch.shape).tolist() == expected_batch.tolist()
+
+
 def test_heuristic_training_requires_frozen_g008_training_schedule(tmp_path):
     config = TrainConfig(device="cpu", heuristic_opponent_probability=0.5)
     with pytest.raises(ValueError, match="frozen g008-train schedule"):

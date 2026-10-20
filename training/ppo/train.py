@@ -142,6 +142,43 @@ def _observation_batch(states, agent_indices):
     return observations
 
 
+def _observation_cache(states):
+    """Build both seat observations once; subsequent rollout ticks update only heads."""
+    if not states:
+        raise ValueError("states must be non-empty")
+    height, width = states[0].height, states[0].width
+    batch = _observation_batch([state for state in states for _ in range(2)],
+                              [seat for _ in states for seat in range(2)])
+    return batch.reshape(len(states), 2, height, width, 12)
+
+
+def _update_observation_cache(cache, previous_states, next_states) -> None:
+    """Advance cached observations in O(arenas), without rescanning every trail."""
+    if len(previous_states) != len(next_states) or len(cache) != len(next_states):
+        raise ValueError("observation cache and state batches must have equal length")
+    for arena, (previous, current) in enumerate(zip(previous_states, next_states)):
+        if current.tick <= previous.tick:
+            cache[arena] = _observation_batch([current, current], [0, 1]).reshape(
+                2, current.height, current.width, 12)
+            continue
+        for agent_index, (old_agent, new_agent) in enumerate(zip(previous.agents, current.agents)):
+            if old_agent.position == new_agent.position:
+                continue
+            old_x, old_y = old_agent.position
+            new_x, new_y = new_agent.position
+            own, opponent = cache[arena, agent_index], cache[arena, 1 - agent_index]
+            own[old_y, old_x, 0] = 0
+            opponent[old_y, old_x, 1] = 0
+            own[old_y, old_x, 4 + old_agent.heading] = 0
+            opponent[old_y, old_x, 8 + old_agent.heading] = 0
+            own[new_y, new_x, 2] = 1
+            opponent[new_y, new_x, 3] = 1
+            own[new_y, new_x, 0] = 1
+            opponent[new_y, new_x, 1] = 1
+            own[new_y, new_x, 4 + new_agent.heading] = 1
+            opponent[new_y, new_x, 8 + new_agent.heading] = 1
+
+
 def _gae(torch, rewards, dones, values, gamma, lam, bootstrap):
     # Rollout collection keeps compact per-step lists; stack them once before
     # the reverse scan so GAE remains vectorized across all arenas.
@@ -386,6 +423,8 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
         states = [initialize_episode(config.width, config.height,
                                      environment_schedule.seed_for(update=update, arena=i, reset_index=0), 0)[0]
                   for i in range(config.arena_count)]
+    observation_cache = _observation_cache(states)
+    occupied_cells = [{cell for agent in state.agents for cell in agent.trail} for state in states]
     # Snapshot choice is made once per arena/rollout using the checkpointed Python
     # RNG stream; episode resets retain that opponent for bounded deterministic provenance.
     snapshot_opponents = (sample_snapshot_opponents(config.arena_count, config.snapshot_opponent_probability)
@@ -401,8 +440,7 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
     benchmark_reset_counts = [0] * config.arena_count
     model.eval()
     for step_no in range(config.rollout_steps):
-        batch_obs = _observation_batch(states, [seat for _ in states for seat in range(2)])
-        observations = _tensor_obs(torch, batch_obs, device)
+        observations = _tensor_obs(torch, observation_cache.reshape(-1, config.height, config.width, 12), device)
         with torch.no_grad():
             logits, values = model(observations)
             distribution = torch.distributions.Categorical(logits=logits)
@@ -434,8 +472,12 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
         dones = [0.0] * config.arena_count
         next_states = []
         for arena, state in enumerate(states):
-            trans = step(state, joint_actions[arena * 2:arena * 2 + 2])
+            trans = step(state, joint_actions[arena * 2:arena * 2 + 2],
+                         occupied_cells=occupied_cells[arena])
             next_states.append(trans.state)
+            for old_agent, new_agent in zip(state.agents, trans.state.agents):
+                if old_agent.position != new_agent.position:
+                    occupied_cells[arena].add(new_agent.position)
             if trans.state.result is not None:
                 completed += 1
                 rewards[arena] = terminal_rewards(trans.state.result)[learner_seats[arena]]
@@ -447,20 +489,33 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
         reward_steps.append(torch.tensor(rewards, dtype=torch.float32, device=device))
         done_steps.append(torch.tensor(dones, dtype=torch.float32, device=device))
         # Reinitialize completed environments from their deterministic, non-evaluation stream.
-        states = [(initialize_episode(
-                       config.width, config.height,
-                       environment_schedule.benchmark_reset_seed(
-                           update=update, arena=i, reset_ordinal=(benchmark_reset_counts.__setitem__(i, benchmark_reset_counts[i] + 1) or benchmark_reset_counts[i])), 0)[0]
-                   if environment_schedule is not None and environment_schedule.is_benchmark else
-                   initialize_episode(config.width, config.height,
-                       environment_schedule.seed_for(update=update, arena=i, reset_index=step_no + 1), 0)[0]
-                   if environment_schedule is not None else
-                   initialize_episode(config.width, config.height, master_seed,
-                                      reset_arena_index(update, i, step_no, config.arena_count,
-                                                        config.total_updates))[0])
-                  if next_states[i].result is not None else next_states[i]
-                  for i in range(config.arena_count)]
-    final_obs = _tensor_obs(torch, _observation_batch(states, learner_seats), device)
+        previous_states, states = states, []
+        for arena, next_state in enumerate(next_states):
+            if next_state.result is None:
+                states.append(next_state)
+                continue
+            if environment_schedule is not None and environment_schedule.is_benchmark:
+                benchmark_reset_counts[arena] += 1
+                reset_state = initialize_episode(
+                    config.width, config.height,
+                    environment_schedule.benchmark_reset_seed(
+                        update=update, arena=arena,
+                        reset_ordinal=benchmark_reset_counts[arena]), 0)[0]
+            elif environment_schedule is not None:
+                reset_state = initialize_episode(
+                    config.width, config.height,
+                    environment_schedule.seed_for(update=update, arena=arena,
+                                                  reset_index=step_no + 1), 0)[0]
+            else:
+                reset_state = initialize_episode(
+                    config.width, config.height, master_seed,
+                    reset_arena_index(update, arena, step_no, config.arena_count,
+                                      config.total_updates))[0]
+            states.append(reset_state)
+            occupied_cells[arena] = {cell for agent in reset_state.agents for cell in agent.trail}
+        _update_observation_cache(observation_cache, previous_states, states)
+    final_batch = observation_cache[range(config.arena_count), learner_seats]
+    final_obs = _tensor_obs(torch, final_batch, device)
     with torch.no_grad():
         _, bootstrap = model(final_obs)
     advantages, returns = _gae(torch, reward_steps, done_steps, value_steps, config.gamma, config.gae_lambda, bootstrap)
