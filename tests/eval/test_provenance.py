@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,12 +11,16 @@ from jsonschema import Draft202012Validator
 from training.eval.provenance import (
     OPEN_SPACE_CODE_SHA256,
     OPEN_SPACE_CONFIG_SHA256,
+    FROZEN_SEED_PLAN_SHA256,
     ProvenanceError,
     manifest_sha256,
+    _read_seed_plan,
     seed_plan_sha256,
     schedule_spec_digest,
+    derive_environment_seed,
     build_expanded_schedule,
     validate_realization,
+    validate_expanded_schedule,
     validate_manifest,
 )
 
@@ -101,6 +106,11 @@ def _valid_manifest():
 
 def _reseal(manifest):
     manifest["manifest_sha256"] = manifest_sha256(manifest)
+
+
+def _canonical_digest(value):
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 class SplitProvenanceTests(unittest.TestCase):
@@ -328,7 +338,7 @@ class SplitProvenanceTests(unittest.TestCase):
             old_plan = Path(directory) / "v1.json"
             old_plan.write_text('{"format":"circuit-ai-g008-split-seed-plan/1"}', encoding="utf-8")
             with patch("training.eval.provenance.SEED_PLAN_PATH", old_plan):
-                with self.assertRaisesRegex(ProvenanceError, "seed.plan /3 bytes"):
+                with self.assertRaisesRegex(ProvenanceError, "seed-plan schema violation"):
                     _validate_manifest(manifest)
 
         incomplete_v2 = _valid_manifest()
@@ -336,6 +346,58 @@ class SplitProvenanceTests(unittest.TestCase):
         _reseal(incomplete_v2)
         with self.assertRaisesRegex(ProvenanceError, "schema violation"):
             _validate_manifest(incomplete_v2)
+
+    def test_seed_plan_requires_complete_v3_schema_and_exact_approved_bytes(self):
+        from unittest.mock import patch
+
+        manifest = _valid_manifest()
+        source = Path(__file__).resolve().parents[2] / "training/configs/g008-split-seed-plan.json"
+        source_plan = json.loads(source.read_text(encoding="utf-8"))
+        self.assertEqual(seed_plan_sha256(), FROZEN_SEED_PLAN_SHA256)
+
+        invalid_plans = {
+            "v1": {"format": "circuit-ai-g008-split-seed-plan/1"},
+            "incomplete_v2": {"format": "circuit-ai-g008-split-seed-plan/2", "partitions": {}},
+            "wrong_version": {**source_plan, "format": "circuit-ai-g008-split-seed-plan/4"},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            for name, plan in invalid_plans.items():
+                path = Path(directory) / f"{name}.json"
+                path.write_text(json.dumps(plan), encoding="utf-8")
+                with patch("training.eval.provenance.SEED_PLAN_PATH", path):
+                    with self.subTest(plan=name), self.assertRaises(ProvenanceError):
+                        _validate_manifest(manifest)
+
+            wrong_hash = Path(directory) / "wrong-hash.json"
+            wrong_hash.write_bytes(source.read_bytes() + b" ")
+            with patch("training.eval.provenance.SEED_PLAN_PATH", wrong_hash):
+                with self.assertRaisesRegex(ProvenanceError, "exact approved seed-plan /3 bytes"):
+                    _validate_manifest(manifest)
+
+    def test_seed_plan_cache_revalidates_changed_bytes_with_same_path_size_and_mtime(self):
+        from unittest.mock import patch
+
+        source = Path(__file__).resolve().parents[2] / "training/configs/g008-split-seed-plan.json"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "seed-plan.json"
+            original = source.read_bytes()
+            path.write_bytes(original)
+            original_stat = path.stat()
+
+            with patch("training.eval.provenance.SEED_PLAN_PATH", path):
+                _read_seed_plan()
+                replacement = original.replace(b'"model_ppo_seed": 1234',
+                                               b'"model_ppo_seed": 1235', 1)
+                self.assertEqual(len(replacement), len(original))
+                path.write_bytes(replacement)
+                os.utime(path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+                changed_stat = path.stat()
+                self.assertEqual(changed_stat.st_size, original_stat.st_size)
+                self.assertEqual(changed_stat.st_mtime_ns, original_stat.st_mtime_ns)
+
+                with self.assertRaisesRegex(ProvenanceError, "exact approved seed-plan /3 bytes"):
+                    build_expanded_schedule(suite_id="fixture-suite", run_id="fixture-run",
+                                            run_key="validation-suite-v1", slots=[])
 
     def test_v3_seed_plan_preserves_old_ranges_and_open_space_fingerprints(self):
         plan = json.loads((Path(__file__).resolve().parents[2] /
@@ -383,6 +445,80 @@ class SplitProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ProvenanceError, "expanded schedule run_id does not match"):
             validate_manifest(manifest, expanded_schedules=expanded,
                               realized_schedules=realized)
+
+    def test_manifest_rows_reject_rehashed_expanded_slot_with_invalid_exclusion_reason(self):
+        from training.eval.g008_manifest import rows_for_usage
+
+        seed_tuple = {
+            "split": "validation",
+            "domain_label": "g008/eval/validation/initial",
+            "env_root_seed": 1_000_000,
+            "run_key": "validation-suite-v1",
+            "update_index": 0,
+            "rollout_index": 0,
+            "arena_index": 0,
+            "game_index": 0,
+            "reset_index": 0,
+        }
+        _, derived_seed, _ = derive_environment_seed(seed_tuple)
+        expanded = build_expanded_schedule(
+            suite_id="fixture-suite",
+            run_id="fixture-run",
+            run_key="validation-suite-v1",
+            slots=[{
+                **seed_tuple,
+                "suite_ordinal": 3,
+                "root_ordinal": 0,
+                "derived_seed_uint64": derived_seed,
+                "status": "protocol-excluded",
+                "protocol_exclusion_reason": "reserved protocol exclusion",
+            }],
+        )
+        realized = validate_realization(
+            expanded,
+            realized_slots=[{"slot_id": expanded["slots"][0]["slot_id"],
+                             "status": "protocol-excluded"}],
+            realized_tuple_list=[],
+            episode_outcomes=[],
+        )
+
+        forged = copy.deepcopy(expanded)
+        forged["slots"][0]["protocol_exclusion_reason"] = ""
+        forged_body = {key: value for key, value in forged.items()
+                       if key != "expanded_schedule_digest"}
+        forged["expanded_schedule_digest"] = _canonical_digest(forged_body)
+        with self.assertRaisesRegex(ProvenanceError, "protocol exclusion reason does not match status"):
+            validate_expanded_schedule(forged)
+
+        invalid_status = copy.deepcopy(expanded)
+        invalid_status["slots"][0]["status"] = "consumed"
+        invalid_status_body = {key: value for key, value in invalid_status.items()
+                               if key != "expanded_schedule_digest"}
+        invalid_status["expanded_schedule_digest"] = _canonical_digest(invalid_status_body)
+        with self.assertRaisesRegex(ProvenanceError, "status must be reserved or protocol-excluded"):
+            validate_expanded_schedule(invalid_status)
+
+        malformed_status = copy.deepcopy(expanded)
+        malformed_status["slots"][0]["status"] = []
+        malformed_status_body = {key: value for key, value in malformed_status.items()
+                                 if key != "expanded_schedule_digest"}
+        malformed_status["expanded_schedule_digest"] = _canonical_digest(malformed_status_body)
+        with self.assertRaisesRegex(ProvenanceError, "status must be reserved or protocol-excluded"):
+            validate_expanded_schedule(malformed_status)
+
+        realized["expanded_schedule_digest"] = forged["expanded_schedule_digest"]
+        realized_body = {key: value for key, value in realized.items()
+                         if key != "realized_schedule_digest"}
+        realized["realized_schedule_digest"] = _canonical_digest(realized_body)
+        manifest = _valid_manifest()
+        manifest["schedule_bindings"][0]["expanded_schedule_digest"] = forged["expanded_schedule_digest"]
+        manifest["schedule_bindings"][0]["realized_schedule_digest"] = realized["realized_schedule_digest"]
+        _reseal(manifest)
+
+        with self.assertRaisesRegex(ProvenanceError, "protocol exclusion reason does not match status"):
+            rows_for_usage(manifest, "train",
+                           expanded_schedules={"fixture-run": forged},
+                           realized_schedules={"fixture-run": realized})
 
 
 if __name__ == "__main__":

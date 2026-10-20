@@ -104,26 +104,110 @@ def make_run(root: Path, run_id="run-42") -> None:
 
 
 def make_g008_benchmark(root: Path, run_id="g008-run") -> None:
+    import uuid
+    from training.eval.provenance import (benchmark_run_keys, schedule_spec_digest,
+                                          seed_plan_sha256)
+    from training.ppo.g008_benchmark import CONFIG_PATH, load_principal_config, prepare_benchmark_schedules
+
     root.mkdir(parents=True, exist_ok=True)
+    run_keys = benchmark_run_keys()
+    run_ids = {key: str(uuid.uuid5(uuid.NAMESPACE_URL, f"{run_id}:{key}")) for key in run_keys}
+    schedules = prepare_benchmark_schedules(run_ids)
+    principal_config, config_document = load_principal_config()
+    roster = [{"run_key": key, "run_id": run_ids[key],
+               "expanded_schedule_digest": schedules[key]["expanded_schedule_digest"]}
+              for key in run_keys]
+    optimizer_updates_per_training_update = 4
+
+    def run_metrics(update_count, repeat_index=0):
+        total = update_count * optimizer_updates_per_training_update
+        update_logs = [{"device": "cuda", "cuda_updates": optimizer_updates_per_training_update,
+                        "optimizer_updates": optimizer_updates_per_training_update,
+                        "rollout_seconds": 1.0 + repeat_index,
+                        "optimizer_seconds": 2.0 + repeat_index,
+                        "checkpoint_seconds": 0.1,
+                        "update_latency_seconds": 3.0 + repeat_index}
+                       for _ in range(update_count)]
+        return {"format": "circuit-ai-g008-benchmark-run-metrics/1",
+                "device": {"device": "cuda", "cuda_available": True, "cuda_name": "Tesla T4",
+                           "optimizer_updates": total, "cuda_optimizer_updates": total},
+                "training": {"updates": update_logs,
+                             "mean_rollout_seconds": 1.0 + repeat_index,
+                             "update_elapsed_seconds": update_count * (3.0 + repeat_index),
+                             "elapsed_seconds": update_count * (4.0 + repeat_index)}}
+
     device = {"device": "cuda", "cuda_available": True, "cuda_name": "Tesla T4",
-              "optimizer_updates": 2, "cuda_optimizer_updates": 2}
+              "optimizer_updates": optimizer_updates_per_training_update,
+              "cuda_optimizer_updates": optimizer_updates_per_training_update}
     repeats = []
     for index in range(5):
-        metrics = {"device": device, "training": {"updates": []}}
+        run_key = f"pair-{index:02d}"
+        metrics = run_metrics(3, index)
         path = root / "measured" / f"repeat-{index:02d}" / "training-metrics.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(metrics))
-        repeats.append({"repeat": index, "optimizer_updates": 2, "cuda_optimizer_updates": 2,
+        transitions = principal_config.arena_count * principal_config.rollout_steps * principal_config.total_updates
+        rollout = (1.0 + index) * 3
+        optimizer = (2.0 + index) * 3
+        checkpoint = sum(0.1 for _ in range(3))
+        update_only = sum((3.0 + index) - 0.1 for _ in range(3))
+        wall = (4.0 + index) * 3
+        repeats.append({"repeat": index, "run_key": run_key, "run_id": run_ids[run_key],
+                        "completed_joint_arena_transitions": transitions,
+                        "agent_decisions": transitions * 2,
+                        "update_only_joint_transitions_per_second": transitions / update_only,
+                        "wall_inclusive_joint_transitions_per_second": transitions / wall,
+                        "update_only_agent_decisions_per_second": transitions * 2 / update_only,
+                        "wall_inclusive_agent_decisions_per_second": transitions * 2 / wall,
+                        "rollout_seconds": rollout, "optimizer_seconds": optimizer,
+                        "update_only_seconds": update_only,
+                        "checkpoint_inclusive_update_elapsed_seconds": 3 * (3.0 + index),
+                        "checkpoint_seconds": checkpoint, "wall_seconds": wall,
+                        "expanded_schedule_digest": schedules[run_key]["expanded_schedule_digest"],
+                        "optimizer_updates": 3 * optimizer_updates_per_training_update,
+                        "cuda_optimizer_updates": 3 * optimizer_updates_per_training_update,
                         "training_metrics_sha256": file_sha256(path)})
+    warmup_hashes = []
     for index in range(2):
+        run_key = f"warmup-python-oracle-incumbent-{index:02d}"
         path = root / "warmups" / f"warmup-{index:02d}" / "training-metrics.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"device": device, "training": {"updates": []}}))
-    report = {"format": "circuit-ai-g008-principal-benchmark/1", "measured_repeats": 5,
-              "device": device, "repeats": repeats}
+        path.write_text(json.dumps(run_metrics(1)))
+        warmup_hashes.append(file_sha256(path))
+    warmups = [{"run_key": f"warmup-python-oracle-incumbent-{index:02d}",
+                "run_id": run_ids[f"warmup-python-oracle-incumbent-{index:02d}"],
+                "expanded_schedule_digest": schedules[f"warmup-python-oracle-incumbent-{index:02d}"]["expanded_schedule_digest"],
+                "training_metrics_sha256": warmup_hashes[index]}
+               for index in range(2)]
+    summary_fields = ("update_only_joint_transitions_per_second", "wall_inclusive_joint_transitions_per_second",
+                      "update_only_agent_decisions_per_second", "wall_inclusive_agent_decisions_per_second",
+                      "rollout_seconds", "optimizer_seconds", "update_only_seconds",
+                      "checkpoint_inclusive_update_elapsed_seconds", "checkpoint_seconds", "wall_seconds",
+                      "completed_joint_arena_transitions", "agent_decisions")
+    from statistics import median
+    def pct(values):
+        values = sorted(values)
+        q1 = median(values[:len(values) // 2])
+        q3 = median(values[(len(values) + 1) // 2:])
+        return {"median": median(values), "min": min(values), "max": max(values), "iqr": q3 - q1}
+    report = {"format": "circuit-ai-g008-principal-benchmark/2", "measured_repeats": 5,
+              "updates_per_repeat": 3,
+              "source": config_document["source"],
+              "config": principal_config.__dict__,
+              "config_sha256": config_document["config_sha256"],
+              "config_artifact_sha256": file_sha256(CONFIG_PATH),
+              "seed_plan_sha256": seed_plan_sha256(), "schedule_spec_digest": schedule_spec_digest(),
+              "schedule_roster": roster, "warmups": {"count": 2, "updates_each": 1, "runs": warmups},
+              "device": device,
+              "summary": {field: pct([repeat[field] for repeat in repeats]) for field in summary_fields},
+              "optimizer_updates_total": sum(repeat["optimizer_updates"] for repeat in repeats),
+              "cuda_optimizer_updates_total": sum(repeat["cuda_optimizer_updates"] for repeat in repeats),
+              "repeats": repeats}
     report_path = root / "g008-principal-benchmark.json"
     report_path.write_text(json.dumps(report))
     evidence = {"format": "circuit-ai-kaggle-g008-benchmark-evidence/1", "run_id": run_id,
+                "python_version": "3.11.11", "torch_version": "2.5.1+cu124", "cuda_version": "12.4",
+                "visible_cuda_devices": ["Tesla T4"],
                 "benchmark_report_sha256": file_sha256(report_path), "benchmark_report": report}
     (root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence))
 
@@ -261,6 +345,1020 @@ def test_download_validates_and_promotes_g008_principal_benchmark(tmp_path):
     assert (destination / "g008-principal-benchmark.json").is_file()
     assert len(list((destination / "measured").glob("repeat-*/training-metrics.json"))) == 5
     assert not (destination / "__results__.html").exists()
+
+
+@pytest.mark.parametrize("mutation", [
+    "old-format", "missing-plan-hash", "wrong-plan-hash", "missing-spec-digest",
+    "stale-spec-digest", "missing-roster", "altered-roster", "stale-repeat-binding",
+    "stale-warmup-binding", "stale-warmup-metrics-hash", "missing-config",
+    "malformed-config", "altered-config", "missing-config-sha", "wrong-config-sha",
+    "missing-config-artifact-sha", "wrong-config-artifact-sha",
+    "missing-source", "wrong-source", "missing-optimizer-updates-total",
+    "wrong-optimizer-updates-total", "missing-cuda-optimizer-updates-total",
+    "wrong-cuda-optimizer-updates-total", "boolean-optimizer-updates-total",
+])
+def test_g008_report_import_rejects_stale_or_incomplete_lineage(tmp_path, mutation):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    report_path = root / "g008-principal-benchmark.json"
+    report = json.loads(report_path.read_text())
+    if mutation == "old-format":
+        report["format"] = "circuit-ai-g008-principal-benchmark/1"
+    elif mutation == "missing-plan-hash":
+        report.pop("seed_plan_sha256")
+    elif mutation == "wrong-plan-hash":
+        report["seed_plan_sha256"] = "0" * 64
+    elif mutation == "missing-spec-digest":
+        report.pop("schedule_spec_digest")
+    elif mutation == "stale-spec-digest":
+        report["schedule_spec_digest"] = "0" * 64
+    elif mutation == "missing-roster":
+        report.pop("schedule_roster")
+    elif mutation == "altered-roster":
+        report["schedule_roster"].pop()
+    elif mutation == "stale-repeat-binding":
+        report["repeats"][0]["expanded_schedule_digest"] = "0" * 64
+    elif mutation == "stale-warmup-binding":
+        report["warmups"]["runs"][0]["run_id"] = "00000000-0000-4000-8000-000000000000"
+    elif mutation == "stale-warmup-metrics-hash":
+        report["warmups"]["runs"][0]["training_metrics_sha256"] = "0" * 64
+    elif mutation == "missing-config":
+        report.pop("config")
+    elif mutation == "malformed-config":
+        report["config"] = "not-an-object"
+    elif mutation == "altered-config":
+        report["config"]["arena_count"] += 1
+    elif mutation == "missing-config-sha":
+        report.pop("config_sha256")
+    elif mutation == "wrong-config-sha":
+        report["config_sha256"] = "0" * 64
+    elif mutation == "missing-config-artifact-sha":
+        report.pop("config_artifact_sha256")
+    elif mutation == "wrong-config-artifact-sha":
+        report["config_artifact_sha256"] = "0" * 64
+    elif mutation == "missing-source":
+        report.pop("source")
+    elif mutation == "wrong-source":
+        report["source"] = "different-frozen-source"
+    elif mutation == "missing-optimizer-updates-total":
+        report.pop("optimizer_updates_total")
+    elif mutation == "wrong-optimizer-updates-total":
+        report["optimizer_updates_total"] -= 1
+    elif mutation == "missing-cuda-optimizer-updates-total":
+        report.pop("cuda_optimizer_updates_total")
+    elif mutation == "wrong-cuda-optimizer-updates-total":
+        report["cuda_optimizer_updates_total"] -= 1
+    elif mutation == "boolean-optimizer-updates-total":
+        report["optimizer_updates_total"] = True
+    report_path.write_text(json.dumps(report))
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    evidence["benchmark_report"] = report
+    evidence["benchmark_report_sha256"] = file_sha256(report_path)
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+@pytest.mark.parametrize("run_kind", ["measured", "warmup"])
+def test_g008_report_import_rejects_non_object_device_evidence(tmp_path, run_kind):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    report_path = root / "g008-principal-benchmark.json"
+    report = json.loads(report_path.read_text())
+    index = 0
+    if run_kind == "measured":
+        metrics_path = root / "measured" / "repeat-00" / "training-metrics.json"
+        report["repeats"][index]["training_metrics_sha256"] = file_sha256(metrics_path)
+    else:
+        metrics_path = root / "warmups" / "warmup-00" / "training-metrics.json"
+        report["warmups"]["runs"][index]["training_metrics_sha256"] = file_sha256(metrics_path)
+    metrics = json.loads(metrics_path.read_text())
+    metrics["device"] = "malformed"
+    metrics_path.write_text(json.dumps(metrics))
+    if run_kind == "measured":
+        report["repeats"][index]["training_metrics_sha256"] = file_sha256(metrics_path)
+    else:
+        report["warmups"]["runs"][index]["training_metrics_sha256"] = file_sha256(metrics_path)
+    report_path.write_text(json.dumps(report))
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    evidence["benchmark_report"] = report
+    evidence["benchmark_report_sha256"] = file_sha256(report_path)
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError, match="device evidence is invalid"):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+@pytest.mark.parametrize("run_kind", ["measured", "warmup"])
+@pytest.mark.parametrize("mutation", ["missing", "mismatched"])
+def test_g008_report_import_rejects_run_cuda_name_not_matching_report(tmp_path, run_kind, mutation):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    report_path = root / "g008-principal-benchmark.json"
+    report = json.loads(report_path.read_text())
+    if run_kind == "measured":
+        metrics_path = root / "measured" / "repeat-00" / "training-metrics.json"
+    else:
+        metrics_path = root / "warmups" / "warmup-00" / "training-metrics.json"
+
+    metrics = json.loads(metrics_path.read_text())
+    if mutation == "missing":
+        metrics["device"].pop("cuda_name")
+    else:
+        metrics["device"]["cuda_name"] = "NVIDIA A100"
+    metrics_path.write_text(json.dumps(metrics))
+
+    report_entry = report["repeats"][0] if run_kind == "measured" else report["warmups"]["runs"][0]
+    report_entry["training_metrics_sha256"] = file_sha256(metrics_path)
+    report_path.write_text(json.dumps(report))
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    evidence["benchmark_report"] = report
+    evidence["benchmark_report_sha256"] = file_sha256(report_path)
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError, match="device evidence is invalid"):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+@pytest.mark.parametrize("mutation", [
+    "missing-matching-totals", "zero-total", "boolean-total", "mismatched-report-total",
+    "missing-training-updates", "wrong-training-update-count", "zero-update-count",
+    "missing-update-cuda-count", "non-cuda-update", "lower-per-update-count",
+])
+@pytest.mark.parametrize("run_kind", ["measured", "warmup"])
+def test_g008_report_import_rejects_invalid_optimizer_update_evidence(tmp_path, run_kind, mutation):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    report_path = root / "g008-principal-benchmark.json"
+    report = json.loads(report_path.read_text())
+    if run_kind == "measured":
+        metrics_path = root / "measured" / "repeat-00" / "training-metrics.json"
+        entry = report["repeats"][0]
+    else:
+        metrics_path = root / "warmups" / "warmup-00" / "training-metrics.json"
+        entry = report["warmups"]["runs"][0]
+    metrics = json.loads(metrics_path.read_text())
+    run_device = metrics["device"]
+    training_updates = metrics["training"]["updates"]
+
+    if mutation == "missing-matching-totals":
+        run_device.pop("optimizer_updates")
+        run_device.pop("cuda_optimizer_updates")
+        entry.pop("optimizer_updates", None)
+        entry.pop("cuda_optimizer_updates", None)
+    elif mutation == "zero-total":
+        run_device["optimizer_updates"] = run_device["cuda_optimizer_updates"] = 0
+        if run_kind == "measured":
+            entry["optimizer_updates"] = entry["cuda_optimizer_updates"] = 0
+    elif mutation == "boolean-total":
+        run_device["optimizer_updates"] = run_device["cuda_optimizer_updates"] = True
+        if run_kind == "measured":
+            entry["optimizer_updates"] = entry["cuda_optimizer_updates"] = True
+    elif mutation == "mismatched-report-total":
+        if run_kind == "measured":
+            entry["optimizer_updates"] -= 1
+            entry["cuda_optimizer_updates"] -= 1
+        else:
+            run_device["optimizer_updates"] -= 1
+            run_device["cuda_optimizer_updates"] -= 1
+    elif mutation == "missing-training-updates":
+        metrics["training"].pop("updates")
+    elif mutation == "wrong-training-update-count":
+        training_updates.pop()
+    elif mutation == "zero-update-count":
+        training_updates[0]["optimizer_updates"] = 0
+        training_updates[0]["cuda_updates"] = 0
+    elif mutation == "missing-update-cuda-count":
+        training_updates[0].pop("cuda_updates")
+    elif mutation == "non-cuda-update":
+        training_updates[0]["device"] = "cpu"
+    elif mutation == "lower-per-update-count":
+        training_updates[0]["optimizer_updates"] -= 1
+        training_updates[0]["cuda_updates"] -= 1
+        run_device["optimizer_updates"] -= 1
+        run_device["cuda_optimizer_updates"] -= 1
+        if run_kind == "measured":
+            entry["optimizer_updates"] -= 1
+            entry["cuda_optimizer_updates"] -= 1
+
+    metrics_path.write_text(json.dumps(metrics))
+    entry["training_metrics_sha256"] = file_sha256(metrics_path)
+    report_path.write_text(json.dumps(report))
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    evidence["benchmark_report"] = report
+    evidence["benchmark_report_sha256"] = file_sha256(report_path)
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+@pytest.mark.parametrize("field", [
+    "update_only_joint_transitions_per_second", "wall_seconds", "completed_joint_arena_transitions",
+])
+def test_g008_report_import_rejects_repeat_summary_values_not_derived_from_metrics(tmp_path, field):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    report_path = root / "g008-principal-benchmark.json"
+    report = json.loads(report_path.read_text())
+    report["repeats"][0][field] += 1
+    report_path.write_text(json.dumps(report))
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    evidence["benchmark_report"] = report
+    evidence["benchmark_report_sha256"] = file_sha256(report_path)
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError, match="disagrees with hashed training metrics"):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+@pytest.mark.parametrize("mutation", ["missing-version", "empty-version", "missing-gpus", "multiple-gpus", "gpu-mismatch"])
+def test_g008_report_import_rejects_incomplete_or_contradictory_kaggle_environment(tmp_path, mutation):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    if mutation == "missing-version":
+        evidence.pop("torch_version")
+    elif mutation == "empty-version":
+        evidence["cuda_version"] = "  "
+    elif mutation == "missing-gpus":
+        evidence["visible_cuda_devices"] = []
+    elif mutation == "multiple-gpus":
+        evidence["visible_cuda_devices"] = ["Tesla T4", "Tesla T4"]
+    else:
+        evidence["visible_cuda_devices"] = ["NVIDIA A100"]
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError, match="execution evidence|visible training GPU"):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+def test_g008_report_import_rejects_consistent_non_t4_device(tmp_path):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    report_path = root / "g008-principal-benchmark.json"
+    report = json.loads(report_path.read_text())
+    report["device"]["cuda_name"] = "NVIDIA A100"
+    report_path.write_text(json.dumps(report))
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    evidence["visible_cuda_devices"] = ["NVIDIA A100"]
+    evidence["benchmark_report"] = report
+    evidence["benchmark_report_sha256"] = file_sha256(report_path)
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError, match="approved Tesla T4"):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+@pytest.mark.parametrize("field", ["optimizer_updates", "cuda_optimizer_updates"])
+def test_g008_report_import_rejects_top_level_device_counts_outside_frozen_warmup(tmp_path, field):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    report_path = root / "g008-principal-benchmark.json"
+    report = json.loads(report_path.read_text())
+    report["device"][field] += 1
+    report_path.write_text(json.dumps(report))
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    evidence["benchmark_report"] = report
+    evidence["benchmark_report_sha256"] = file_sha256(report_path)
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError, match="top-level device optimizer counts"):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+@pytest.mark.parametrize("field", ["median", "iqr"])
+def test_g008_report_import_rejects_tampered_summary_percentiles(tmp_path, field):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "g008-run"
+    make_g008_benchmark(root)
+    report_path = root / "g008-principal-benchmark.json"
+    report = json.loads(report_path.read_text())
+    report["summary"]["wall_seconds"][field] += 1
+    report_path.write_text(json.dumps(report))
+    evidence_path = root / "kaggle-execution-evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    evidence["benchmark_report"] = report
+    evidence["benchmark_report_sha256"] = file_sha256(report_path)
+    evidence_path.write_text(json.dumps(evidence))
+
+    with pytest.raises(KaggleError, match="summary wall_seconds percentiles"):
+        validate_principal_benchmark_artifacts(root, "g008-run")
+
+
+class FakeRecoveryRegistry:
+    def __init__(self, path):
+        self.path = path
+        self._events = []
+        self.lock_head_hash = None
+        self.events_calls = 0
+
+    def events(self):
+        self.events_calls += 1
+        return self._events.copy()
+
+    def append(self, event_type, event_data):
+        index = len(self._events)
+        event = {"event_index": index, "event_type": event_type, "event_data": event_data,
+                 "event_hash": format(index + 1, "064x")}
+        self._events.append(event)
+        return event
+
+    def preflight_workload(self, data):
+        return self.append("workload_preflight", data)
+
+    def dispatch_workload_push(self, data):
+        return self.append("workload_push_dispatched", data)
+
+    def accept_workload_push(self, data):
+        return self.append("workload_push_accepted", data)
+
+    def resolve_workload_attempt(self, data):
+        return self.append("workload_attempt", data)
+
+
+def make_recovery_registry(tmp_path, *, timeout=30, kind="benchmark"):
+    from tools.kaggle.cli import package_tree_sha256
+
+    registry = FakeRecoveryRegistry(tmp_path / "recovery.jsonl")
+    frozen_package_sha256 = package_tree_sha256(make_recovery_source(tmp_path))
+    hashes = {name: f"{index:064x}" for index, name in enumerate((
+        "package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+        "backend_sha256", "trainer_sha256", "engine_sha256",
+    ), 10)}
+    hashes["package_sha256"] = frozen_package_sha256
+    variant = {"variant_id": "paired", **hashes}
+    if kind == "train":
+        variants = [{**variant, "variant_id": value} for value in ("incumbent", "candidate")]
+        variant_id = "incumbent"
+    else:
+        variants = [variant, {**variant, "variant_id": "candidate"}]
+        variant_id = "paired"
+    amendment = {
+        "recovery_registrations": [{"registration_id": "recovery-bench", "registration_kind": "benchmark"},
+                                   {"registration_id": "recovery-train", "registration_kind": "train"}],
+    }
+    record = {"session_timeout_seconds": timeout, "workload_gpu_seconds_cap": 3600 if kind == "benchmark" else 7200,
+              "workload_output_bytes_cap": 1_000_000, "accelerator_count": 1,
+              "machine_shape": "NvidiaTeslaT4", "kernel_id": "owner/kernel", **hashes}
+    record["implementation_variants" if kind == "benchmark" else "allowed_implementation_variants"] = variants
+    rid = "recovery-bench" if kind == "benchmark" else "recovery-train"
+    other_id = "recovery-train" if kind == "benchmark" else "recovery-bench"
+    workloads = [{"registration_id": rid, "registration_kind": kind, "record": record},
+                 {"registration_id": other_id, "registration_kind": "train" if kind == "benchmark" else "benchmark",
+                  "record": {**record, "session_timeout_seconds": 7200 if kind == "benchmark" else 3600,
+                             "workload_gpu_seconds_cap": 7200 if kind == "benchmark" else 3600}}]
+    amendment_event = registry.append("recovery_amendment", {
+        "historical_overrun_evidence": {"current_version_number": 10},
+        "reservation_metadata": {"campaign_gpu_seconds_before": 8424, "campaign_output_bytes_before": 0,
+                                 "reserved_gpu_seconds": {"validation": 0, "final": 7200},
+                                 "reserved_output_bytes": {"benchmark": 1000000, "train": 1000000}},
+    })
+    reg_events = []
+    for workload in workloads:
+        item = dict(workload)
+        item["record"] = {**item["record"], "recovery_amendment_event_index": amendment_event["event_index"],
+                          "recovery_amendment_event_hash": amendment_event["event_hash"]}
+        event = registry.append("registration", {"registration_id": item["registration_id"],
+                                                  "registration_kind": item["registration_kind"],
+                                                  "record": item["record"]})
+        reg_events.append(event)
+    selected = next(event for event in reg_events if event["event_data"]["registration_kind"] == kind)
+    return registry, selected, variant_id
+
+
+class FakeRecoveryApi:
+    def __init__(self, statuses=("COMPLETE", "COMPLETE"), *, version=10, assigned=11,
+                 quota_remaining=40000, quota_used=1000, drift_after_status=False,
+                 lose_push_response=False):
+        self.statuses = list(statuses)
+        self.current_version = version
+        self.assigned_version = assigned
+        self.quota_remaining = quota_remaining
+        self.quota_used = quota_used
+        self.drift_after_status = drift_after_status
+        self.lose_push_response = lose_push_response
+        self.reject_before_assignment = False
+        self.metadata_calls = []
+        self.status_calls = []
+        self.push_calls = []
+        self.quota_calls = 0
+
+    def get_kernel(self, kernel_id):
+        self.metadata_calls.append(kernel_id)
+        return {"kernel_id": kernel_id, "current_version_number": self.current_version}
+
+    def kernels_status(self, kernel_id):
+        self.status_calls.append(kernel_id)
+        if self.drift_after_status:
+            self.current_version += 1
+        status = self.statuses.pop(0) if self.statuses else "RUNNING"
+        return {"status": status}
+
+    def kernels_push(self, folder, *, timeout, acc):
+        self.push_calls.append({"folder": folder, "timeout": timeout, "acc": acc})
+        if self.lose_push_response:
+            raise TimeoutError("fake lost response")
+        if self.reject_before_assignment:
+            return {"version_number": 0, "error": "rejected by server"}
+        self.current_version = self.assigned_version
+        return {"version_number": self.assigned_version}
+
+    def quota_view(self):
+        self.quota_calls += 1
+        if self.quota_calls > 1:
+            self.quota_used += 20
+            self.quota_remaining -= 20
+        return {"gpu_quota": {"remaining_gpu_seconds": self.quota_remaining,
+                              "used_gpu_seconds": self.quota_used}}
+
+
+def make_recovery_source(tmp_path):
+    source = tmp_path / "recovery-package"
+    source.mkdir(parents=True, exist_ok=True)
+    (source / "kernel-metadata.json").write_text(json.dumps({"id": "owner/kernel"}))
+    (source / ".arena-source-revision").write_text("frozen-r1")
+    (source / "run_kaggle.py").write_text("# frozen test source\n")
+    return source
+
+
+@pytest.mark.parametrize("kind", ["benchmark", "train"])
+def test_recovery_adapter_pushes_exact_timeout_accepts_assignment_and_brackets_latest_polls(tmp_path, kind):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path, kind=kind)
+    if kind == "train":
+        registry.lock_head_hash = "f" * 64
+        registry.append("registration_closed", {"pre_lock_head_hash": "e" * 64})
+    api = FakeRecoveryApi(statuses=("COMPLETE", "RUNNING", "COMPLETE"))
+    clock = [10.0]
+    event = run_recovery_workload(
+        registry, registration["event_index"], make_recovery_source(tmp_path),
+        attempt_id="attempt-1", implementation_variant_id=variant,
+        no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 123,
+        monotonic=lambda: clock[0], sleep=lambda seconds: clock.__setitem__(0, clock[0] + seconds),
+        poll_interval_seconds=1, reconciliation_slack_seconds=5,
+    )
+    assert api.push_calls[0]["timeout"] == "30"
+    assert api.push_calls[0]["acc"] == "NvidiaTeslaT4"
+    assert api.status_calls == ["owner/kernel"] * 3
+    assert api.metadata_calls.count("owner/kernel") == 7
+    assert [item["event_type"] for item in registry.events()][-4:] == [
+        "workload_preflight", "workload_push_dispatched", "workload_push_accepted", "workload_attempt",
+    ]
+    assert event["event_data"]["assigned_version"] == 11
+    assert event["event_data"]["output_bytes"] == 123
+
+
+def test_recovery_preflight_requires_explicit_no_external_writer_confirmation(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    api = FakeRecoveryApi()
+    with pytest.raises(KaggleError, match="no outside writer"):
+        run_recovery_workload(registry, registration["event_index"], make_recovery_source(tmp_path),
+                              attempt_id="attempt-1", implementation_variant_id=variant,
+                              no_external_writer_confirmed=False, api=api,
+                              output_bytes=lambda kernel, version: 0)
+    assert api.push_calls == [] and api.metadata_calls == []
+    assert not any(event["event_type"] == "workload_preflight" for event in registry.events())
+
+
+def test_recovery_rejects_package_drift_before_any_event_or_push(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    source = make_recovery_source(tmp_path)
+    (source / "run_kaggle.py").write_text("# mutated after registration\n")
+    api = FakeRecoveryApi()
+    with pytest.raises(KaggleError, match="registered package_sha256"):
+        run_recovery_workload(
+            registry, registration["event_index"], source,
+            attempt_id="attempt-mutated-package", implementation_variant_id=variant,
+            no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+        )
+    assert api.push_calls == []
+    assert not any(event["event_type"] in {"workload_preflight", "workload_push_dispatched"}
+                   for event in registry.events())
+
+
+def test_recovery_package_tree_hash_rejects_symlinks(tmp_path):
+    from tools.kaggle.cli import package_tree_sha256
+
+    source = make_recovery_source(tmp_path)
+    target = tmp_path / "outside-secret"
+    target.write_text("must not be followed")
+    (source / "linked-input").symlink_to(target)
+    with pytest.raises(KaggleError, match="cannot contain symlinks"):
+        package_tree_sha256(source)
+
+
+def test_recovery_resumes_preflight_after_package_drift_without_duplicate_events(tmp_path, monkeypatch):
+    import tools.kaggle.cli as cli
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    source = make_recovery_source(tmp_path)
+    api = FakeRecoveryApi(statuses=("COMPLETE", "COMPLETE", "COMPLETE"))
+    original_hash = cli.package_tree_sha256
+    calls = []
+
+    def change_on_second_hash(path):
+        calls.append(path)
+        return original_hash(path) if len(calls) == 1 else "0" * 64
+
+    monkeypatch.setattr(cli, "package_tree_sha256", change_on_second_hash)
+    with pytest.raises(KaggleError, match="changed after preflight"):
+        cli.run_recovery_workload(
+            registry, registration["event_index"], source,
+            attempt_id="attempt-package-race", implementation_variant_id=variant,
+            no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+        )
+    assert len(calls) == 2
+    assert api.push_calls == []
+    assert registry.events()[-1]["event_type"] == "workload_preflight"
+    assert not any(event["event_type"] == "workload_push_dispatched" for event in registry.events())
+
+    monkeypatch.setattr(cli, "package_tree_sha256", original_hash)
+    terminal = cli.run_recovery_workload(
+        registry, registration["event_index"], source,
+        attempt_id="attempt-package-race", implementation_variant_id=variant,
+        no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+    )
+    types = [event["event_type"] for event in registry.events()]
+    assert types.count("workload_preflight") == 1
+    assert types.count("workload_push_dispatched") == 1
+    assert types.count("workload_push_accepted") == 1
+    assert types.count("workload_attempt") == 1
+    assert terminal["event_data"]["terminal_status"] == "COMPLETE"
+    projected_budget = terminal["event_data"]["result"]["projected_budget"]
+    assert projected_budget["quota_gpu_seconds_remaining"] == 39980
+    assert projected_budget["campaign_gpu_seconds_projected"] == 8424 + 30
+    assert len(api.push_calls) == 1
+
+
+def test_recovery_lost_push_response_leaves_pending_tail_and_never_pushes_twice(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    api = FakeRecoveryApi(lose_push_response=True)
+    args = (registry, registration["event_index"], make_recovery_source(tmp_path))
+    kwargs = {"attempt_id": "attempt-1", "implementation_variant_id": variant,
+              "no_external_writer_confirmed": True, "api": api,
+              "output_bytes": lambda kernel, version: 0}
+    with pytest.raises(KaggleError, match="ambiguous"):
+        run_recovery_workload(*args, **kwargs)
+    with pytest.raises(KaggleError, match="dispatch-only tail"):
+        run_recovery_workload(*args, **kwargs)
+    assert len(api.push_calls) == 1
+    assert [event["event_type"] for event in registry.events()][-2:] == [
+        "workload_preflight", "workload_push_dispatched",
+    ]
+
+
+def test_recovery_adapter_rejects_version_drift_and_unknown_status_without_terminal_event(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    for index, api in enumerate((FakeRecoveryApi(drift_after_status=True),
+                                 FakeRecoveryApi(statuses=("COMPLETE", "MYSTERY")))):
+        registry, registration, variant = make_recovery_registry(tmp_path / str(index))
+        with pytest.raises(KaggleError):
+            run_recovery_workload(registry, registration["event_index"],
+                                  make_recovery_source(tmp_path / str(index)),
+                                  attempt_id="attempt-1", implementation_variant_id=variant,
+                                  no_external_writer_confirmed=True, api=api,
+                                  output_bytes=lambda kernel, version: 0,
+                                  monotonic=lambda: 0, sleep=lambda seconds: None,
+                                  reconciliation_slack_seconds=0)
+        assert not any(event["event_type"] == "workload_attempt" for event in registry.events())
+
+
+def test_recovery_adapter_budget_rejection_happens_before_preflight_or_push(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    api = FakeRecoveryApi(quota_remaining=10000)
+    with pytest.raises(KaggleError, match="quota"):
+        run_recovery_workload(registry, registration["event_index"], make_recovery_source(tmp_path),
+                              attempt_id="attempt-1", implementation_variant_id=variant,
+                              no_external_writer_confirmed=True, api=api,
+                              output_bytes=lambda kernel, version: 0)
+    assert api.push_calls == []
+    assert not any(event["event_type"] == "workload_preflight" for event in registry.events())
+
+
+def test_recovery_adapter_resolves_terminal_error_and_releases_project_lock(tmp_path):
+    from tools.kaggle.cli import _recovery_kernel_lock, run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    api = FakeRecoveryApi(statuses=("COMPLETE", "ERROR"))
+    event = run_recovery_workload(
+        registry, registration["event_index"], make_recovery_source(tmp_path),
+        attempt_id="attempt-error", implementation_variant_id=variant,
+        no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 1,
+        monotonic=lambda: 2.0, sleep=lambda seconds: None,
+    )
+    assert event["event_data"]["terminal_status"] == "ERROR"
+    with _recovery_kernel_lock(registry.path, "owner/kernel"):
+        pass
+
+
+def test_recovery_timeout_keeps_accepted_reservation_pending_and_blocks_new_attempt(tmp_path):
+    from tools.kaggle.cli import _recovery_kernel_lock, run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    api = FakeRecoveryApi(statuses=("COMPLETE",))
+    ticks = [0.0]
+    def monotonic():
+        ticks[0] += 1
+        return ticks[0]
+    source = make_recovery_source(tmp_path)
+    with pytest.raises(KaggleError, match="monotonic timeout deadline"):
+        run_recovery_workload(
+            registry, registration["event_index"], source,
+            attempt_id="attempt-timeout", implementation_variant_id=variant,
+            no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+            monotonic=monotonic, sleep=lambda seconds: None,
+            reconciliation_slack_seconds=0,
+        )
+    assert [event["event_type"] for event in registry.events()][-3:] == [
+        "workload_preflight", "workload_push_dispatched", "workload_push_accepted",
+    ]
+    with _recovery_kernel_lock(registry.path, "owner/kernel"):
+        pass
+    with pytest.raises(KaggleError, match="unresolved attempt"):
+        run_recovery_workload(
+            registry, registration["event_index"], source,
+            attempt_id="attempt-retry", implementation_variant_id=variant,
+            no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+        )
+    assert len(api.push_calls) == 1
+
+
+def test_recovery_resumes_accepted_tail_to_terminal_with_original_budget(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    source = make_recovery_source(tmp_path)
+    first_api = FakeRecoveryApi(statuses=("COMPLETE", "RUNNING"))
+    ticks = [0.0]
+
+    def monotonic():
+        ticks[0] += 1.0
+        return ticks[0]
+
+    with pytest.raises(KaggleError, match="monotonic timeout deadline"):
+        run_recovery_workload(
+            registry, registration["event_index"], source,
+            attempt_id="accepted-resume", implementation_variant_id=variant,
+            no_external_writer_confirmed=True, api=first_api, output_bytes=lambda kernel, version: 0,
+            monotonic=monotonic, sleep=lambda _: None, reconciliation_slack_seconds=0,
+        )
+    assert registry.events()[-1]["event_type"] == "workload_push_accepted"
+
+    # The run was already accepted against 40,000 seconds of quota. Its remaining
+    # quota can now be below the threshold for a new reservation without making
+    # terminal reconciliation invalid.
+    resume_api = FakeRecoveryApi(statuses=("COMPLETE",), version=11, assigned=11,
+                                quota_remaining=10000, quota_used=30000)
+    terminal = run_recovery_workload(
+        registry, registration["event_index"], source,
+        attempt_id="accepted-resume", implementation_variant_id=variant,
+        no_external_writer_confirmed=True, api=resume_api, output_bytes=lambda kernel, version: 0,
+    )
+    types = [event["event_type"] for event in registry.events()]
+    assert types.count("workload_preflight") == 1
+    assert types.count("workload_push_dispatched") == 1
+    assert types.count("workload_push_accepted") == 1
+    assert types.count("workload_attempt") == 1
+    assert terminal["event_data"]["terminal_status"] == "COMPLETE"
+    assert terminal["event_data"]["result"]["quota_gpu_seconds_before"] == 30000
+    assert terminal["event_data"]["result"]["quota_gpu_seconds_remaining_after"] == 9980
+    projected_budget = terminal["event_data"]["result"]["projected_budget"]
+    assert projected_budget["quota_gpu_seconds_remaining"] == 40000
+    assert projected_budget["campaign_gpu_seconds_projected"] == 8424 + 30
+
+
+def test_recovery_explicit_server_rejection_resolves_without_version_assignment(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = make_recovery_registry(tmp_path)
+    api = FakeRecoveryApi()
+    api.reject_before_assignment = True
+    event = run_recovery_workload(
+        registry, registration["event_index"], make_recovery_source(tmp_path),
+        attempt_id="attempt-rejected", implementation_variant_id=variant,
+        no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+    )
+    assert event["event_data"]["outcome"] == "pre_assignment_rejected"
+    assert event["event_data"]["assigned_version"] is None
+    assert event["event_data"]["actual_gpu_seconds"] == 0
+
+
+def test_recovery_cli_requires_operator_gates_before_registry_or_kaggle_access(tmp_path, capsys):
+    from tools.kaggle.cli import main
+
+    args = ["kaggle", "recovery-run", "--registry", str(tmp_path / "registry.jsonl"),
+            "--registration-event-index", "0", "--attempt-id", "cli-attempt",
+            "--source-dir", str(tmp_path / "source"), "--output-dir", str(tmp_path / "output")]
+    assert main(args) == 2
+    assert "--confirm" in capsys.readouterr().err
+    assert not (tmp_path / "registry.jsonl").exists()
+
+
+def test_g008_v3_importer_rejects_incomplete_frozen_warmup_roster(tmp_path):
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    root = tmp_path / "benchmark"
+    root.mkdir()
+    report = {"format": "circuit-ai-g008-principal-benchmark/3",
+              "device": {"device": "cuda", "cuda_available": True, "cuda_name": "Tesla T4"}}
+    report_path = root / "g008-principal-benchmark.json"
+    report_path.write_text(json.dumps(report))
+    evidence = {"format": "circuit-ai-kaggle-g008-benchmark-evidence/1", "run_id": "g008-v3",
+                "benchmark_report": report, "benchmark_report_sha256": file_sha256(report_path),
+                "python_version": "3.11", "torch_version": "2.5", "cuda_version": "12.1",
+                "visible_cuda_devices": ["Tesla T4"]}
+    (root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence))
+    with pytest.raises(KaggleError, match="all five pairs and sixteen warmups"):
+        validate_principal_benchmark_artifacts(root, "g008-v3")
+
+
+def test_recovery_selection_projection_matches_registry_shape_for_v3_report():
+    from tools.kaggle.cli import _recovery_selection_evidence
+
+    report = {"parity": {"passed": True, "pairs": {"pair-00": {"passed": True}},
+                         "implementation_hashes": {"incumbent": "x", "candidate": "y"}},
+              "pairs": [{"candidate_speedup_ratio": 1.2} for _ in range(5)],
+              "summary": {"candidate_speedup_ratio": {"median": 1.2, "min": 1.1}},
+              "selection": "candidate", "selected_variant_id": "candidate"}
+    evidence = _recovery_selection_evidence(report)
+    assert evidence == {"parity": {"passed": True},
+                        "pairs": [{"candidate_speedup_ratio": 1.2} for _ in range(5)],
+                        "summary": {"candidate_speedup_ratio": {"median": 1.2}},
+                        "selection": "candidate", "selected_variant_id": "candidate"}
+
+
+def test_recovery_artifact_binds_valid_v3_report_and_selection_to_registry(tmp_path, monkeypatch):
+    import hashlib
+    import statistics
+    import uuid
+
+    from tools.kaggle.cli import register_recovery_benchmark_artifact
+    from training.eval.provenance import benchmark_run_keys, schedule_spec_digest, seed_plan_sha256
+    from training.ppo.g008_benchmark import (CONFIG_PATH, CANDIDATE_SOURCE_COMMIT,
+                                             INCUMBENT_SOURCE_COMMIT, implementation_hashes,
+                                             load_principal_config, prepare_benchmark_schedules)
+
+    artifact_root = tmp_path / "downloaded"
+    artifact_root.mkdir()
+    run_keys = benchmark_run_keys()
+    run_ids = {key: str(uuid.uuid5(uuid.NAMESPACE_URL, f"fake-valid-v3:{key}")) for key in run_keys}
+    schedules = prepare_benchmark_schedules(run_ids)
+    config, config_doc = load_principal_config()
+    implementations = {role: implementation_hashes(role) for role in ("incumbent", "candidate")}
+    source_sha = hashlib.sha256(json.dumps(implementations, sort_keys=True, separators=(",", ":"),
+                                            ensure_ascii=False).encode()).hexdigest()
+    commits = {"incumbent": INCUMBENT_SOURCE_COMMIT, "candidate": CANDIDATE_SOURCE_COMMIT}
+    expected_steps = ((config.arena_count * config.rollout_steps + config.minibatch_size - 1)
+                      // config.minibatch_size) * config.update_epochs
+    transitions = config.arena_count * config.rollout_steps * config.total_updates
+    metric_hashes = {}
+
+    def write_metrics(relative, update_count, latency):
+        updates = [{"device": "cuda", "cuda_updates": expected_steps,
+                    "optimizer_updates": expected_steps, "optimizer_seconds": 1.0,
+                    "checkpoint_seconds": 0.1, "update_latency_seconds": latency}
+                   for _ in range(update_count)]
+        metrics = {"format": "circuit-ai-g008-benchmark-run-metrics/1",
+                   "device": {"device": "cuda", "cuda_available": True, "cuda_name": "Tesla T4",
+                              "optimizer_updates": expected_steps * update_count,
+                              "cuda_optimizer_updates": expected_steps * update_count},
+                   "training": {"updates": updates, "mean_rollout_seconds": 1.0,
+                                "update_elapsed_seconds": update_count * latency,
+                                "elapsed_seconds": update_count * (latency + 1.0)}}
+        path = artifact_root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(metrics, sort_keys=True), encoding="utf-8")
+        digest = file_sha256(path)
+        metric_hashes[relative] = digest
+        return metrics, digest
+
+    def arm_metrics(run_key, role, latency):
+        relative = f"measured/{run_key}/{role}/training-metrics.json"
+        _, digest = write_metrics(relative, config.total_updates, latency)
+        update_only = config.total_updates * (latency - 0.1)
+        rollout = config.total_updates * 1.0
+        optimizer = config.total_updates * 1.0
+        checkpoint = config.total_updates * 0.1
+        update_elapsed = config.total_updates * latency
+        wall = config.total_updates * (latency + 1.0)
+        speed = transitions / update_only
+        decisions = transitions * 2
+        return {"implementation": {"role": role, "variant_id": role,
+                                    "source_commit": commits[role], **implementations[role]},
+                "run_key": run_key, "run_id": run_ids[run_key], "seed": config.seed,
+                "config_sha256": config_doc["config_sha256"],
+                "expanded_schedule_digest": schedules[run_key]["expanded_schedule_digest"],
+                "completed_joint_arena_transitions": transitions, "agent_decisions": decisions,
+                "update_only_joint_transitions_per_second": speed,
+                "wall_inclusive_joint_transitions_per_second": transitions / wall,
+                "update_only_agent_decisions_per_second": decisions / update_only,
+                "wall_inclusive_agent_decisions_per_second": decisions / wall,
+                "rollout_seconds": rollout, "optimizer_seconds": optimizer,
+                "update_only_seconds": update_only,
+                "checkpoint_inclusive_update_elapsed_seconds": update_elapsed,
+                "checkpoint_seconds": checkpoint, "wall_seconds": wall,
+                "optimizer_updates": expected_steps * config.total_updates,
+                "cuda_optimizer_updates": expected_steps * config.total_updates,
+                "training_metrics_file": relative, "training_metrics_sha256": digest}
+
+    parity_pairs = {}
+    for index in range(5):
+        key = f"pair-{index:02d}"
+        trace = {"sha256": f"{index + 1:064x}", "transition_count": config.arena_count * config.rollout_steps,
+                 "reset_count": 7,
+                 "action_source": "g008-trainer-model-sampled-collector/1"}
+        parity_pairs[key] = {"passed": True, "incumbent": dict(trace), "candidate": dict(trace),
+                             "implementation_hashes": implementations}
+    pairs, pair_roles = [], {"incumbent": {}, "candidate": {}}
+    for index in range(5):
+        key = f"pair-{index:02d}"
+        incumbent = arm_metrics(key, "incumbent", 4.1)
+        candidate = arm_metrics(key, "candidate", 3.1)
+        for role, arm in (("incumbent", incumbent), ("candidate", candidate)):
+            for field in ("wall_inclusive_joint_transitions_per_second", "update_only_seconds",
+                          "wall_seconds", "optimizer_seconds", "rollout_seconds"):
+                pair_roles[role].setdefault(field, []).append(arm[field])
+        ratio = candidate["update_only_joint_transitions_per_second"] / incumbent["update_only_joint_transitions_per_second"]
+        pairs.append({"repeat": index, "run_key": key, "run_id": run_ids[key],
+                      "order": ["incumbent", "candidate"] if index % 2 == 0 else ["candidate", "incumbent"],
+                      "seed": config.seed, "config_sha256": config_doc["config_sha256"],
+                      "expanded_schedule_digest": schedules[key]["expanded_schedule_digest"],
+                      "parity_sha256": parity_pairs[key]["incumbent"]["sha256"],
+                      "candidate_speedup_ratio": ratio,
+                      "arms": {"incumbent": incumbent, "candidate": candidate}})
+    ratios = [pair["candidate_speedup_ratio"] for pair in pairs]
+
+    def percentiles(values):
+        ordered = sorted(values)
+        q1 = statistics.median(ordered[:len(ordered) // 2])
+        q3 = statistics.median(ordered[(len(ordered) + 1) // 2:])
+        return {"median": statistics.median(ordered), "min": min(ordered),
+                "max": max(ordered), "iqr": q3 - q1}
+
+    summary = {
+        "candidate_update_only_joint_transitions_per_second": percentiles(
+            [pair["arms"]["candidate"]["update_only_joint_transitions_per_second"] for pair in pairs]),
+        "incumbent_update_only_joint_transitions_per_second": percentiles(
+            [pair["arms"]["incumbent"]["update_only_joint_transitions_per_second"] for pair in pairs]),
+        "candidate_speedup_ratio": percentiles(ratios),
+    }
+    for role, fields in pair_roles.items():
+        for field, values in fields.items():
+            summary[f"{role}_{field}"] = percentiles(values)
+
+    warmups = []
+    for key in run_keys:
+        if not key.startswith("warmup-"):
+            continue
+        backend, role, repeat = key.removeprefix("warmup-").rsplit("-", 2)
+        relative = f"warmups/{backend}/{role}/warmup-{repeat}/training-metrics.json"
+        _, digest = write_metrics(relative, 1, 4.1)
+        warmups.append({"backend_id": backend, "role": role, "run": int(repeat), "run_key": key,
+                        "run_id": run_ids[key],
+                        "implementation": {"role": role, "variant_id": role,
+                                           "source_commit": commits[role], **implementations[role]},
+                        "discarded": True,
+                        "expanded_schedule_digest": schedules[key]["expanded_schedule_digest"],
+                        "training_metrics_file": relative, "training_metrics_sha256": digest,
+                        "completed_joint_arena_transitions": config.arena_count * config.rollout_steps})
+    report = {
+        "format": "circuit-ai-g008-principal-benchmark/3", "selection": "candidate",
+        "selected_variant_id": "candidate", "selection_rule": {"parity_required": True},
+        "implementations": implementations, "implementation_source_commits": commits,
+        "source_sha256": source_sha, "source": config_doc["source"], "config": config.__dict__,
+        "config_sha256": config_doc["config_sha256"], "config_artifact_sha256": file_sha256(CONFIG_PATH),
+        "seed_plan_sha256": seed_plan_sha256(), "schedule_spec_digest": schedule_spec_digest(),
+        "schedule_roster": [{"run_key": key, "run_id": run_ids[key],
+                              "expanded_schedule_digest": schedules[key]["expanded_schedule_digest"]}
+                             for key in run_keys],
+        "warmups": {"count_per_role": 2, "updates_each": 1, "discarded": True, "runs": warmups},
+        "measured_repeats": 5, "updates_per_repeat": config.total_updates,
+        "parity": {"passed": True, "pairs": parity_pairs, "implementation_hashes": implementations},
+        "device": {"device": "cuda", "cuda_available": True, "cuda_name": "Tesla T4",
+                   "optimizer_updates": expected_steps, "cuda_optimizer_updates": expected_steps},
+        "summary": summary,
+        "optimizer_updates_total": sum(arm["optimizer_updates"] for pair in pairs for arm in pair["arms"].values()),
+        "cuda_optimizer_updates_total": sum(arm["cuda_optimizer_updates"] for pair in pairs for arm in pair["arms"].values()),
+        "pairs": pairs,
+    }
+    report_path = artifact_root / "g008-principal-benchmark.json"
+    report_path.write_text(json.dumps(report, sort_keys=True), encoding="utf-8")
+    evidence = {"format": "circuit-ai-kaggle-g008-benchmark-evidence/1", "run_id": "g008-valid-v3",
+                "python_version": "3.11.11", "torch_version": "2.5.1+cu124", "cuda_version": "12.4",
+                "visible_cuda_devices": ["Tesla T4"], "benchmark_report": report,
+                "benchmark_report_sha256": file_sha256(report_path)}
+    (artifact_root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
+
+    registration_event = {"event_index": 1, "event_hash": "a" * 64,
+                          "event_type": "registration", "event_data": {}}
+    attempt_data = {
+        "attempt_id": "attempt-v3", "outcome": "terminal", "terminal_status": "COMPLETE",
+        "registration_event_index": 1, "registration_event_hash": registration_event["event_hash"],
+        "assigned_version": 11, "terminal_metadata": {"kernel_id": "owner/kernel", "status": "COMPLETE",
+                                                            "current_version_number": 11},
+        "status_evidence": [{"kernel_id": "owner/kernel", "status": "COMPLETE",
+                             "current_version_number": 11}],
+        "implementation_variant_id": "paired", "package_sha256": "b" * 64,
+        "source_sha256": source_sha, "config_sha256": config_doc["config_sha256"],
+        "seed_plan_sha256": seed_plan_sha256(), "backend_sha256": "c" * 64,
+        "trainer_sha256": "d" * 64, "engine_sha256": "e" * 64,
+    }
+    attempt_event = {"event_index": 3, "event_hash": "f" * 64,
+                     "event_type": "workload_attempt", "event_data": attempt_data}
+
+    class ArtifactRegistry:
+        path = tmp_path / "registry.jsonl"
+
+        def __init__(self):
+            self.recorded = None
+
+        def events(self):
+            return [{"event_index": 0, "event_hash": "9" * 64}, registration_event,
+                    {"event_index": 2, "event_hash": "0" * 64}, attempt_event]
+
+        def register_benchmark_artifact(self, artifact_sha256, registration_index, registration_hash, **kwargs):
+            self.recorded = {"artifact_sha256": artifact_sha256, "registration_event_index": registration_index,
+                             "registration_event_hash": registration_hash, **kwargs}
+            return self.recorded
+
+    registry = ArtifactRegistry()
+    envelope_path = artifact_root / "g008-recovery-benchmark-artifact.json"
+    result = register_recovery_benchmark_artifact(registry, attempt_event, artifact_root, envelope_path)
+    expected_evidence = {"parity": {"passed": True},
+                         "pairs": [{"candidate_speedup_ratio": ratio} for ratio in ratios],
+                         "summary": {"candidate_speedup_ratio": {"median": statistics.median(ratios)}},
+                         "selection": "candidate", "selected_variant_id": "candidate"}
+    assert result == registry.recorded
+    assert result["selection_evidence"] == expected_evidence
+    assert result["report_sha256"] == file_sha256(report_path)
+    envelope = json.loads(envelope_path.read_text(encoding="utf-8"))
+    assert envelope["raw_metrics_sha256"] == metric_hashes
+    assert envelope["attempt"]["assigned_version"] == 11
+
+    report["parity"]["pairs"]["pair-00"]["candidate"]["sha256"] = "0" * 64
+    from training.ppo import g008_benchmark
+    monkeypatch.setattr(g008_benchmark, "prepare_benchmark_schedules", lambda _: schedules)
+    from tools.kaggle.cli import validate_principal_benchmark_artifacts
+
+    def refresh_report_evidence():
+        report_path.write_text(json.dumps(report, sort_keys=True), encoding="utf-8")
+        evidence["benchmark_report"] = report
+        evidence["benchmark_report_sha256"] = file_sha256(report_path)
+        (artifact_root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
+
+    refresh_report_evidence()
+    with pytest.raises(KaggleError, match="passed flag contradicts its two parity trace hashes"):
+        validate_principal_benchmark_artifacts(artifact_root, "g008-valid-v3")
+
+    traces = report["parity"]["pairs"]["pair-00"]
+    traces["candidate"]["sha256"] = traces["incumbent"]["sha256"]
+    traces["incumbent"]["reset_count"] = config.arena_count * config.rollout_steps + 1
+    refresh_report_evidence()
+    with pytest.raises(KaggleError, match="parity trace digest/count/action source is invalid"):
+        validate_principal_benchmark_artifacts(artifact_root, "g008-valid-v3")
+
+    traces["incumbent"]["reset_count"] = 7
+    traces["candidate"]["reset_count"] = 8
+    refresh_report_evidence()
+    with pytest.raises(KaggleError, match="contradictory reset counts"):
+        validate_principal_benchmark_artifacts(artifact_root, "g008-valid-v3")
 
 
 def test_download_hash_validates_benchmark_report_in_manifest(tmp_path):
@@ -488,6 +1586,11 @@ def test_prepare_builds_deterministic_self_contained_package_without_kaggle(tmp_
     try:
         assert (embedded_root / "run-config.json").is_file()
         assert (embedded_root / "training/ppo/train.py").is_file()
+        incumbent_root = embedded_root / "training/ppo/g008_incumbent"
+        assert {"train.py", "engine.py", "manifest.json"} <= {path.name for path in incumbent_root.iterdir()}
+        incumbent_manifest = json.loads((incumbent_root / "manifest.json").read_text())
+        assert incumbent_manifest["files"]["train.py"] == file_sha256(incumbent_root / "train.py")
+        assert incumbent_manifest["files"]["engine.py"] == file_sha256(incumbent_root / "engine.py")
         assert (embedded_root / "schemas/lc-run-1.schema.json").is_file()
     finally:
         namespace["SOURCE_TMP"].cleanup()
@@ -528,6 +1631,26 @@ def test_prepare_rejects_unregistered_g008_run_roster(tmp_path):
     config = tmp_path / "g008-config.json"
     config.write_text(json.dumps({"run_id": "g008-invalid", "train_config": {"device": "auto"},
                                   "g008_principal_benchmark": {"run_ids": {"pair-00": "not-a-uuid"}}}))
+    with pytest.raises(KaggleError, match="preregistered G008 benchmark schedule"):
+        prepare("me/circuit-ai", "g008-test", tmp_path / "package", config)
+    assert not (tmp_path / "package").exists()
+
+
+def test_prepare_rejects_modified_frozen_seed_plan_before_publishing_package(tmp_path, monkeypatch):
+    import uuid
+    from training.eval.provenance import SEED_PLAN_PATH, benchmark_run_keys
+
+    altered_plan = json.loads(SEED_PLAN_PATH.read_text())
+    altered_plan["protocol"] += " modified"
+    plan_path = tmp_path / "altered-seed-plan.json"
+    plan_path.write_text(json.dumps(altered_plan))
+    run_ids = {key: str(uuid.uuid5(uuid.NAMESPACE_URL, f"modified-plan:{key}"))
+               for key in benchmark_run_keys()}
+    monkeypatch.setattr("training.eval.provenance.SEED_PLAN_PATH", plan_path)
+    config = tmp_path / "g008-config.json"
+    config.write_text(json.dumps({"run_id": "g008-invalid-plan", "train_config": {"device": "auto"},
+                                  "g008_principal_benchmark": {"run_ids": run_ids}}))
+
     with pytest.raises(KaggleError, match="preregistered G008 benchmark schedule"):
         prepare("me/circuit-ai", "g008-test", tmp_path / "package", config)
     assert not (tmp_path / "package").exists()

@@ -10,7 +10,9 @@ import hashlib
 import json
 import re
 import unicodedata
-from functools import lru_cache
+from copy import deepcopy
+from contextvars import ContextVar
+from functools import lru_cache, wraps
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -21,6 +23,9 @@ SCHEMA_PATH = Path(__file__).resolve().parents[2] / "schemas" / "lc-split-manife
 _SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 _VALIDATOR = Draft202012Validator(_SCHEMA)
 SEED_PLAN_PATH = Path(__file__).resolve().parents[1] / "configs" / "g008-split-seed-plan.json"
+SEED_PLAN_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "schemas" / "g008-split-seed-plan-3.schema.json"
+_SEED_PLAN_SCHEMA = json.loads(SEED_PLAN_SCHEMA_PATH.read_text(encoding="utf-8"))
+_SEED_PLAN_VALIDATOR = Draft202012Validator(_SEED_PLAN_SCHEMA)
 _SPLITS = ("train", "imitation_demo", "benchmark", "validation", "final")
 _HASH_FIELDS = (
     "opponent_sha256",
@@ -45,11 +50,28 @@ _SPLIT_USAGES = {
 # the opponent ID. Re-freeze this lock if the policy implementation changes.
 OPEN_SPACE_CODE_SHA256 = "9e5103176218ca092206ba50899a35c43ad488ce825a95af487e76798ce60123"
 OPEN_SPACE_CONFIG_SHA256 = "4043dda35bb8cc2adc43112cb5b00eff50ac721eb062b15d0d83b7ae41510b7f"
-FROZEN_SEED_PLAN_SHA256 = "0173875c2f13fc3ffe5dbae76c2b6d6e46bc8398da7f8a748988a51b345d4b24"
+FROZEN_SEED_PLAN_SHA256 = "c6b16733a045e94e7310183e8be8a62cf4327b5d2bdc3eed40bb9d552ce17593"
+_ACTIVE_SEED_PLAN: ContextVar[tuple[dict[str, Any], str] | None] = ContextVar(
+    "g008_active_seed_plan", default=None)
 
 
 class ProvenanceError(ValueError):
     """Raised when a split manifest is incomplete, inconsistent, or leaky."""
+
+
+def _seed_plan_boundary(function):
+    """Read and validate one fresh plan snapshot for each outer operation."""
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        if _ACTIVE_SEED_PLAN.get() is not None:
+            return function(*args, **kwargs)
+        snapshot = _load_seed_plan_snapshot()
+        token = _ACTIVE_SEED_PLAN.set(snapshot)
+        try:
+            return function(*args, **kwargs)
+        finally:
+            _ACTIVE_SEED_PLAN.reset(token)
+    return wrapped
 
 
 SEED_CODEC_PREFIX = b"CIRCUIT-AI/G008/ENV-SEED/v1\0"
@@ -233,6 +255,7 @@ def _slot_id(suite_id: str, run_id: str, backend_id: str, root_ordinal: int,
     return _sha256(_canonical_json(identity))
 
 
+@_seed_plan_boundary
 def collision_scan(slots: list[Mapping[str, Any]]) -> dict[str, Any]:
     """Scan the complete reserved roster; only paired identical tuple reuse passes."""
     by_seed: dict[int, list[Mapping[str, Any]]] = {}
@@ -264,6 +287,7 @@ def collision_scan(slots: list[Mapping[str, Any]]) -> dict[str, Any]:
             "duplicate_groups": duplicates, "passed": passed}
 
 
+@_seed_plan_boundary
 def build_expanded_schedule(*, suite_id: str, run_id: str, run_key: str,
                             slots: list[Mapping[str, Any]], seed_plan_sha: str | None = None) -> dict[str, Any]:
     """Canonicalize a preregistered full reservation roster and digest it."""
@@ -289,7 +313,7 @@ def build_expanded_schedule(*, suite_id: str, run_id: str, run_key: str,
             raise ProvenanceError("slot run_key differs from schedule run_key")
         status = slot.get("status")
         reason = slot.get("protocol_exclusion_reason")
-        if status not in {"reserved", "protocol-excluded"}:
+        if not isinstance(status, str) or status not in {"reserved", "protocol-excluded"}:
             raise ProvenanceError("slot status must be preregistered reserved or protocol-excluded")
         if not isinstance(reason, str) or (status == "protocol-excluded") != bool(reason):
             raise ProvenanceError("protocol exclusion reason must be present only for excluded slots")
@@ -321,6 +345,7 @@ def build_expanded_schedule(*, suite_id: str, run_id: str, run_key: str,
     return {**body, "expanded_schedule_digest": _sha256(_canonical_json(body))}
 
 
+@_seed_plan_boundary
 def build_training_run_schedule(*, run_id: str, root_seed: int, arena_count: int,
                                 total_updates: int, rollout_steps: int,
                                 seed_plan_sha: str | None = None) -> dict[str, Any]:
@@ -365,6 +390,7 @@ def build_training_run_schedule(*, run_id: str, root_seed: int, arena_count: int
                                    seed_plan_sha=actual_plan_sha)
 
 
+@_seed_plan_boundary
 def benchmark_run_keys() -> tuple[str, ...]:
     """Return benchmark run_key order exactly as measured roots then warmup roots."""
     plan, _ = _read_seed_plan()
@@ -378,6 +404,7 @@ def benchmark_run_keys() -> tuple[str, ...]:
     return tuple(keys)
 
 
+@_seed_plan_boundary
 def build_benchmark_reservation_roster(*, suite_id: str,
                                       run_ids: Mapping[str, str]) -> list[dict[str, Any]]:
     """Materialize the frozen G008 benchmark upper-bound roster (all reset slots)."""
@@ -436,6 +463,7 @@ def build_benchmark_reservation_roster(*, suite_id: str,
     return roster
 
 
+@_seed_plan_boundary
 def build_benchmark_run_schedules(*, suite_id: str,
                                   run_ids: Mapping[str, str]) -> dict[str, dict[str, Any]]:
     """Expand one canonical schedule per frozen benchmark run_key/run_id."""
@@ -451,6 +479,7 @@ def build_benchmark_run_schedules(*, suite_id: str,
     return schedules
 
 
+@_seed_plan_boundary
 def build_schedule_aggregate(*, expanded_schedules: Mapping[str, Mapping[str, Any]],
                               realized_schedules: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     """Bind an ordered set of run IDs to common spec and expanded/realized digests."""
@@ -475,6 +504,7 @@ def build_schedule_aggregate(*, expanded_schedules: Mapping[str, Mapping[str, An
     return {"schedule_spec_digest": spec_digest, "runs": runs}
 
 
+@_seed_plan_boundary
 def validate_expanded_schedule(expanded: Mapping[str, Any], seed_plan_sha: str | None = None) -> None:
     """Recompute expanded digest, tuple encodings, slot IDs, order, and full collision scan."""
     required = {"schedule_spec_digest", "suite_id", "run_id", "run_key", "slots",
@@ -515,6 +545,14 @@ def validate_expanded_schedule(expanded: Mapping[str, Any], seed_plan_sha: str |
         _, derived, _ = derive_environment_seed(seed_tuple)
         if slot["derived_seed_uint64"] != derived:
             raise ProvenanceError("expanded slot derived seed does not match tuple")
+        status = slot["status"]
+        reason = slot["protocol_exclusion_reason"]
+        if not isinstance(status, str) or status not in {"reserved", "protocol-excluded"}:
+            raise ProvenanceError("expanded slot status must be reserved or protocol-excluded")
+        if not isinstance(reason, str) or (status == "protocol-excluded") != bool(reason):
+            raise ProvenanceError("expanded slot protocol exclusion reason does not match status")
+        if reason != unicodedata.normalize("NFC", reason):
+            raise ProvenanceError("expanded slot protocol exclusion reason must be NFC-normalized")
         backend = duplicate_members.get(slot["slot_id"], "shared")
         expected_id = _slot_id(expanded["suite_id"], expanded["run_id"], backend,
                                slot["root_ordinal"], seed_tuple)
@@ -531,6 +569,7 @@ def validate_expanded_schedule(expanded: Mapping[str, Any], seed_plan_sha: str |
         raise ProvenanceError("collision scan is incomplete, stale, or malformed")
 
 
+@_seed_plan_boundary
 def validate_realization(expanded: Mapping[str, Any], *, realized_slots: list[Mapping[str, Any]],
                          realized_tuple_list: list[Mapping[str, Any]],
                          episode_outcomes: list[Mapping[str, Any]], completed_run: bool = True) -> dict[str, Any]:
@@ -607,6 +646,7 @@ def validate_realization(expanded: Mapping[str, Any], *, realized_slots: list[Ma
     return {**payload, "realized_schedule_digest": _sha256(_canonical_json(payload))}
 
 
+@_seed_plan_boundary
 def validate_schedule_binding(binding: Mapping[str, Any], *, expanded: Mapping[str, Any],
                               realized: Mapping[str, Any], seed_plan_sha: str | None = None) -> None:
     """Fail closed when a consumer artifact omits or misbinds schedule ancestry."""
@@ -648,25 +688,38 @@ def manifest_sha256(manifest: Mapping[str, Any]) -> str:
 
 def seed_plan_sha256() -> str:
     """Digest the exact frozen seed-plan artifact bytes used by this validator."""
-    try:
-        return hashlib.sha256(SEED_PLAN_PATH.read_bytes()).hexdigest()
-    except OSError as exc:
-        raise ProvenanceError(f"cannot read frozen G008 seed plan: {exc}") from exc
+    return _read_seed_plan()[1]
 
 
 def _read_seed_plan() -> tuple[dict[str, Any], str]:
+    active = _ACTIVE_SEED_PLAN.get()
+    if active is not None:
+        return active
+    return _load_seed_plan_snapshot()
+
+
+def _load_seed_plan_snapshot() -> tuple[dict[str, Any], str]:
     try:
-        stat = SEED_PLAN_PATH.stat()
-        return _read_seed_plan_cached(str(SEED_PLAN_PATH.resolve()), stat.st_mtime_ns, stat.st_size)
+        contents = SEED_PLAN_PATH.read_bytes()
+        digest = hashlib.sha256(contents).hexdigest()
+        cached_plan, cached_digest = _read_seed_plan_cached(
+            str(SEED_PLAN_PATH.resolve()), digest, contents)
+        return deepcopy(cached_plan), cached_digest
     except (OSError, json.JSONDecodeError) as exc:
         raise ProvenanceError(f"cannot read frozen G008 seed plan: {exc}") from exc
 
 
 @lru_cache(maxsize=8)
-def _read_seed_plan_cached(path: str, _mtime_ns: int, _size: int) -> tuple[dict[str, Any], str]:
-    contents = Path(path).read_bytes()
+def _read_seed_plan_cached(path: str, digest: str, contents: bytes) -> tuple[dict[str, Any], str]:
+    if hashlib.sha256(contents).hexdigest() != digest:
+        raise ProvenanceError("seed-plan content changed while computing its digest")
     plan = json.loads(contents)
-    digest = hashlib.sha256(contents).hexdigest()
+    errors = sorted(_SEED_PLAN_VALIDATOR.iter_errors(plan),
+                    key=lambda error: list(error.absolute_path))
+    if errors:
+        first = errors[0]
+        location = "/".join(str(part) for part in first.absolute_path) or "<root>"
+        raise ProvenanceError(f"seed-plan schema violation at {location}: {first.message}")
     if plan.get("format") != "circuit-ai-g008-split-seed-plan/3" or digest != FROZEN_SEED_PLAN_SHA256:
         raise ProvenanceError("G008 requires the exact approved seed-plan /3 bytes")
     return plan, digest
@@ -679,6 +732,7 @@ def _contains_open_space_token(source_id: str) -> bool:
     return any(tokens[index:index + 2] == ["open", "space"] for index in range(len(tokens) - 1))
 
 
+@_seed_plan_boundary
 def validate_manifest(manifest: Mapping[str, Any], *,
                       expanded_schedules: Mapping[str, Mapping[str, Any]] | None = None,
                       realized_schedules: Mapping[str, Mapping[str, Any]] | None = None) -> None:

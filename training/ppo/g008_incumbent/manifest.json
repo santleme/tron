@@ -1,0 +1,8 @@
+{
+  "format": "circuit-ai-g008-incumbent-snapshot/1",
+  "source_commit": "3ee627a95a584f0556454fcd18910c2fb0d77c17",
+  "files": {
+    "train.py": "419db34631b461193a9942bddc9b65841ed4a984c5acd9b1bfaade33a75f55d9",
+    "engine.py": "a93dc0c8001325dbb55bb90da5cd9ae4e262948de9b27be01a195299fd8be25b"
+  }
+}

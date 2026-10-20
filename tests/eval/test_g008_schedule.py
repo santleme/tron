@@ -6,7 +6,9 @@ from unittest.mock import patch
 
 import pytest
 
+from training.eval import provenance as provenance_module
 from training.eval.provenance import (
+    FROZEN_SEED_PLAN_SHA256,
     ProvenanceError,
     SEED_TUPLE_FIELDS,
     build_benchmark_reservation_roster,
@@ -19,7 +21,9 @@ from training.eval.provenance import (
     derive_environment_seed,
     encode_optional_uint64,
     _encode_string,
+    seed_plan_sha256,
     schedule_spec_digest,
+    schedule_spec_payload,
     validate_realization,
     validate_schedule_binding,
 )
@@ -81,6 +85,35 @@ def _expanded(slots):
 
 
 class G008SeedCodecTests(unittest.TestCase):
+    def test_schedule_expansion_reads_one_seed_plan_snapshot_for_all_nested_tuple_checks(self):
+        slots = [_slot(_tuple(arena=arena)) for arena in range(8)]
+        with patch("training.eval.provenance._load_seed_plan_snapshot",
+                   wraps=provenance_module._load_seed_plan_snapshot) as read_snapshot:
+            _expanded(slots)
+        self.assertEqual(read_snapshot.call_count, 1)
+
+    def test_realization_reads_one_seed_plan_snapshot_for_multiple_consumed_tuples(self):
+        expanded = _expanded([_slot(_tuple(arena=arena)) for arena in range(3)])
+        realized_slots = [{"slot_id": slot["slot_id"], "status": "consumed"}
+                          for slot in expanded["slots"]]
+        realized_tuples = [{field: slot[field] for field in SEED_TUPLE_FIELDS}
+                           for slot in expanded["slots"]]
+        outcomes = [{
+            "initial_slot_id": slot["slot_id"],
+            "seat0_agent_id": "agent-zero",
+            "seat1_agent_id": "agent-one",
+            "result": "draw",
+            "terminal_reason": "timeout",
+            "ticks_completed": 12,
+        } for slot in expanded["slots"]]
+
+        with patch("training.eval.provenance._load_seed_plan_snapshot",
+                   wraps=provenance_module._load_seed_plan_snapshot) as read_snapshot:
+            validate_realization(expanded, realized_slots=realized_slots,
+                                 realized_tuple_list=realized_tuples,
+                                 episode_outcomes=outcomes)
+        self.assertEqual(read_snapshot.call_count, 1)
+
     def test_golden_vector_matches_frozen_plan_exactly(self):
         plan_path = Path(__file__).resolve().parents[2] / "training/configs/g008-split-seed-plan.json"
         vector = json.loads(plan_path.read_text())["environment_seed_codec"]["golden_vector"]
@@ -150,10 +183,19 @@ class G008SeedCodecTests(unittest.TestCase):
     def test_benchmark_schedule_spec_digest_is_stable_and_bound_to_plan(self):
         first = schedule_spec_digest()
         self.assertEqual(first, schedule_spec_digest())
-        self.assertEqual(first, "9b3878688d8494211cbde92c7f671653239956a97161263277e0db19b2e7ffec")
+        self.assertEqual(first, "ca13f87ee6b45f7b4d340f6c62715d4980f9966468e5511f7a06953f056c8ec5")
+        self.assertEqual(FROZEN_SEED_PLAN_SHA256,
+                         "c6b16733a045e94e7310183e8be8a62cf4327b5d2bdc3eed40bb9d552ce17593")
+        self.assertEqual(seed_plan_sha256(), FROZEN_SEED_PLAN_SHA256)
         self.assertEqual(len(first), 64)
         with self.assertRaisesRegex(ProvenanceError, "stale seed-plan"):
             schedule_spec_digest("0" * 64)
+
+    def test_mutating_schedule_spec_payload_does_not_poison_cached_seed_plan(self):
+        payload = schedule_spec_payload()
+        payload["partitions"]["train"]["root_seed_range_inclusive"][0] = 1
+        self.assertEqual(schedule_spec_digest(),
+                         "ca13f87ee6b45f7b4d340f6c62715d4980f9966468e5511f7a06953f056c8ec5")
 
 
 class G008ScheduleTests(unittest.TestCase):
