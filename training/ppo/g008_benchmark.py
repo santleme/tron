@@ -39,8 +39,9 @@ REPORT_FORMAT = "circuit-ai-g008-principal-benchmark/3"
 INCUMBENT_DIR = Path(__file__).resolve().parent / "g008_incumbent"
 INCUMBENT_MANIFEST = INCUMBENT_DIR / "manifest.json"
 INCUMBENT_SOURCE_COMMIT = "3ee627a95a584f0556454fcd18910c2fb0d77c17"
+INCUMBENT_LOCAL_PATCH_ID = "g008-incumbent-seat-observation-expansion-v1"
 CANDIDATE_SOURCE_COMMIT = "4849bb95d255af186225c1006f29bc66fb832427"
-INCUMBENT_TRAIN_SHA256 = "419db34631b461193a9942bddc9b65841ed4a984c5acd9b1bfaade33a75f55d9"
+INCUMBENT_TRAIN_SHA256 = "18eca4fe98d635646e51dd0e25d229aa64d2563ff7ad177881b89e7459b3f4e1"
 INCUMBENT_ENGINE_SHA256 = "a93dc0c8001325dbb55bb90da5cd9ae4e262948de9b27be01a195299fd8be25b"
 CANDIDATE_TRAIN_SHA256 = "9991dc8e0c45cf586d2597f82f1cc30ceaf62c6754b976bd39eca70a3f86c38c"
 CANDIDATE_ENGINE_SHA256 = "cfd6fe1817e06e5e892306f1fac2b5eef3cdeb4e68da2e83b26c8f4f23a6c7d0"
@@ -117,6 +118,7 @@ def implementation_hashes(role: str) -> dict[str, str]:
     manifest = json.loads(INCUMBENT_MANIFEST.read_text(encoding="utf-8"))
     if manifest != {"format": "circuit-ai-g008-incumbent-snapshot/1",
                     "source_commit": INCUMBENT_SOURCE_COMMIT,
+                    "local_patch_id": INCUMBENT_LOCAL_PATCH_ID,
                     "files": {"train.py": INCUMBENT_TRAIN_SHA256,
                               "engine.py": INCUMBENT_ENGINE_SHA256}}:
         raise ValueError("incumbent snapshot manifest differs from the frozen source identity")

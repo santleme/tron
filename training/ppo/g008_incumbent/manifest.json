@@ -1,8 +1,9 @@
 {
   "format": "circuit-ai-g008-incumbent-snapshot/1",
   "source_commit": "3ee627a95a584f0556454fcd18910c2fb0d77c17",
+  "local_patch_id": "g008-incumbent-seat-observation-expansion-v1",
   "files": {
-    "train.py": "419db34631b461193a9942bddc9b65841ed4a984c5acd9b1bfaade33a75f55d9",
+    "train.py": "18eca4fe98d635646e51dd0e25d229aa64d2563ff7ad177881b89e7459b3f4e1",
     "engine.py": "a93dc0c8001325dbb55bb90da5cd9ae4e262948de9b27be01a195299fd8be25b"
   }
 }

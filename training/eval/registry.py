@@ -9,7 +9,9 @@ import fcntl
 import hashlib
 import json
 import os
+import stat
 import statistics
+import tempfile
 from decimal import Decimal, InvalidOperation
 import unicodedata
 from pathlib import Path
@@ -20,7 +22,7 @@ _HASH_CHARS = frozenset("0123456789abcdef")
 _REGISTRATION_KINDS = frozenset({"train", "imitation", "ablation", "validation", "final", "benchmark"})
 _RECOVERY_EVENT_TYPES = frozenset({
     "recovery_amendment", "workload_preflight", "workload_push_dispatched",
-    "workload_push_accepted", "workload_attempt",
+    "workload_push_accepted", "workload_attempt", "recovery_cycle_amendment_v2",
 })
 _LEGACY_HEAD_INDEX = 12
 _LEGACY_HEAD_HASH = "0208abba4954ffd08b01d5069c674e8bc3f5d1817c95ddb0b0bb4eedd41f3fd7"
@@ -29,6 +31,18 @@ _CYCLE2_PROPOSAL_SHA256 = "efd2ea6e9525b2d59b3143fae97110f1eb3a76707ae2e19a7512b
 _CYCLE1_FINAL_EVENT_INDEX = 19
 _CYCLE1_FINAL_EVENT_HASH = "7280fb7471484e856b48d1a931cb18d97d5bd2f94949790c41defef9154c4213"
 _CYCLE2_EVENT_INDEX = 20
+_CYCLE3_EVENT_INDEX = 27
+_CYCLE3_PARENT_EVENT_HASH = "850b7fe3f0c2afbdf229cda83a3d2dba51bc607fa3a6efa337d7a6d70de309f7"
+# Frozen Cycle-3 proposal digest; changing the proposal requires a reviewed registry update.
+_CYCLE3_PROPOSAL_SHA256 = "731ad7a7b477bc18e87572f6827fa7f18f38bbdedf130765d600fe5558250527"
+# Provisional Cycle-3 limits copied from the approved Cycle-2 envelope; update
+# together with the reviewed Cycle-3 proposal if its frozen limits differ.
+_CYCLE3_BENCHMARK_GPU_SECONDS = 5600
+_CYCLE3_TRAIN_GPU_SECONDS = 7200
+_CYCLE3_PROJECT_EXPERIMENT_GPU_SECONDS = 21600
+_CYCLE3_PROJECT_TOTAL_GPU_SECONDS = 28800
+_CYCLE3_FINAL_RESERVE_GPU_SECONDS = 7200
+_CYCLE3_OUTPUT_CATEGORY_CAP_BYTES = 1_000_000_000
 _CYCLE2_BENCHMARK_GPU_SECONDS = 5600
 _CYCLE2_TRAIN_GPU_SECONDS = 7200
 _CYCLE2_OUTPUT_CATEGORY_CAP = 1_000_000_000
@@ -87,6 +101,60 @@ def canonical_bytes(value: Any) -> bytes:
         raise RegistryError(f"not canonical-JSON serializable: {exc}") from exc
 
 
+_CYCLE3_DERIVED_RECORD_FIELDS = frozenset({
+    "recovery_cycle_amendment_event_index", "recovery_cycle_amendment_event_hash",
+})
+
+
+def cycle3_registration_record_sha256(record: dict[str, Any]) -> str:
+    """Hash Cycle-3 registration bytes before adding the derived amendment pointer."""
+    if not isinstance(record, dict):
+        raise RegistryError("cycle-3 registration record must be an object")
+    projection = {key: value for key, value in record.items() if key not in _CYCLE3_DERIVED_RECORD_FIELDS}
+    return hashlib.sha256(canonical_bytes(projection)).hexdigest()
+
+
+def cycle3_registration_bindings_sha256(rows: list[dict[str, Any]]) -> str:
+    """Hash the ordered, amendment-bound benchmark/train identity and record rows."""
+    if not isinstance(rows, list) or len(rows) != 2:
+        raise RegistryError("cycle-3 registration bindings require benchmark and train rows")
+    if any(not isinstance(row, dict) or set(row) != {
+            "registration_id", "registration_kind", "run_uuid", "record_sha256"} for row in rows):
+        raise RegistryError("cycle-3 registration binding row shape is invalid")
+    if [row["registration_kind"] for row in rows] != ["benchmark", "train"]:
+        raise RegistryError("cycle-3 registration bindings must be ordered benchmark then train")
+    if any(not all(isinstance(row[key], str) and row[key] for key in ("registration_id", "run_uuid"))
+           or not _is_hash(row["record_sha256"]) for row in rows):
+        raise RegistryError("cycle-3 registration binding row contains invalid identity or record hash")
+    return hashlib.sha256(canonical_bytes(rows)).hexdigest()
+
+
+_CYCLE3_PREFLIGHT_CONTEXT_FIELDS = (
+    "kernel_id", "current_version_number", "current_terminal_status", "current_status_evidence",
+    "quota_gpu_seconds_remaining_before", "quota_evidence",
+)
+
+
+def cycle3_preflight_context_sha256(context: dict[str, Any]) -> str:
+    """Hash the exact live-kernel and quota context authorized before Cycle 3."""
+    if not isinstance(context, dict) or any(key not in context for key in _CYCLE3_PREFLIGHT_CONTEXT_FIELDS):
+        raise RegistryError("cycle-3 preflight context is incomplete")
+    projection = {key: context[key] for key in _CYCLE3_PREFLIGHT_CONTEXT_FIELDS}
+    return hashlib.sha256(canonical_bytes(projection)).hexdigest()
+
+
+def cycle3_authorization_statement(proposal_sha256: str, registration_bindings_sha256: str,
+                                   preflight_context_sha256: str) -> str:
+    """Return the only accepted authorization statement for all frozen hashes."""
+    if not all(_is_hash(value) for value in
+               (proposal_sha256, registration_bindings_sha256, preflight_context_sha256)):
+        raise RegistryError("cycle-3 authorization statement requires SHA-256 bindings")
+    return (f"Authorize G008 Cycle 3 proposal sha256:{proposal_sha256}. "
+            f"Registration bindings sha256:{registration_bindings_sha256}. "
+            f"Preflight context sha256:{preflight_context_sha256}. "
+            "Exclusive writer: no other writer updates pascalcoimbra/circuit-ai until the benchmark is terminal and reconciled.")
+
+
 def _is_hash(value: Any) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(c in _HASH_CHARS for c in value)
 
@@ -125,7 +193,109 @@ def _keys(data: Any, expected: set[str], event_type: str) -> dict[str, Any]:
 
 
 def _validate_data(event_type: str, data: Any) -> None:
-    if event_type == "recovery_cycle_amendment":
+    if event_type == "recovery_cycle_amendment_v2":
+        expected = {"schema_id", "schema_version", "cycle_id", "created_at_utc", "prior_head_hash",
+                    "prior_final_event_index", "proposal_sha256", "retired_registration_event_indices",
+                    "recovery_registrations", "registration_bindings_sha256", "preflight_context_sha256",
+                    "compute_caps_gpu_seconds", "project_gpu_seconds_before",
+                    "project_output_bytes_before", "quota_gpu_seconds_remaining_before",
+                    "protected_final_reserve_gpu_seconds", "output_caps_bytes",
+                    "output_category_reservations_bytes", "kernel_id", "current_version_number",
+                    "current_terminal_status", "current_status_evidence", "quota_evidence",
+                    "user_authorization"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-kaggle-recovery-cycle-amendment" or d["schema_version"] != 2
+                or d["cycle_id"] != "g008-recovery-cycle-3"):
+            raise RegistryError("unsupported recovery cycle-3 amendment schema")
+        if (d["prior_final_event_index"] != _CYCLE3_EVENT_INDEX - 1
+                or d["prior_head_hash"] != _CYCLE3_PARENT_EVENT_HASH):
+            raise RegistryError("cycle-3 amendment must bind exact terminal cycle-2 head")
+        if not _is_hash(d["proposal_sha256"]) or d["proposal_sha256"] != _CYCLE3_PROPOSAL_SHA256:
+            raise RegistryError("cycle-3 amendment does not bind the frozen proposal digest")
+        if (not _is_hash(d["registration_bindings_sha256"])
+                or d["registration_bindings_sha256"] != cycle3_registration_bindings_sha256(d["recovery_registrations"])):
+            raise RegistryError("cycle-3 amendment registration binding digest is invalid")
+        if (not _is_hash(d["preflight_context_sha256"])
+                or d["preflight_context_sha256"] != cycle3_preflight_context_sha256(d)):
+            raise RegistryError("cycle-3 amendment preflight context digest is invalid")
+        authorization = d["user_authorization"]
+        if (not isinstance(authorization, dict)
+                or set(authorization) != {"proposal_sha256", "registration_bindings_sha256", "preflight_context_sha256",
+                                         "statement", "confirmed_at_utc"}
+                or authorization.get("proposal_sha256") != _CYCLE3_PROPOSAL_SHA256
+                or authorization.get("registration_bindings_sha256") != d["registration_bindings_sha256"]
+                or authorization.get("preflight_context_sha256") != d["preflight_context_sha256"]
+                or not isinstance(authorization.get("statement"), str) or not authorization["statement"]
+                or authorization.get("statement") != cycle3_authorization_statement(
+                    _CYCLE3_PROPOSAL_SHA256, d["registration_bindings_sha256"], d["preflight_context_sha256"])
+                or not isinstance(authorization.get("confirmed_at_utc"), str)
+                or not authorization["confirmed_at_utc"].endswith("Z")):
+            raise RegistryError("cycle-3 amendment requires authorization bound to the frozen proposal")
+        if d["retired_registration_event_indices"] != [21, 22]:
+            raise RegistryError("cycle-3 amendment must retire both cycle-2 registrations")
+        if d["compute_caps_gpu_seconds"] != {"benchmark": _CYCLE3_BENCHMARK_GPU_SECONDS,
+                                             "train": _CYCLE3_TRAIN_GPU_SECONDS,
+                                             "project_experiment": _CYCLE3_PROJECT_EXPERIMENT_GPU_SECONDS,
+                                             "project_total": _CYCLE3_PROJECT_TOTAL_GPU_SECONDS}:
+            raise RegistryError("cycle-3 compute caps differ from the provisional reviewed budget")
+        if (d["project_gpu_seconds_before"] != 8664 or d["project_output_bytes_before"] != 34685):
+            raise RegistryError("cycle-3 baseline must count cycle-1/2 committed use exactly once")
+        if (d["project_gpu_seconds_before"] + _CYCLE3_BENCHMARK_GPU_SECONDS
+                + _CYCLE3_TRAIN_GPU_SECONDS > _CYCLE3_PROJECT_EXPERIMENT_GPU_SECONDS):
+            raise RegistryError("cycle-3 projected GPU use exceeds experiment cap")
+        if (d["project_gpu_seconds_before"] + _CYCLE3_BENCHMARK_GPU_SECONDS
+                + _CYCLE3_TRAIN_GPU_SECONDS + _CYCLE3_FINAL_RESERVE_GPU_SECONDS > _CYCLE3_PROJECT_TOTAL_GPU_SECONDS):
+            raise RegistryError("cycle-3 projected GPU use exceeds project cap with reserve")
+        if not isinstance(d["kernel_id"], str) or not d["kernel_id"]:
+            raise RegistryError("cycle-3 amendment requires exact Kaggle kernel identity")
+        if d["current_version_number"] != 12 or isinstance(d["current_version_number"], bool):
+            raise RegistryError("cycle-3 amendment must bind current Kaggle version 12")
+        if d["current_terminal_status"] != "ERROR":
+            raise RegistryError("cycle-3 amendment must bind reconciled cycle-2 ERROR status")
+        if d["current_status_evidence"] != {"status": "ERROR", "current_version_number": 12,
+                                             "kernel_id": d["kernel_id"]}:
+            raise RegistryError("cycle-3 status evidence must exactly bind version 12 and kernel")
+        quota = d["quota_gpu_seconds_remaining_before"]
+        qev = d["quota_evidence"]
+        if (not isinstance(quota, int) or isinstance(quota, bool) or quota < 0
+                or not isinstance(qev, dict)
+                or set(qev) != {"remaining_gpu_seconds", "used_gpu_seconds", "source"}
+                or qev.get("remaining_gpu_seconds") != quota
+                or not isinstance(qev.get("used_gpu_seconds"), int)
+                or isinstance(qev.get("used_gpu_seconds"), bool) or qev["used_gpu_seconds"] < 0
+                or not isinstance(qev.get("source"), str) or not qev["source"]):
+            raise RegistryError("cycle-3 amendment requires exact live quota evidence")
+        if quota < (_CYCLE3_BENCHMARK_GPU_SECONDS + _CYCLE3_TRAIN_GPU_SECONDS
+                    + _CYCLE3_FINAL_RESERVE_GPU_SECONDS):
+            raise RegistryError("cycle-3 quota cannot cover registered caps and protected reserve")
+        if d["protected_final_reserve_gpu_seconds"] != _CYCLE3_FINAL_RESERVE_GPU_SECONDS:
+            raise RegistryError("cycle-3 must retain the protected final reserve")
+        if d["output_caps_bytes"] != {"aggregate": _RECOVERY_MAX_OUTPUT_BYTES,
+                                      "per_run": _RECOVERY_MAX_RUN_OUTPUT_BYTES}:
+            raise RegistryError("cycle-3 output caps differ from the recovery envelope")
+        categories = {"benchmark": _CYCLE3_OUTPUT_CATEGORY_CAP_BYTES,
+                      "training": _CYCLE3_OUTPUT_CATEGORY_CAP_BYTES,
+                      "validation": _CYCLE3_OUTPUT_CATEGORY_CAP_BYTES,
+                      "final": _CYCLE3_OUTPUT_CATEGORY_CAP_BYTES}
+        if d["output_category_reservations_bytes"] != categories:
+            raise RegistryError("cycle-3 output category reservations differ from the recovery envelope")
+        if d["project_output_bytes_before"] + sum(categories.values()) > _RECOVERY_MAX_OUTPUT_BYTES:
+            raise RegistryError("cycle-3 output reservations exceed aggregate cap")
+        regs = d["recovery_registrations"]
+        if (not isinstance(regs, list) or len(regs) != 2
+                or sorted(r.get("registration_kind") for r in regs if isinstance(r, dict)) != ["benchmark", "train"]):
+            raise RegistryError("cycle-3 amendment must name exactly one benchmark and one train")
+        if any(set(r) != {"registration_id", "registration_kind", "run_uuid", "record_sha256"}
+               or not all(isinstance(r[k], str) and r[k] for k in r) for r in regs):
+            raise RegistryError("cycle-3 registration identities are malformed")
+        if any(not _is_hash(r["record_sha256"]) for r in regs):
+            raise RegistryError("cycle-3 registration record binding is not a SHA-256")
+        if (len({r["registration_id"] for r in regs}) != 2
+                or len({r["run_uuid"] for r in regs}) != 2):
+            raise RegistryError("cycle-3 registration IDs and UUIDs must be unique")
+        if not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z"):
+            raise RegistryError("cycle-3 amendment timestamp must be UTC")
+    elif event_type == "recovery_cycle_amendment":
         expected = {"schema_id", "schema_version", "cycle_id", "created_at_utc", "prior_head_hash",
                     "prior_final_event_index", "proposal_sha256", "seed_plan_sha256",
                     "retired_registration_event_indices", "recovery_registrations", "compute_caps_gpu_seconds",
@@ -358,7 +528,7 @@ def _validate_data(event_type: str, data: Any) -> None:
         required = {"registration_id", "registration_kind", "record"}
         cycle2 = required | {"cycle_id"}
         d = _keys(data, cycle2 if isinstance(data, dict) and set(data) == cycle2 else required, event_type)
-        if "cycle_id" in d and d["cycle_id"] != "g008-recovery-cycle-2":
+        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
             raise RegistryError("unsupported registration cycle_id")
         if not isinstance(d["registration_id"], str) or not d["registration_id"]:
             raise RegistryError("registration_id must be a non-empty string")
@@ -412,8 +582,11 @@ def _validate_data(event_type: str, data: Any) -> None:
                          "expected_current_version", "quota_evidence", "policy_evidence", "prior_attempts",
                          "implementation_variant_id", "no_outside_writer_confirmed", "exclusive_lock_id", "reconciliation_slack_seconds",
                          "lock_head_hash"}
-        cycle2 = required | {"cycle_id"}
-        d = _keys(data, cycle2 if isinstance(data, dict) and set(data) == cycle2 else required, event_type)
+        cycle_ids = {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}
+        cycle_schema = required | {"cycle_id"}
+        d = _keys(data, cycle_schema if isinstance(data, dict) and set(data) == cycle_schema else required, event_type)
+        if "cycle_id" in d and d["cycle_id"] not in cycle_ids:
+            raise RegistryError("unsupported workload cycle_id")
         _validate_attempt_identity(d)
         _validate_attempt_hashes(d)
         if d["reserved_gpu_seconds"] != d["session_timeout_seconds"] or d["accelerator_count"] != 1:
@@ -444,8 +617,10 @@ def _validate_data(event_type: str, data: Any) -> None:
                          "preflight_event_hash", "kernel_id", "package_sha256", "source_sha256", "config_sha256",
                          "seed_plan_sha256", "backend_sha256", "trainer_sha256", "engine_sha256", "session_timeout_seconds", "accelerator_count",
                          "reserved_gpu_seconds", "implementation_variant_id", "dispatch_timestamp_utc", "request_identity", "lock_head_hash"}
-        cycle2 = required | {"cycle_id"}
-        d = _keys(data, cycle2 if isinstance(data, dict) and set(data) == cycle2 else required, event_type)
+        cycle_schema = required | {"cycle_id"}
+        d = _keys(data, cycle_schema if isinstance(data, dict) and set(data) == cycle_schema else required, event_type)
+        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
+            raise RegistryError("unsupported workload cycle_id")
         _validate_attempt_identity(d)
         _validate_attempt_hashes(d)
         if not _is_hash(d["preflight_event_hash"]) or d["reserved_gpu_seconds"] != d["session_timeout_seconds"] or d["accelerator_count"] != 1:
@@ -460,8 +635,10 @@ def _validate_data(event_type: str, data: Any) -> None:
         required = {"attempt_id", "registration_event_index", "registration_event_hash", "preflight_event_index",
                          "preflight_event_hash", "dispatch_event_index", "dispatch_event_hash", "assigned_version",
                          "implementation_variant_id", "push_response", "confirming_metadata", "lock_head_hash"}
-        cycle2 = required | {"cycle_id"}
-        d = _keys(data, cycle2 if isinstance(data, dict) and set(data) == cycle2 else required, event_type)
+        cycle_schema = required | {"cycle_id"}
+        d = _keys(data, cycle_schema if isinstance(data, dict) and set(data) == cycle_schema else required, event_type)
+        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
+            raise RegistryError("unsupported workload cycle_id")
         _validate_attempt_identity(d)
         if not isinstance(d["implementation_variant_id"], str) or not d["implementation_variant_id"]:
             raise RegistryError("accepted push must preserve implementation variant")
@@ -486,8 +663,10 @@ def _validate_data(event_type: str, data: Any) -> None:
                          "artifact_sha256", "rejection_evidence", "no_assignment_metadata", "implementation_variant_id",
                          "package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
                          "trainer_sha256", "engine_sha256", "lock_head_hash"}
-        cycle2 = required | {"cycle_id"}
-        d = _keys(data, cycle2 if isinstance(data, dict) and set(data) == cycle2 else required, event_type)
+        cycle_schema = required | {"cycle_id"}
+        d = _keys(data, cycle_schema if isinstance(data, dict) and set(data) == cycle_schema else required, event_type)
+        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
+            raise RegistryError("unsupported workload cycle_id")
         _validate_attempt_identity(d)
         if not isinstance(d["implementation_variant_id"], str) or not d["implementation_variant_id"]:
             raise RegistryError("terminal attempt must preserve implementation variant")
@@ -702,8 +881,12 @@ def _read(path: Path) -> list[dict[str, Any]]:
                 raise RegistryError("post-lock evidence registration hash mismatch")
         prev = event["event_hash"]
         events.append(event)
+    cycle3_indices = [i for i, event in enumerate(events)
+                      if event["event_type"] == "recovery_cycle_amendment_v2"]
     cycle2_indices = [i for i, event in enumerate(events) if event["event_type"] == "recovery_cycle_amendment"]
-    if cycle2_indices:
+    if cycle3_indices:
+        _validate_recovery_cycle3_suffix(events)
+    elif cycle2_indices:
         _validate_recovery_suffix(events[:_CYCLE2_EVENT_INDEX])
         _validate_recovery_cycle2_suffix(events)
     else:
@@ -1389,6 +1572,258 @@ def _validate_recovery_cycle2_suffix(events: list[dict[str, Any]]) -> None:
         raise RegistryError("cycle-2 actual/reserved output exceeds aggregate cap")
 
 
+def _validate_recovery_cycle3_suffix(events: list[dict[str, Any]]) -> None:
+    """Replay Cycle 3 after validating the immutable Cycle 1 and 2 prefixes."""
+    indices = [i for i, event in enumerate(events)
+               if event["event_type"] == "recovery_cycle_amendment_v2"]
+    if indices != [_CYCLE3_EVENT_INDEX] or len(events) <= _CYCLE3_EVENT_INDEX:
+        raise RegistryError("cycle-3 amendment must be the sole v2 amendment at index 27")
+    parent = events[26]
+    if parent["event_hash"] != _CYCLE3_PARENT_EVENT_HASH or parent["event_type"] != "workload_attempt":
+        raise RegistryError("cycle-3 requires exact terminal cycle-2 event 26")
+    _validate_recovery_suffix(events[:20])
+    _validate_recovery_cycle2_suffix(events[:27])
+    amendment_event = events[27]
+    amendment = amendment_event["event_data"]
+    c2 = events[20]["event_data"]
+    terminal = parent["event_data"]
+    if terminal["outcome"] != "terminal":
+        raise RegistryError("cycle-3 parent must be an assigned terminal cycle-2 attempt")
+    if (amendment["project_gpu_seconds_before"] != c2["project_gpu_seconds_before"] + terminal["actual_gpu_seconds"]
+            or amendment["project_output_bytes_before"] != c2["project_output_bytes_before"] + terminal["output_bytes"]):
+        raise RegistryError("cycle-3 baseline must count committed cycle-2 use exactly once")
+    if (amendment["kernel_id"] != terminal["terminal_metadata"]["kernel_id"]
+            or amendment["current_version_number"] != terminal["assigned_version"]
+            or amendment["current_terminal_status"] != terminal["terminal_status"]
+            or amendment["current_status_evidence"] != {
+                "status": terminal["terminal_status"], "current_version_number": terminal["assigned_version"],
+                "kernel_id": terminal["terminal_metadata"]["kernel_id"]}):
+        raise RegistryError("cycle-3 amendment does not bind exact cycle-2 terminal status")
+
+    named = {r["registration_id"]: r for r in amendment["recovery_registrations"]}
+    registrations: dict[int, dict[str, Any]] = {}
+    variants_by_kind: dict[str, dict[str, dict[str, Any]]] = {}
+    ids: set[str] = set()
+    attempts: dict[str, dict[str, Any]] = {}
+    artifact_index = lock_index = None
+    attestation_index = None
+    artifact_data = None
+    current_version = amendment["current_version_number"]
+    for i, event in enumerate(events[28:], 28):
+        typ, data = event["event_type"], event["event_data"]
+        if typ == "recovery_cycle_amendment_v2":
+            raise RegistryError("a second Cycle-3 amendment is forbidden")
+        if typ == "registration":
+            expected_kind = "benchmark" if i == 28 else "train"
+            if i > 29 or len(registrations) >= 2 or data.get("cycle_id") != "g008-recovery-cycle-3" or data["registration_kind"] != expected_kind:
+                raise RegistryError("cycle-3 permits exactly two consecutive benchmark/train registrations")
+            rid, kind, record = data["registration_id"], data["registration_kind"], data["record"]
+            rule = named.get(rid)
+            if rule is None or rid in ids or rule["registration_kind"] != kind or record.get("run_uuid") != rule["run_uuid"]:
+                raise RegistryError("cycle-3 registration differs from its amended identity")
+            if cycle3_registration_record_sha256(record) != rule["record_sha256"]:
+                raise RegistryError("cycle-3 registration record differs from its user-authorized package binding")
+            prior_ids = {e["event_data"]["registration_id"] for e in events[:i] if e["event_type"] == "registration"}
+            prior_uuids = {e["event_data"]["record"].get("run_uuid") for e in events[:i] if e["event_type"] == "registration"}
+            if rid in prior_ids or rule["run_uuid"] in prior_uuids:
+                raise RegistryError("cycle-3 registration reuses a retired identity")
+            if (record.get("cycle_id") != "g008-recovery-cycle-3"
+                    or record.get("recovery_cycle_amendment_event_index") != 27
+                    or record.get("recovery_cycle_amendment_event_hash") != amendment_event["event_hash"]):
+                raise RegistryError("cycle-3 registration does not pin its amendment")
+            expected_cap = amendment["compute_caps_gpu_seconds"][kind]
+            timeout = 2800 if kind == "benchmark" else 7200
+            output_cap = 100_000_000 if kind == "benchmark" else _CYCLE3_OUTPUT_CATEGORY_CAP_BYTES
+            if (record.get("workload_gpu_seconds_cap") != expected_cap
+                    or record.get("session_timeout_seconds") != timeout
+                    or record.get("workload_output_bytes_cap") != output_cap
+                    or record.get("accelerator_count") != 1 or record.get("machine_shape") != "NvidiaTeslaT4"
+                    or record.get("kernel_id") != amendment["kernel_id"]):
+                raise RegistryError("cycle-3 registration changed frozen resources or kernel")
+            for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256", "trainer_sha256", "engine_sha256"):
+                if not _is_hash(record.get(key)):
+                    raise RegistryError("cycle-3 registration has invalid workload hashes")
+            variant_rows = record.get("implementation_variants" if kind == "benchmark" else "allowed_implementation_variants")
+            variant_keys = {"variant_id", "package_sha256", "source_sha256", "trainer_sha256", "backend_sha256",
+                            "engine_sha256", "config_sha256", "seed_plan_sha256"}
+            if not isinstance(variant_rows, list) or len(variant_rows) != 2:
+                raise RegistryError("cycle-3 registration must freeze exactly two implementation variants")
+            parsed: dict[str, dict[str, Any]] = {}
+            for variant in variant_rows:
+                if (not isinstance(variant, dict) or set(variant) != variant_keys
+                        or variant.get("variant_id") not in {"incumbent", "candidate"}
+                        or variant["variant_id"] in parsed):
+                    raise RegistryError("cycle-3 variants must bind incumbent and candidate exactly once")
+                if any(not _is_hash(variant[key]) for key in variant_keys - {"variant_id"}):
+                    raise RegistryError("cycle-3 variant has invalid implementation/runtime hash")
+                if variant["config_sha256"] != record["config_sha256"]:
+                    raise RegistryError("cycle-3 variant changed registered config hash")
+                parsed[variant["variant_id"]] = variant
+            variants_by_kind[kind] = parsed
+            registrations[i] = {"event": event, "record": record, "kind": kind}
+            ids.add(rid)
+            if set(variants_by_kind) == {"benchmark", "train"}:
+                shared = ("source_sha256", "trainer_sha256", "backend_sha256", "engine_sha256",
+                          "config_sha256", "seed_plan_sha256")
+                if any(variants_by_kind["benchmark"][variant_id][key] != variants_by_kind["train"][variant_id][key]
+                       for variant_id in ("incumbent", "candidate") for key in shared):
+                    raise RegistryError("cycle-3 benchmark/train registrations differ in shared variant hashes")
+            continue
+        if typ in {"workload_preflight", "workload_push_dispatched", "workload_push_accepted", "workload_attempt"}:
+            if len(registrations) != 2 or data.get("cycle_id") != "g008-recovery-cycle-3":
+                raise RegistryError("both cycle-3 registrations must precede execution")
+            aid = data["attempt_id"]
+            if typ == "workload_preflight":
+                ri = data["registration_event_index"]
+                reg = registrations.get(ri)
+                if aid in attempts or reg is None or reg["event"]["event_hash"] != data["registration_event_hash"]:
+                    raise RegistryError("cycle-3 preflight reuses an attempt or registration")
+                if data["expected_current_version"] != current_version or data["kernel_id"] != reg["record"]["kernel_id"]:
+                    raise RegistryError("cycle-3 preflight does not bind current version/kernel")
+                if data["session_timeout_seconds"] != reg["record"]["session_timeout_seconds"]:
+                    raise RegistryError("cycle-3 preflight timeout differs from registration")
+                if reg["kind"] == "benchmark" and (data["implementation_variant_id"] != "paired" or artifact_index is not None):
+                    raise RegistryError("cycle-3 benchmark must be paired and precede artifact")
+                if reg["kind"] == "train" and (artifact_index is None or lock_index is None or attestation_index is None):
+                    raise RegistryError("cycle-3 training requires benchmark artifact, lock, and attestation")
+                if reg["kind"] == "train":
+                    selected = (artifact_data or {}).get("selection_evidence", {}).get("selected_variant_id")
+                    if data["implementation_variant_id"] != selected:
+                        raise RegistryError("cycle-3 training differs from benchmark-selected variant")
+                    if data["lock_head_hash"] != events[lock_index]["event_hash"]:
+                        raise RegistryError("cycle-3 training preflight must bind exact lock")
+                    expected_hashes = variants_by_kind["train"].get(selected)
+                else:
+                    if data["lock_head_hash"] is not None:
+                        raise RegistryError("cycle-3 benchmark preflight cannot bind future lock")
+                    expected_hashes = reg["record"]
+                for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256"):
+                    if expected_hashes is None or data[key] != expected_hashes[key]:
+                        raise RegistryError(f"cycle-3 preflight changed registered {key}")
+                attempts[aid] = {"phase": "preflight", "reg": ri, "data": data,
+                                 "preflight_index": i, "preflight_hash": event["event_hash"], "last": i}
+                continue
+            state = attempts.get(aid)
+            if state is None or state["phase"] == "terminal" or i != state["last"] + 1:
+                raise RegistryError("cycle-3 attempt lifecycle must be contiguous")
+            if data["registration_event_index"] != state["reg"]:
+                raise RegistryError("cycle-3 lifecycle changed registration binding")
+            if typ == "workload_push_dispatched":
+                if (state["phase"] != "preflight" or data["preflight_event_index"] != state["preflight_index"]
+                        or data["preflight_event_hash"] != state["preflight_hash"]):
+                    raise RegistryError("cycle-3 dispatch must immediately follow preflight")
+                for key in ("kernel_id", "package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256", "session_timeout_seconds",
+                            "accelerator_count", "reserved_gpu_seconds", "implementation_variant_id", "lock_head_hash"):
+                    if data[key] != state["data"][key]:
+                        raise RegistryError("cycle-3 dispatch changed preflight workload binding")
+                state.update(phase="dispatched", dispatch=i, last=i)
+            elif typ == "workload_push_accepted":
+                if state["phase"] != "dispatched" or data["dispatch_event_index"] != state["dispatch"]:
+                    raise RegistryError("cycle-3 acceptance must bind dispatch")
+                if (data["preflight_event_index"] != state["preflight_index"]
+                        or data["preflight_event_hash"] != state["preflight_hash"]
+                        or data["implementation_variant_id"] != state["data"]["implementation_variant_id"]
+                        or data["lock_head_hash"] != state["data"]["lock_head_hash"]):
+                    raise RegistryError("cycle-3 acceptance changed preflight/variant binding")
+                if data["assigned_version"] <= state["data"]["expected_current_version"]:
+                    raise RegistryError("cycle-3 acceptance must assign a new version")
+                state.update(phase="accepted", accepted=i, version=data["assigned_version"], last=i)
+            else:
+                if state["phase"] not in {"dispatched", "accepted"}:
+                    raise RegistryError("cycle-3 terminal event lacks dispatch")
+                if state["phase"] == "accepted" and (data["outcome"] != "terminal" or data["accepted_event_index"] != state["accepted"] or data["assigned_version"] != state["version"]):
+                    raise RegistryError("cycle-3 attempt differs from accepted receipt")
+                if state["phase"] == "dispatched" and data["outcome"] != "pre_assignment_rejected":
+                    raise RegistryError("cycle-3 dispatched attempt needs acceptance or proven rejection")
+                if state["phase"] == "dispatched":
+                    no_assignment = data["no_assignment_metadata"]
+                    if (data["rejection_evidence"].get("server_rejected_before_assignment") is not True
+                            or no_assignment.get("no_version_assigned") is not True
+                            or no_assignment.get("pre_push_current_version") != state["data"]["expected_current_version"]
+                            or no_assignment.get("post_push_current_version") != state["data"]["expected_current_version"]
+                            or data["actual_gpu_seconds"] != 0):
+                        raise RegistryError("cycle-3 pre-assignment rejection lacks exact no-assignment proof")
+                rec = registrations[state["reg"]]["record"]
+                if (data["preflight_event_index"] != state["preflight_index"]
+                        or data["preflight_event_hash"] != state["preflight_hash"]
+                        or data["dispatch_event_index"] != state["dispatch"]
+                        or data["dispatch_event_hash"] != events[state["dispatch"]]["event_hash"]
+                        or data["implementation_variant_id"] != state["data"]["implementation_variant_id"]):
+                    raise RegistryError("cycle-3 terminal attempt changed preflight/dispatch/variant binding")
+                for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256"):
+                    if data[key] != state["data"][key]:
+                        raise RegistryError("cycle-3 terminal attempt changed frozen workload hash")
+                if data["actual_gpu_seconds"] > rec["session_timeout_seconds"] or data["output_bytes"] > rec["workload_output_bytes_cap"]:
+                    raise RegistryError("cycle-3 actual use exceeds registered timeout/output")
+                if data["outcome"] == "terminal":
+                    current_version = data["assigned_version"]
+                state.update(phase="terminal", terminal=i, terminal_data=data, last=i)
+            continue
+        if typ == "benchmark_artifact":
+            ai = data.get("attempt_event_index")
+            if artifact_index is not None or lock_index is not None or not isinstance(ai, int) or isinstance(ai, bool) or ai >= i:
+                raise RegistryError("cycle-3 benchmark artifact is duplicate or malformed")
+            if not any(s["phase"] == "terminal" and s.get("terminal") == ai
+                       and s["terminal_data"].get("terminal_status") == "COMPLETE"
+                       and events[ai]["event_hash"] == data.get("attempt_event_hash")
+                       and data.get("registration_event_index") == s["reg"]
+                       and data.get("registration_event_hash") == events[s["reg"]]["event_hash"]
+                       for s in attempts.values()):
+                raise RegistryError("cycle-3 artifact must bind successful terminal benchmark")
+            artifact_index, artifact_data = i, data
+            continue
+        if typ == "registration_closed":
+            if artifact_index is None or i != artifact_index + 1:
+                raise RegistryError("cycle-3 artifact must immediately precede lock")
+            if data != {"pre_lock_head_hash": events[artifact_index]["event_hash"],
+                        "pre_lock_final_event_index": artifact_index}:
+                raise RegistryError("cycle-3 lock must pin exact benchmark artifact prefix")
+            lock_index = i
+            continue
+        if typ == "benchmark_attestation":
+            if lock_index is None or i != lock_index + 1 or artifact_data is None:
+                raise RegistryError("cycle-3 attestation must immediately follow lock")
+            if data != {**artifact_data, "lock_head_hash": events[lock_index]["event_hash"]}:
+                raise RegistryError("cycle-3 attestation must bind exact artifact and lock")
+            attestation_index = i
+            continue
+        raise RegistryError("event type is not allowed in cycle-3 suffix")
+    if attempts and ids != set(named):
+        raise RegistryError("both cycle-3 registrations must precede execution")
+    pending = [s for s in attempts.values() if s["phase"] != "terminal"]
+    if pending and (len(pending) != 1 or pending[0]["last"] != len(events) - 1):
+        raise RegistryError("pending cycle-3 attempt blocks later events")
+    actual_gpu = {"benchmark": 0, "train": 0}
+    reserved_gpu = {"benchmark": 0, "train": 0}
+    actual_output = {"benchmark": 0, "training": 0}
+    reserved_output = {"benchmark": 0, "training": 0}
+    for state in attempts.values():
+        kind = registrations[state["reg"]]["kind"]
+        category = "benchmark" if kind == "benchmark" else "training"
+        if state["phase"] == "terminal":
+            actual_gpu[kind] += state["terminal_data"]["actual_gpu_seconds"]
+            actual_output[category] += state["terminal_data"]["output_bytes"]
+        else:
+            record = registrations[state["reg"]]["record"]
+            reserved_gpu[kind] += record["session_timeout_seconds"]
+            reserved_output[category] += record["workload_output_bytes_cap"]
+    for kind in actual_gpu:
+        if actual_gpu[kind] + reserved_gpu[kind] > amendment["compute_caps_gpu_seconds"][kind]:
+            raise RegistryError("cycle-3 workload GPU use/reservation exceeds cap")
+    for category in actual_output:
+        if actual_output[category] + reserved_output[category] > amendment["output_category_reservations_bytes"][category]:
+            raise RegistryError("cycle-3 workload output use/reservation exceeds category cap")
+    project_gpu = amendment["project_gpu_seconds_before"] + sum(actual_gpu.values()) + sum(reserved_gpu.values())
+    if (project_gpu > _CYCLE3_PROJECT_EXPERIMENT_GPU_SECONDS
+            or project_gpu + _CYCLE3_FINAL_RESERVE_GPU_SECONDS > _CYCLE3_PROJECT_TOTAL_GPU_SECONDS):
+        raise RegistryError("cycle-3 actual/reserved GPU use exceeds project budget")
+    if amendment["project_output_bytes_before"] + sum(amendment["output_category_reservations_bytes"].values()) > _RECOVERY_MAX_OUTPUT_BYTES:
+        raise RegistryError("cycle-3 output reservations exceed aggregate cap")
+
+
 class Registry:
     """Safe registry operations over a JSON-lines file (never creates one implicitly)."""
     def __init__(self, path: str | Path):
@@ -1419,6 +1854,9 @@ class Registry:
         with lock_path.open("a+b") as lock:
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
             events = _read(self.path)
+            if (event_type == "recovery_cycle_amendment_v2"
+                    or (event_type == "registration" and event_data.get("cycle_id") == "g008-recovery-cycle-3")):
+                raise RegistryError("Cycle-3 amendment and registrations must use the atomic batch API")
             _validate_data(event_type, event_data)
             locked = any(e["event_type"] == "registration_closed" for e in events)
             if event_type == "registration" and locked:
@@ -1461,7 +1899,9 @@ class Registry:
             payload = _payload(len(events), event_type, event_data, prev)
             event = {**payload, "event_hash": _event_hash(payload)}
             candidate_events = events + [event]
-            if any(e["event_type"] == "recovery_cycle_amendment" for e in candidate_events):
+            if any(e["event_type"] == "recovery_cycle_amendment_v2" for e in candidate_events):
+                _validate_recovery_cycle3_suffix(candidate_events)
+            elif any(e["event_type"] == "recovery_cycle_amendment" for e in candidate_events):
                 _validate_recovery_suffix(candidate_events[:_CYCLE2_EVENT_INDEX])
                 _validate_recovery_cycle2_suffix(candidate_events)
             else:
@@ -1506,6 +1946,111 @@ class Registry:
         if events[-1]["event_type"] != "workload_attempt":
             raise RegistryError("cycle-2 amendment requires terminal cycle-1 event 19")
         return self._append("recovery_cycle_amendment", amendment)
+
+    def register_recovery_cycle3_batch(self, amendment: dict[str, Any],
+                                       workloads: list[dict[str, Any]], *,
+                                       expected_parent_hash: str | None = None,
+                                       expected_parent_index: int | None = None) -> list[dict[str, Any]]:
+        """Validate and atomically append Cycle-3 events 27-29 under one registry lock."""
+        expected_parent_hash = _CYCLE3_PARENT_EVENT_HASH if expected_parent_hash is None else expected_parent_hash
+        expected_parent_index = _CYCLE3_EVENT_INDEX - 1 if expected_parent_index is None else expected_parent_index
+        if expected_parent_hash != _CYCLE3_PARENT_EVENT_HASH or expected_parent_index != _CYCLE3_EVENT_INDEX - 1:
+            raise RegistryError("Cycle-3 batch requires the frozen terminal Cycle-2 parent anchor")
+        if not isinstance(workloads, list) or len(workloads) != 2:
+            raise RegistryError("Cycle-3 batch requires exactly benchmark and train workloads")
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = self.path.with_name(self.path.name + ".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open("a+b") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            events = _read(self.path)
+            if (len(events) - 1 != expected_parent_index or not events
+                    or events[-1]["event_hash"] != expected_parent_hash):
+                raise RegistryError("Cycle-3 registry head changed from its frozen parent")
+            if any(event["event_type"] == "recovery_cycle_amendment_v2" for event in events):
+                raise RegistryError("Cycle-3 amendment is already present")
+            _validate_data("recovery_cycle_amendment_v2", amendment)
+            named = amendment["recovery_registrations"]
+            if [row["registration_kind"] for row in named] != ["benchmark", "train"]:
+                raise RegistryError("Cycle-3 workload order must be benchmark then train")
+            workload_by_id: dict[str, dict[str, Any]] = {}
+            for workload in workloads:
+                if (not isinstance(workload, dict)
+                        or set(workload) != {"registration_id", "registration_kind", "record"}
+                        or not isinstance(workload["registration_id"], str)
+                        or not isinstance(workload["registration_kind"], str)
+                        or not isinstance(workload["record"], dict)):
+                    raise RegistryError("Cycle-3 workload candidate shape is invalid")
+                if workload["registration_id"] in workload_by_id:
+                    raise RegistryError("duplicate Cycle-3 workload registration_id")
+                workload_by_id[workload["registration_id"]] = workload
+            if set(workload_by_id) != {row["registration_id"] for row in named}:
+                raise RegistryError("Cycle-3 workload candidates differ from authorized IDs")
+
+            candidate_events = list(events)
+            candidate_payloads: list[dict[str, Any]] = []
+            prev = events[-1]["event_hash"]
+            amendment_payload = _payload(_CYCLE3_EVENT_INDEX, "recovery_cycle_amendment_v2", amendment, prev)
+            amendment_event = {**amendment_payload, "event_hash": _event_hash(amendment_payload)}
+            candidate_events.append(amendment_event)
+            candidate_payloads.append(amendment_event)
+            for row in named:
+                workload = workload_by_id[row["registration_id"]]
+                if workload["registration_kind"] != row["registration_kind"]:
+                    raise RegistryError("Cycle-3 workload kind differs from authorized binding")
+                record = dict(workload["record"])
+                if _CYCLE3_DERIVED_RECORD_FIELDS & record.keys():
+                    raise RegistryError("Cycle-3 workload record must omit derived amendment pointers before binding")
+                if cycle3_registration_record_sha256(record) != row["record_sha256"]:
+                    raise RegistryError("Cycle-3 workload record differs from user-authorized binding")
+                record["recovery_cycle_amendment_event_index"] = amendment_event["event_index"]
+                record["recovery_cycle_amendment_event_hash"] = amendment_event["event_hash"]
+                data = {"registration_id": row["registration_id"],
+                        "registration_kind": row["registration_kind"],
+                        "record": record, "cycle_id": "g008-recovery-cycle-3"}
+                _validate_data("registration", data)
+                prev = candidate_events[-1]["event_hash"]
+                payload = _payload(len(candidate_events), "registration", data, prev)
+                event = {**payload, "event_hash": _event_hash(payload)}
+                candidate_events.append(event)
+                candidate_payloads.append(event)
+            _validate_recovery_cycle3_suffix(candidate_events)
+            encoded = self.path.read_bytes() + b"".join(
+                canonical_bytes(event) + b"\n" for event in candidate_payloads)
+            original_stat = self.path.stat()
+            temp_fd = -1
+            temp_path: str | None = None
+            try:
+                temp_fd, temp_path = tempfile.mkstemp(
+                    prefix=f".{self.path.name}.", suffix=".tmp", dir=self.path.parent)
+                os.fchown(temp_fd, original_stat.st_uid, original_stat.st_gid)
+                os.fchmod(temp_fd, stat.S_IMODE(original_stat.st_mode))
+                offset = 0
+                while offset < len(encoded):
+                    written = os.write(temp_fd, encoded[offset:])
+                    if written <= 0:
+                        raise RegistryError("short atomic Cycle-3 temp write")
+                    offset += written
+                os.fsync(temp_fd)
+                os.close(temp_fd)
+                temp_fd = -1
+                os.replace(temp_path, self.path)
+                temp_path = None
+                directory_fd = os.open(self.path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+            finally:
+                if temp_fd >= 0:
+                    os.close(temp_fd)
+                if temp_path is not None:
+                    try:
+                        os.unlink(temp_path)
+                    except FileNotFoundError:
+                        pass
+            _read(self.path)
+            return candidate_payloads
 
     def register_recovery_workload(self, registration_id: str, registration_kind: str,
                                    record: dict[str, Any]) -> dict[str, Any]:

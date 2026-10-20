@@ -899,6 +899,426 @@ def test_cycle2_retry_counts_only_cycle2_usage_after_event19_boundary():
     assert budget["output_bytes"] == {"benchmark": 4519, "training": 0}
 
 
+def _cycle3_budget_fixture(*, include_terminal_attempt=False):
+    events = [{"event_index": index, "event_type": "legacy", "event_data": {}}
+              for index in range(26)]
+    events.append({"event_index": 26, "event_type": "workload_attempt", "event_data": {
+        "cycle_id": "g008-recovery-cycle-2", "actual_gpu_seconds": 115, "output_bytes": 3763}})
+    amendment_data = {
+        "schema_id": "g008-kaggle-recovery-cycle-amendment", "schema_version": 2,
+        "cycle_id": "g008-recovery-cycle-3", "prior_final_event_index": 26,
+        "prior_head_hash": "a" * 64, "kernel_id": "owner/kernel",
+        "current_version_number": 12, "current_terminal_status": "ERROR",
+        "project_gpu_seconds_before": 8664, "project_output_bytes_before": 34685,
+        "compute_caps_gpu_seconds": {"benchmark": 5600, "train": 7200,
+                                     "project_experiment": 21600, "project_total": 28800},
+        "protected_final_reserve_gpu_seconds": 7200,
+        "output_caps_bytes": {"aggregate": 5_000_000_000, "per_run": 1_000_000_000},
+        "output_category_reservations_bytes": {name: 1_000_000_000 for name in
+                                                ("benchmark", "training", "validation", "final")},
+        "quota_evidence": {"remaining_gpu_seconds": 99468},
+    }
+    amendment = {"event_index": 27, "event_type": "recovery_cycle_amendment_v2",
+                 "event_data": amendment_data, "event_hash": "b" * 64}
+    events.append(amendment)
+    records = {}
+    for index, kind, timeout, output_cap in (
+            (28, "benchmark", 2800, 100_000_000), (29, "train", 7200, 1_000_000_000)):
+        record = {"cycle_id": "g008-recovery-cycle-3", "session_timeout_seconds": timeout,
+                  "workload_gpu_seconds_cap": 5600 if kind == "benchmark" else 7200,
+                  "workload_output_bytes_cap": output_cap,
+                  "recovery_cycle_amendment_event_index": 27,
+                  "recovery_cycle_amendment_event_hash": "b" * 64}
+        event = {"event_index": index, "event_type": "registration", "event_data": {
+            "registration_id": f"cycle3-{kind}", "registration_kind": kind,
+            "cycle_id": "g008-recovery-cycle-3", "record": record}}
+        events.append(event)
+        records[kind] = event
+    if include_terminal_attempt:
+        events.append({"event_index": 30, "event_type": "workload_attempt", "event_data": {
+            "attempt_id": "cycle3-bench-01", "cycle_id": "g008-recovery-cycle-3",
+            "registration_event_index": 28, "actual_gpu_seconds": 125, "output_bytes": 4519}})
+    return _Cycle2BudgetRegistry(events), records
+
+
+def test_cycle3_budget_uses_its_amendment_baseline_and_counts_cycle3_actuals_once():
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    registry, records = _cycle3_budget_fixture(include_terminal_attempt=True)
+    budget = _validate_recovery_budget(registry, records["benchmark"], 2800, quota_remaining=99468)
+
+    assert budget["cycle_id"] == "g008-recovery-cycle-3"
+    assert budget["actual"] == {"benchmark": 125, "train": 0}
+    assert budget["output_bytes"] == {"benchmark": 4519, "training": 0}
+    assert budget["campaign_gpu_seconds_current_attempt_projected"] == 8664 + 125 + 2800
+    assert budget["campaign_gpu_seconds_projected"] == 8664 + 125 + 2800 + 7200
+    assert budget["campaign_gpu_seconds_with_final_reserve"] == 8664 + 125 + 2800 + 7200 + 7200
+    assert budget["project_output_bytes_projected_with_reserves"] == 34685 + 4_000_000_000
+
+
+def test_cycle3_registration_must_pin_the_exact_v2_amendment_event():
+    from tools.kaggle.cli import _cycle3_amendment, _expected_recovery_current_version
+
+    registry, records = _cycle3_budget_fixture()
+    assert _cycle3_amendment(registry.events(), records["benchmark"])["current_version_number"] == 12
+    assert _expected_recovery_current_version(registry.events(), records["benchmark"]) == 12
+    events = registry.events()
+    events.append({"event_index": 30, "event_type": "workload_attempt", "event_data": {
+        "cycle_id": "g008-recovery-cycle-3", "outcome": "terminal", "assigned_version": 13}})
+    assert _expected_recovery_current_version(events, records["benchmark"]) == 13
+    record = records["benchmark"]["event_data"]["record"]
+    record["recovery_cycle_amendment_event_hash"] = "c" * 64
+    with pytest.raises(KaggleError, match="amendment identity"):
+        _cycle3_amendment(registry.events(), records["benchmark"])
+
+
+def _cycle3_recovery_setup(tmp_path):
+    registry, original, variant = make_recovery_registry(tmp_path)
+    amendment_data = {
+        "schema_id": "g008-kaggle-recovery-cycle-amendment", "schema_version": 2,
+        "cycle_id": "g008-recovery-cycle-3", "kernel_id": "owner/kernel",
+        "current_version_number": 12,
+        "current_terminal_status": "ERROR", "project_gpu_seconds_before": 8664,
+        "current_status_evidence": {"status": "ERROR", "current_version_number": 12,
+                                    "kernel_id": "owner/kernel"},
+        "quota_gpu_seconds_remaining_before": 99468,
+        "quota_evidence": {"remaining_gpu_seconds": 99468, "used_gpu_seconds": 8532,
+                           "source": "pinned Kaggle SDK quota_view"},
+        "project_output_bytes_before": 34685,
+        "compute_caps_gpu_seconds": {"benchmark": 5600, "train": 7200,
+                                     "project_experiment": 21600, "project_total": 28800},
+        "protected_final_reserve_gpu_seconds": 7200,
+        "output_caps_bytes": {"aggregate": 5_000_000_000, "per_run": 1_000_000_000},
+        "output_category_reservations_bytes": {name: 1_000_000_000 for name in
+                                                ("benchmark", "training", "validation", "final")},
+    }
+    from training.eval.registry import cycle3_preflight_context_sha256
+    amendment_data["preflight_context_sha256"] = cycle3_preflight_context_sha256(amendment_data)
+    amendment = registry.append("recovery_cycle_amendment_v2", amendment_data)
+    record = {**original["event_data"]["record"], "cycle_id": "g008-recovery-cycle-3",
+              "session_timeout_seconds": 30, "workload_gpu_seconds_cap": 5600,
+              "workload_output_bytes_cap": 1_000_000,
+              "recovery_cycle_amendment_event_index": amendment["event_index"],
+              "recovery_cycle_amendment_event_hash": amendment["event_hash"]}
+    registration = registry.append("registration", {**original["event_data"],
+        "cycle_id": "g008-recovery-cycle-3", "record": record})
+    return registry, registration, variant
+
+
+def test_cycle3_recovery_push_starts_at_exact_v12_and_accepts_v13(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = _cycle3_recovery_setup(tmp_path)
+    api = FakeRecoveryApi(statuses=("ERROR", "COMPLETE", "COMPLETE"), version=12, assigned=13,
+                          quota_remaining=99468, quota_used=8532)
+
+    terminal = run_recovery_workload(
+        registry, registration["event_index"], make_recovery_source(tmp_path),
+        attempt_id="cycle3-bench-01", implementation_variant_id=variant,
+        no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 123,
+        monotonic=lambda: 10.0, sleep=lambda _: None, poll_interval_seconds=1,
+    )
+
+    assert api.push_calls[0]["timeout"] == "30"
+    assert api.current_version == 13
+    preflight = next(event for event in registry.events() if event["event_type"] == "workload_preflight")
+    assert preflight["event_data"]["expected_current_version"] == 12
+    assert terminal["event_data"]["assigned_version"] == 13
+
+
+@pytest.mark.parametrize("drift", ["status", "quota"])
+def test_cycle3_initial_preflight_rejects_status_or_quota_context_drift(tmp_path, drift):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = _cycle3_recovery_setup(tmp_path)
+    status = "COMPLETE" if drift == "status" else "ERROR"
+    quota = 99467 if drift == "quota" else 99468
+    api = FakeRecoveryApi(statuses=(status,), version=12, assigned=13,
+                          quota_remaining=quota, quota_used=8532)
+
+    with pytest.raises(KaggleError, match="authorized snapshot"):
+        run_recovery_workload(
+            registry, registration["event_index"], make_recovery_source(tmp_path),
+            attempt_id="cycle3-preflight-drift", implementation_variant_id=variant,
+            no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+            monotonic=lambda: 10.0, sleep=lambda _: None, poll_interval_seconds=1,
+        )
+
+    assert api.push_calls == []
+    assert not any(event["event_type"] == "workload_preflight" for event in registry.events())
+
+
+def test_cycle3_training_preflight_matches_latest_reconciled_benchmark_status(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, benchmark_registration, _ = _cycle3_recovery_setup(tmp_path)
+    registry.append("workload_push_dispatched", {
+        "cycle_id": "g008-recovery-cycle-3", "attempt_id": "cycle3-benchmark-terminal",
+    })
+    registry.append("workload_attempt", {
+        "cycle_id": "g008-recovery-cycle-3", "attempt_id": "cycle3-benchmark-terminal",
+        "outcome": "terminal", "registration_event_index": benchmark_registration["event_index"],
+        "assigned_version": 13, "terminal_status": "COMPLETE",
+        "actual_gpu_seconds": 20, "output_bytes": 100,
+    })
+    amendment = registry.events()[3]
+    benchmark_record = benchmark_registration["event_data"]["record"]
+    variants = benchmark_record["implementation_variants"]
+    train_record = {**benchmark_record,
+                    "session_timeout_seconds": 30, "workload_gpu_seconds_cap": 7200,
+                    "workload_output_bytes_cap": 1_000_000,
+                    "allowed_implementation_variants": [
+                        {**item, "variant_id": name} for item, name in zip(variants, ("incumbent", "candidate"))
+                    ]}
+    train_record.pop("implementation_variants")
+    train_registration = registry.append("registration", {
+        "cycle_id": "g008-recovery-cycle-3", "registration_id": "cycle3-train",
+        "registration_kind": "train", "record": train_record,
+    })
+    api = FakeRecoveryApi(statuses=("ERROR",), version=13, assigned=14)
+
+    with pytest.raises(KaggleError, match="reconciled terminal attempt"):
+        run_recovery_workload(
+            registry, train_registration["event_index"], make_recovery_source(tmp_path),
+            attempt_id="cycle3-train-status-drift", implementation_variant_id="incumbent",
+            no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+            monotonic=lambda: 10.0, sleep=lambda _: None, poll_interval_seconds=1,
+        )
+
+    assert api.push_calls == []
+    assert not any(event["event_type"] == "workload_preflight" for event in registry.events())
+
+
+def test_cycle3_training_accepts_updated_sufficient_quota_after_benchmark(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, benchmark_registration, _ = _cycle3_recovery_setup(tmp_path)
+    registry.append("workload_push_dispatched", {
+        "cycle_id": "g008-recovery-cycle-3", "attempt_id": "cycle3-benchmark-terminal",
+    })
+    registry.append("workload_attempt", {
+        "cycle_id": "g008-recovery-cycle-3", "attempt_id": "cycle3-benchmark-terminal",
+        "outcome": "terminal", "registration_event_index": benchmark_registration["event_index"],
+        "assigned_version": 13, "terminal_status": "COMPLETE",
+        "actual_gpu_seconds": 20, "output_bytes": 100,
+    })
+    benchmark_record = benchmark_registration["event_data"]["record"]
+    variants = benchmark_record["implementation_variants"]
+    train_record = {**benchmark_record,
+                    "session_timeout_seconds": 30, "workload_gpu_seconds_cap": 7200,
+                    "workload_output_bytes_cap": 1_000_000,
+                    "allowed_implementation_variants": [
+                        {**item, "variant_id": name} for item, name in zip(variants, ("incumbent", "candidate"))
+                    ]}
+    train_record.pop("implementation_variants")
+    train_registration = registry.append("registration", {
+        "cycle_id": "g008-recovery-cycle-3", "registration_id": "cycle3-train",
+        "registration_kind": "train", "record": train_record,
+    })
+    api = FakeRecoveryApi(statuses=("COMPLETE", "COMPLETE"), version=13, assigned=14,
+                          quota_remaining=20_000, quota_used=80_000)
+
+    terminal = run_recovery_workload(
+        registry, train_registration["event_index"], make_recovery_source(tmp_path),
+        attempt_id="cycle3-train-after-benchmark", implementation_variant_id="incumbent",
+        no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+        monotonic=lambda: 10.0, sleep=lambda _: None, poll_interval_seconds=1,
+    )
+
+    assert api.push_calls[0]["timeout"] == "30"
+    assert api.current_version == 14
+    assert terminal["event_data"]["terminal_status"] == "COMPLETE"
+
+
+def _append_cycle3_terminal_benchmark_error(registry, benchmark_registration):
+    registry.append("workload_push_dispatched", {
+        "cycle_id": "g008-recovery-cycle-3", "attempt_id": "cycle3-benchmark-error",
+    })
+    registry.append("workload_attempt", {
+        "cycle_id": "g008-recovery-cycle-3", "attempt_id": "cycle3-benchmark-error",
+        "outcome": "terminal", "registration_event_index": benchmark_registration["event_index"],
+        "assigned_version": 13, "terminal_status": "ERROR",
+        "actual_gpu_seconds": 20, "output_bytes": 100,
+    })
+
+
+def test_cycle3_retry_after_reconciled_error_uses_exact_version_status_and_fresh_quota(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = _cycle3_recovery_setup(tmp_path)
+    _append_cycle3_terminal_benchmark_error(registry, registration)
+    api = FakeRecoveryApi(statuses=("ERROR", "COMPLETE"), version=13, assigned=14,
+                          quota_remaining=20_000, quota_used=80_000)
+
+    terminal = run_recovery_workload(
+        registry, registration["event_index"], make_recovery_source(tmp_path),
+        attempt_id="cycle3-benchmark-retry-01", implementation_variant_id=variant,
+        no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 123,
+        monotonic=lambda: 10.0, sleep=lambda _: None, poll_interval_seconds=1,
+    )
+
+    preflight = next(event for event in registry.events()
+                     if event["event_type"] == "workload_preflight"
+                     and event["event_data"]["attempt_id"] == "cycle3-benchmark-retry-01")
+    assert preflight["event_data"]["expected_current_version"] == 13
+    assert preflight["event_data"]["policy_evidence"]["preflight_status"] == "ERROR"
+    assert preflight["event_data"]["quota_evidence"]["remaining_gpu_seconds"] == 20_000
+    assert api.push_calls[0]["timeout"] == "30"
+    assert api.current_version == 14
+    assert terminal["event_data"]["terminal_status"] == "COMPLETE"
+
+
+def test_cycle3_retry_with_insufficient_fresh_quota_fails_before_preflight_or_dispatch(tmp_path):
+    from tools.kaggle.cli import run_recovery_workload
+
+    registry, registration, variant = _cycle3_recovery_setup(tmp_path)
+    _append_cycle3_terminal_benchmark_error(registry, registration)
+    api = FakeRecoveryApi(statuses=("ERROR",), version=13, assigned=14,
+                          quota_remaining=10_000, quota_used=90_000)
+    prior_events = registry.events()
+
+    with pytest.raises(KaggleError, match="quota cannot cover"):
+        run_recovery_workload(
+            registry, registration["event_index"], make_recovery_source(tmp_path),
+            attempt_id="cycle3-benchmark-retry-insufficient-quota", implementation_variant_id=variant,
+            no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
+            monotonic=lambda: 10.0, sleep=lambda _: None, poll_interval_seconds=1,
+        )
+
+    assert registry.events() == prior_events
+    assert api.push_calls == []
+
+
+def _cycle3_registration_payloads():
+    from training.eval.registry import (
+        cycle3_authorization_statement,
+        cycle3_preflight_context_sha256,
+        cycle3_registration_bindings_sha256,
+        cycle3_registration_record_sha256,
+    )
+
+    proposal_hash = "a" * 64
+    workloads = []
+    rows = []
+    for kind, run_uuid in (("benchmark", "benchmark-run"), ("train", "train-run")):
+        record = {"cycle_id": "g008-recovery-cycle-3", "run_uuid": run_uuid,
+                  "session_timeout_seconds": 2800 if kind == "benchmark" else 7200,
+                  "package_sha256": ("1" if kind == "benchmark" else "2") * 64}
+        registration_id = f"cycle3-{kind}"
+        row = {"registration_id": registration_id, "registration_kind": kind,
+               "run_uuid": run_uuid, "record_sha256": cycle3_registration_record_sha256(record)}
+        rows.append(row)
+        workloads.append({"registration_id": registration_id, "registration_kind": kind, "record": record})
+    bindings_hash = cycle3_registration_bindings_sha256(rows)
+    amendment = {
+        "cycle_id": "g008-recovery-cycle-3", "proposal_sha256": proposal_hash,
+        "registration_bindings_sha256": bindings_hash, "recovery_registrations": rows,
+        "kernel_id": "owner/kernel", "current_version_number": 12,
+        "current_terminal_status": "ERROR",
+        "current_status_evidence": {"status": "ERROR", "current_version_number": 12,
+                                    "kernel_id": "owner/kernel"},
+        "quota_gpu_seconds_remaining_before": 99468,
+        "quota_evidence": {"remaining_gpu_seconds": 99468, "used_gpu_seconds": 8532,
+                           "source": "pinned Kaggle SDK quota_view"},
+        "recovery_registrations": rows,
+    }
+    context_hash = cycle3_preflight_context_sha256(amendment)
+    amendment["preflight_context_sha256"] = context_hash
+    amendment["user_authorization"] = {
+        "proposal_sha256": proposal_hash, "registration_bindings_sha256": bindings_hash,
+        "preflight_context_sha256": context_hash,
+        "statement": cycle3_authorization_statement(proposal_hash, bindings_hash, context_hash),
+        "confirmed_at_utc": "2026-10-20T22:00:00Z"}
+    return amendment, workloads
+
+
+def test_cycle3_registration_helper_binds_authorization_and_adds_derived_pointers(tmp_path):
+    from tools.kaggle.cli import register_recovery_cycle3_workloads
+
+    class Cycle3Registry(FakeRecoveryRegistry):
+        def __init__(self, path):
+            super().__init__(path)
+            self.batch_calls = 0
+
+        def register_recovery_cycle3_batch(self, amendment, workloads):
+            self.batch_calls += 1
+            amendment_event = self.append("recovery_cycle_amendment_v2", amendment)
+            events = [amendment_event]
+            for item in workloads:
+                record = {**item["record"],
+                          "recovery_cycle_amendment_event_index": amendment_event["event_index"],
+                          "recovery_cycle_amendment_event_hash": amendment_event["event_hash"]}
+                events.append(self.append("registration", {
+                    "registration_id": item["registration_id"],
+                    "registration_kind": item["registration_kind"],
+                    "record": record, "cycle_id": "g008-recovery-cycle-3"}))
+            return events
+
+    registry = Cycle3Registry(tmp_path / "registry.jsonl")
+    amendment, workloads = _cycle3_registration_payloads()
+    api = FakeRecoveryApi(statuses=("ERROR",), version=12, quota_remaining=99468, quota_used=8532)
+    events = register_recovery_cycle3_workloads(registry, amendment, workloads, api=api)
+
+    assert registry.batch_calls == 1
+    assert [event["event_type"] for event in events] == [
+        "recovery_cycle_amendment_v2", "registration", "registration"]
+    assert [event["event_data"]["registration_kind"] for event in events[1:]] == ["benchmark", "train"]
+    for event, workload in zip(events[1:], workloads):
+        record = event["event_data"]["record"]
+        assert record["recovery_cycle_amendment_event_index"] == events[0]["event_index"]
+        assert record["recovery_cycle_amendment_event_hash"] == events[0]["event_hash"]
+        assert record == {**workload["record"],
+                          "recovery_cycle_amendment_event_index": events[0]["event_index"],
+                          "recovery_cycle_amendment_event_hash": events[0]["event_hash"]}
+
+
+def test_cycle3_registration_helper_rejects_record_drift_before_registry_mutation(tmp_path):
+    from tools.kaggle.cli import register_recovery_cycle3_workloads
+
+    registry = FakeRecoveryRegistry(tmp_path / "registry.jsonl")
+    amendment, workloads = _cycle3_registration_payloads()
+    workloads[0]["record"]["package_sha256"] = "f" * 64
+
+    with pytest.raises(KaggleError, match="record hash"):
+        register_recovery_cycle3_workloads(registry, amendment, workloads)
+    assert registry.events() == []
+
+
+def test_cycle3_registration_helper_rejects_preflight_snapshot_drift_before_mutation(tmp_path):
+    from tools.kaggle.cli import register_recovery_cycle3_workloads
+
+    registry = FakeRecoveryRegistry(tmp_path / "registry.jsonl")
+    amendment, workloads = _cycle3_registration_payloads()
+    amendment["quota_gpu_seconds_remaining_before"] -= 1
+
+    with pytest.raises(KaggleError, match="authorization"):
+        register_recovery_cycle3_workloads(registry, amendment, workloads)
+    assert registry.events() == []
+
+
+@pytest.mark.parametrize("drift", ["kernel", "version", "status", "quota"])
+def test_cycle3_registration_helper_rejects_live_context_drift_without_append(tmp_path, drift):
+    from tools.kaggle.cli import register_recovery_cycle3_workloads
+
+    registry = FakeRecoveryRegistry(tmp_path / "registry.jsonl")
+    amendment, workloads = _cycle3_registration_payloads()
+    api = FakeRecoveryApi(statuses=("ERROR",), version=12, quota_remaining=99468, quota_used=8532)
+    if drift == "kernel":
+        api.get_kernel = lambda kernel_id: {"kernel_id": "other/kernel", "current_version_number": 12}
+    elif drift == "version":
+        api.current_version = 13
+    elif drift == "status":
+        api.statuses = ["COMPLETE"]
+    elif drift == "quota":
+        api.quota_remaining -= 1
+
+    with pytest.raises(KaggleError, match="Live Cycle-3 kernel|authorized Cycle-3 snapshot"):
+        register_recovery_cycle3_workloads(registry, amendment, workloads, api=api)
+
+    assert registry.events() == []
+    assert api.push_calls == []
+
+
 class FakeRecoveryApi:
     def __init__(self, statuses=("COMPLETE", "COMPLETE"), *, version=10, assigned=11,
                  quota_remaining=40000, quota_used=1000, drift_after_status=False,

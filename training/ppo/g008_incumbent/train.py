@@ -401,7 +401,8 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
     benchmark_reset_counts = [0] * config.arena_count
     model.eval()
     for step_no in range(config.rollout_steps):
-        batch_obs = _observation_batch(states, [seat for _ in states for seat in range(2)])
+        batch_obs = _observation_batch([state for state in states for _ in range(2)],
+                                       [seat for _ in states for seat in range(2)])
         observations = _tensor_obs(torch, batch_obs, device)
         with torch.no_grad():
             logits, values = model(observations)

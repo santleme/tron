@@ -561,6 +561,113 @@ def register_recovery_cycle2_workloads(registry, amendment: dict, workloads: Seq
         raise KaggleError(f"Cycle-2 registry append failed; inspect the append-only head before continuing: {exc}") from exc
 
 
+def register_recovery_cycle3_workloads(registry, amendment: dict, workloads: Sequence[dict], *, api=None) -> list[dict]:
+    """Bind authorization to frozen C3 records, then append amendment and derived-pointer registrations."""
+    if not isinstance(workloads, Sequence) or isinstance(workloads, (str, bytes)) or len(workloads) != 2:
+        raise KaggleError("Cycle 3 requires exactly its approved benchmark and training workload records.")
+    if not isinstance(amendment, dict) or amendment.get("cycle_id") != "g008-recovery-cycle-3":
+        raise KaggleError("Cycle-3 amendment must bind the exact reviewed cycle ID.")
+    try:
+        from training.eval.registry import (
+            cycle3_authorization_statement,
+            cycle3_preflight_context_sha256,
+            cycle3_registration_bindings_sha256,
+            cycle3_registration_record_sha256,
+        )
+    except ImportError as exc:
+        raise KaggleError("Cycle-3 registration binding helpers are unavailable.") from exc
+
+    named = amendment.get("recovery_registrations")
+    if not isinstance(named, list) or len(named) != 2:
+        raise KaggleError("Cycle-3 amendment must name exactly two records before registry mutation.")
+    expected_kinds = ["benchmark", "train"]
+    if [row.get("registration_kind") if isinstance(row, dict) else None for row in named] != expected_kinds:
+        raise KaggleError("Cycle-3 amendment bindings must order benchmark then train.")
+    workload_map = {item.get("registration_id"): item for item in workloads if isinstance(item, dict)}
+    expected_map = {row.get("registration_id"): row for row in named if isinstance(row, dict)}
+    if len(workload_map) != 2 or workload_map.keys() != expected_map.keys():
+        raise KaggleError("Cycle-3 workloads differ from the amendment's exact registration IDs.")
+
+    ordered_workloads = []
+    projected_rows = []
+    for expected in named:
+        item = workload_map[expected["registration_id"]]
+        kind, record = item.get("registration_kind"), item.get("record")
+        if kind != expected["registration_kind"] or not isinstance(record, dict):
+            raise KaggleError("Cycle-3 workload kind or record differs from its authorized binding.")
+        if ("recovery_cycle_amendment_event_index" in record
+                or "recovery_cycle_amendment_event_hash" in record):
+            raise KaggleError("Cycle-3 records must be frozen before adding derived amendment pointers.")
+        if record.get("cycle_id") != "g008-recovery-cycle-3" or record.get("run_uuid") != expected.get("run_uuid"):
+            raise KaggleError("Cycle-3 workload record differs from its authorized cycle or run UUID.")
+        record_hash = cycle3_registration_record_sha256(record)
+        if expected.get("record_sha256") != record_hash:
+            raise KaggleError("Cycle-3 workload record hash differs from the user-authorized binding.")
+        projected_rows.append({key: expected[key] for key in (
+            "registration_id", "registration_kind", "run_uuid", "record_sha256")})
+        ordered_workloads.append(item)
+
+    proposal_hash = amendment.get("proposal_sha256")
+    bindings_hash = cycle3_registration_bindings_sha256(projected_rows)
+    preflight_context_hash = cycle3_preflight_context_sha256(amendment)
+    authorization = amendment.get("user_authorization")
+    if (amendment.get("registration_bindings_sha256") != bindings_hash
+            or amendment.get("preflight_context_sha256") != preflight_context_hash
+            or not isinstance(authorization, dict)
+            or authorization.get("proposal_sha256") != proposal_hash
+            or authorization.get("registration_bindings_sha256") != bindings_hash
+            or authorization.get("preflight_context_sha256") != preflight_context_hash
+            or authorization.get("statement") != cycle3_authorization_statement(
+                proposal_hash, bindings_hash, preflight_context_hash)
+            or not isinstance(authorization.get("confirmed_at_utc"), str)
+            or not authorization["confirmed_at_utc"].endswith("Z")):
+        raise KaggleError("Cycle-3 authorization must bind the exact proposal and ordered workload records.")
+
+    if api is None:
+        try:
+            from kaggle.api.kaggle_api_extended import KaggleApi
+            api = KaggleApi()
+            api.authenticate()
+        except (ImportError, AttributeError) as exc:
+            raise KaggleError("Pinned Kaggle SDK is required to verify the live Cycle-3 preflight context.") from exc
+    kernel_id = _kernel_id(amendment.get("kernel_id"))
+    try:
+        before = _sdk_metadata(api, kernel_id)
+        live_status, _ = _sdk_status(api, kernel_id)
+        after = _sdk_metadata(api, kernel_id)
+    except KaggleError as exc:
+        raise KaggleError("Live Cycle-3 kernel identity/status could not be verified; no registry events were appended.") from exc
+    if before != after or live_status not in {"COMPLETE", "ERROR", "CANCELLED", "TIMEOUT"}:
+        raise KaggleError("Live Cycle-3 kernel is changing or nonterminal; no registry events were appended.")
+    quota_remaining, quota_used = _quota_seconds(api)
+    live_context = {
+        "kernel_id": kernel_id,
+        "current_version_number": after["current_version_number"],
+        "current_terminal_status": live_status,
+        "current_status_evidence": {
+            "status": live_status,
+            "current_version_number": after["current_version_number"],
+            "kernel_id": kernel_id,
+        },
+        "quota_gpu_seconds_remaining_before": quota_remaining,
+        "quota_evidence": {
+            "remaining_gpu_seconds": quota_remaining,
+            "used_gpu_seconds": quota_used,
+            "source": "pinned Kaggle SDK quota_view",
+        },
+    }
+    if cycle3_preflight_context_sha256(live_context) != preflight_context_hash:
+        raise KaggleError("Live kernel/quota context differs from the user-authorized Cycle-3 snapshot; no registry events were appended.")
+
+    try:
+        batch_workloads = [{"registration_id": item["registration_id"],
+                            "registration_kind": item["registration_kind"],
+                            "record": dict(item["record"])} for item in ordered_workloads]
+        return registry.register_recovery_cycle3_batch(amendment, batch_workloads)
+    except Exception as exc:
+        raise KaggleError(f"Cycle-3 registry append failed; inspect the append-only head before continuing: {exc}") from exc
+
+
 def register_recovery_benchmark_artifact(registry, attempt_event: dict,
                                          artifact_root: Path, envelope_path: Path) -> dict:
     """Write and register an immutable post-download envelope for a successful /3 attempt."""
@@ -767,9 +874,164 @@ def _recovery_record(registration_event: dict, variant_id: str) -> tuple[dict, d
     )}
 
 
+def _cycle3_amendment(events: list[dict], registration_event: dict) -> dict:
+    """Resolve the exact C3 amendment pinned by a workload registration."""
+    data = registration_event.get("event_data", {})
+    record = data.get("record", {})
+    if data.get("cycle_id") != "g008-recovery-cycle-3" or record.get("cycle_id") != data.get("cycle_id"):
+        raise KaggleError("Cycle-3 recovery requires an exact current-cycle registration.")
+    index = record.get("recovery_cycle_amendment_event_index")
+    expected_hash = record.get("recovery_cycle_amendment_event_hash")
+    if type(index) is not int or not 0 <= index < len(events):
+        raise KaggleError("Cycle-3 registration does not pin an exact prior amendment event.")
+    amendment_event = events[index]
+    if (amendment_event.get("event_type") != "recovery_cycle_amendment_v2"
+            or amendment_event.get("event_hash") != expected_hash
+            or amendment_event.get("event_data", {}).get("cycle_id") != data.get("cycle_id")
+            or amendment_event.get("event_data", {}).get("schema_id") != "g008-kaggle-recovery-cycle-amendment"
+            or amendment_event.get("event_data", {}).get("schema_version") != 2):
+        raise KaggleError("Cycle-3 registration amendment identity does not match the verified registry chain.")
+    return amendment_event["event_data"]
+
+
+def _expected_recovery_current_version(events: list[dict], registration_event: dict) -> int | None:
+    """Return the exact reconciled cursor for a cycle-specific workload."""
+    data = registration_event.get("event_data", {})
+    cycle_id = data.get("cycle_id")
+    if cycle_id == "g008-recovery-cycle-3":
+        amendment = _cycle3_amendment(events, registration_event)
+    elif cycle_id == "g008-recovery-cycle-2":
+        cycle_event = next((event for event in events if event.get("event_type") == "recovery_cycle_amendment"
+                            and event.get("event_data", {}).get("cycle_id") == cycle_id), None)
+        if cycle_event is None:
+            raise KaggleError("Cycle-2 registration has no matching cycle amendment.")
+        amendment = cycle_event["event_data"]
+    else:
+        amendment = None
+    if cycle_id in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
+        latest_attempt = next((event for event in reversed(events)
+                               if event.get("event_type") == "workload_attempt"
+                               and event.get("event_data", {}).get("cycle_id") == cycle_id), None)
+        if latest_attempt:
+            latest_data = latest_attempt["event_data"]
+            return (latest_data.get("assigned_version") if latest_data.get("outcome") == "terminal"
+                    else latest_data.get("no_assignment_metadata", {}).get("post_push_current_version"))
+        return amendment.get("current_version_number")
+    previous = [event for event in events if event.get("event_type") == "workload_attempt"
+                and event.get("event_data", {}).get("registration_event_index") == registration_event.get("event_index")]
+    if previous and previous[-1]["event_data"].get("assigned_version") is not None:
+        return previous[-1]["event_data"].get("assigned_version")
+    historical = next((event["event_data"]["historical_overrun_evidence"].get("current_version_number")
+                       for event in events if event.get("event_type") == "recovery_amendment"), None)
+    return historical
+
+
+def _expected_recovery_terminal_status(events: list[dict], registration_event: dict) -> str | None:
+    """Return the status that must still be live at the reconciled C3 version cursor."""
+    data = registration_event.get("event_data", {})
+    if data.get("cycle_id") != "g008-recovery-cycle-3":
+        return None
+    amendment = _cycle3_amendment(events, registration_event)
+    for event in reversed(events):
+        attempt = event.get("event_data", {})
+        if (event.get("event_type") == "workload_attempt"
+                and attempt.get("cycle_id") == data["cycle_id"]
+                and attempt.get("outcome") == "terminal"
+                and attempt.get("assigned_version") is not None):
+            return attempt.get("terminal_status")
+    return amendment.get("current_terminal_status")
+
+
 def _validate_recovery_budget(registry, registration_event: dict, timeout: int,
                               quota_remaining: int, *, resuming_attempt_id: str | None = None) -> dict:
     events = registry.events()
+    registration_data = registration_event.get("event_data", {})
+    if registration_data.get("cycle_id") == "g008-recovery-cycle-3":
+        amendment = _cycle3_amendment(events, registration_event)
+        kind = registration_data.get("registration_kind")
+        category = "benchmark" if kind == "benchmark" else "training" if kind == "train" else None
+        record = registration_data.get("record", {})
+        if category is None or type(timeout) is not int or timeout != record.get("session_timeout_seconds"):
+            raise KaggleError("Cycle-3 budget check requires the exact registered workload timeout and kind.")
+
+        cycle_id = registration_data["cycle_id"]
+        cycle_actual_gpu = {"benchmark": 0, "train": 0}
+        cycle_actual_output = {"benchmark": 0, "training": 0}
+        states = {}
+        for event in events:
+            data = event.get("event_data", {})
+            if data.get("cycle_id") != cycle_id:
+                continue
+            typ, attempt_id = event.get("event_type"), data.get("attempt_id")
+            if typ == "workload_preflight":
+                states[attempt_id] = {"phase": "preflight", "data": data}
+            elif typ == "workload_push_dispatched":
+                states.setdefault(attempt_id, {"phase": "dispatched", "data": data})["phase"] = "dispatched"
+            elif typ == "workload_push_accepted":
+                states.setdefault(attempt_id, {"phase": "accepted", "data": data})["phase"] = "accepted"
+            elif typ == "workload_attempt":
+                states[attempt_id] = {"phase": "terminal", "data": data}
+                prior_registration = events[data["registration_event_index"]]["event_data"]
+                prior_kind = prior_registration["registration_kind"]
+                prior_category = "benchmark" if prior_kind == "benchmark" else "training"
+                cycle_actual_gpu[prior_kind] += data["actual_gpu_seconds"]
+                cycle_actual_output[prior_category] += data["output_bytes"]
+
+        pending = {aid: state for aid, state in states.items() if state["phase"] != "terminal"}
+        if resuming_attempt_id is not None and pending.get(resuming_attempt_id, {}).get("phase") not in {
+                "preflight", "accepted"}:
+            raise KaggleError("Only the exact current-cycle pending attempt may be resumed.")
+        other_pending = set(pending) - ({resuming_attempt_id} if resuming_attempt_id else set())
+        if other_pending:
+            raise KaggleError("An unresolved cycle-3 attempt blocks all new workload events and pushes.")
+
+        caps = amendment["compute_caps_gpu_seconds"]
+        workload_cap = record.get("workload_gpu_seconds_cap")
+        if workload_cap != caps[kind] or cycle_actual_gpu[kind] + timeout > workload_cap:
+            raise KaggleError("Full timeout reservation exceeds the current-cycle workload GPU budget.")
+        pending_gpu = sum(state["data"]["session_timeout_seconds"] for aid, state in pending.items()
+                          if aid != resuming_attempt_id)
+        current_projected = (amendment["project_gpu_seconds_before"] + sum(cycle_actual_gpu.values())
+                             + pending_gpu + timeout)
+        future_train = caps["train"] if kind == "benchmark" else 0
+        experiment_projected = current_projected + future_train
+        final_reserve = amendment["protected_final_reserve_gpu_seconds"]
+        projected_total = experiment_projected + final_reserve
+        if experiment_projected > caps["project_experiment"]:
+            raise KaggleError("Full timeout reservation exceeds the project experiment allocation.")
+        if projected_total > caps["project_total"]:
+            raise KaggleError("Full timeout reservation exceeds the project total or protected reserve.")
+        if quota_remaining < timeout + future_train + final_reserve:
+            raise KaggleError("Kaggle quota cannot cover this attempt, remaining training, and final reserve.")
+
+        output_caps = amendment["output_category_reservations_bytes"]
+        run_output_cap = record.get("workload_output_bytes_cap")
+        pending_output = {"benchmark": 0, "training": 0}
+        for aid, state in pending.items():
+            if aid == resuming_attempt_id:
+                continue
+            pending_data = state["data"]
+            pending_reg = events[pending_data["registration_event_index"]]["event_data"]
+            pending_category = "benchmark" if pending_reg["registration_kind"] == "benchmark" else "training"
+            pending_output[pending_category] += pending_reg["record"]["workload_output_bytes_cap"]
+        output_caps_bytes = amendment["output_caps_bytes"]
+        if (cycle_actual_output[category] + pending_output[category] + run_output_cap > output_caps[category]
+                or run_output_cap > output_caps_bytes["per_run"]):
+            raise KaggleError("Full registered output reservation exceeds its cycle-3 category cap.")
+        output_reserved = sum(output_caps.values())
+        output_projected = amendment["project_output_bytes_before"] + output_reserved
+        if output_projected > output_caps_bytes["aggregate"]:
+            raise KaggleError("Cycle-3 output categories exceed the aggregate project cap.")
+        return {"actual": cycle_actual_gpu, "output_bytes": cycle_actual_output,
+                "campaign_gpu_seconds_current_attempt_projected": current_projected,
+                "future_train_reserve_gpu_seconds": future_train,
+                "campaign_gpu_seconds_projected": experiment_projected,
+                "campaign_gpu_seconds_with_final_reserve": projected_total,
+                "quota_gpu_seconds_remaining": quota_remaining,
+                "protected_final_reserve_gpu_seconds": final_reserve,
+                "cycle_id": cycle_id,
+                "project_output_bytes_projected_with_reserves": output_projected}
+
     cycle2_event = next((event for event in events if event.get("event_type") == "recovery_cycle_amendment"), None)
     if cycle2_event is not None:
         cycle2 = cycle2_event["event_data"]
@@ -946,6 +1208,8 @@ def run_recovery_workload(registry, registration_event_index: int, source_dir: P
                    if event.get("event_type") == "recovery_cycle_amendment"), None)
     if cycle_id == "g008-recovery-cycle-2" and cycle2 is None:
         raise KaggleError("Cycle-2 registration has no matching cycle amendment.")
+    cycle3_amendment = (_cycle3_amendment(events, registration)
+                        if cycle_id == "g008-recovery-cycle-3" else None)
     record, hashes = _recovery_record(registration, implementation_variant_id)
     kernel_id = _kernel_id(record["kernel_id"])
     timeout = record["session_timeout_seconds"]
@@ -1009,23 +1273,7 @@ def run_recovery_workload(registry, registration_event_index: int, source_dir: P
                             if reg_data["registration_kind"] == "train" else None)):
                     raise KaggleError("Existing preflight tail does not match its exact registration, package, timeout, or operator evidence.")
             else:
-                if cycle_id == "g008-recovery-cycle-2":
-                    latest_cycle_attempt = next((event for event in reversed(events)
-                                                 if event.get("event_type") == "workload_attempt"
-                                                 and event.get("event_data", {}).get("cycle_id") == cycle_id), None)
-                    if latest_cycle_attempt:
-                        latest_data = latest_cycle_attempt["event_data"]
-                        expected_version = (latest_data.get("assigned_version")
-                                            if latest_data.get("outcome") == "terminal"
-                                            else latest_data.get("no_assignment_metadata", {}).get(
-                                                "post_push_current_version"))
-                    else:
-                        expected_version = cycle2.get("current_version_number")
-                else:
-                    expected_version = (previous[-1]["event_data"].get("assigned_version")
-                                        if previous and previous[-1]["event_data"].get("assigned_version") is not None
-                                        else next((event["event_data"]["historical_overrun_evidence"]["current_version_number"]
-                                                   for event in events if event.get("event_type") == "recovery_amendment"), None))
+                expected_version = _expected_recovery_current_version(events, registration)
             if type(expected_version) is not int or expected_version <= 0:
                 raise KaggleError("No exact reconciled kernel version is available for recovery preflight.")
             before = _sdk_metadata(api, kernel_id)
@@ -1038,6 +1286,34 @@ def run_recovery_workload(registry, registration_event_index: int, source_dir: P
             if prior_status not in {"COMPLETE", "ERROR", "CANCELLED", "TIMEOUT"}:
                 raise KaggleError("Prior latest Kaggle status is not terminal.")
             quota_remaining, quota_used_before = _quota_seconds(api)
+            if cycle3_amendment is not None:
+                prior_cycle3_dispatch = any(
+                    event.get("event_type") == "workload_push_dispatched"
+                    and event.get("event_data", {}).get("cycle_id") == cycle_id
+                    for event in events)
+                if not prior_cycle3_dispatch:
+                    from training.eval.registry import cycle3_preflight_context_sha256
+                    live_context = {
+                        "kernel_id": kernel_id,
+                        "current_version_number": after["current_version_number"],
+                        "current_terminal_status": prior_status,
+                        "current_status_evidence": {
+                            "status": prior_status,
+                            "current_version_number": after["current_version_number"],
+                            "kernel_id": kernel_id,
+                        },
+                        "quota_gpu_seconds_remaining_before": quota_remaining,
+                        "quota_evidence": {
+                            "remaining_gpu_seconds": quota_remaining,
+                            "used_gpu_seconds": quota_used_before,
+                            "source": "pinned Kaggle SDK quota_view",
+                        },
+                    }
+                    if cycle3_preflight_context_sha256(live_context) != cycle3_amendment.get(
+                            "preflight_context_sha256"):
+                        raise KaggleError("Live initial Cycle-3 status/quota context differs from its authorized snapshot.")
+                elif prior_status != _expected_recovery_terminal_status(events, registration):
+                    raise KaggleError("Live Cycle-3 status differs from its exact reconciled terminal attempt.")
             budget = _validate_recovery_budget(
                 registry, registration, timeout, quota_remaining,
                 resuming_attempt_id=attempt_id if phase == "workload_preflight" else None,

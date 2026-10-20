@@ -60,7 +60,7 @@ class G008PrincipalBenchmarkTests(unittest.TestCase):
 
     def test_selector_binds_exact_snapshot_hashes_and_fails_on_drift(self):
         baseline = g008_benchmark.implementation_hashes("incumbent")
-        self.assertEqual(baseline, {"trainer_sha256": "419db34631b461193a9942bddc9b65841ed4a984c5acd9b1bfaade33a75f55d9",
+        self.assertEqual(baseline, {"trainer_sha256": "18eca4fe98d635646e51dd0e25d229aa64d2563ff7ad177881b89e7459b3f4e1",
                                     "engine_sha256": "a93dc0c8001325dbb55bb90da5cd9ae4e262948de9b27be01a195299fd8be25b"})
         incumbent_train, identity = g008_benchmark.select_implementation("incumbent")
         self.assertEqual(identity["role"], "incumbent")
@@ -84,6 +84,36 @@ class G008PrincipalBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(state.agents), 2)
         self.assertEqual([seed.label for seed in seeds], ["episode", "agent/0", "agent/1"])
         self.assertEqual(g008_benchmark.implementation_hashes("incumbent"), hashes_before)
+
+    def test_incumbent_collector_expands_states_for_both_seats(self):
+        import contextlib
+        import numpy as np
+
+        incumbent = g008_benchmark._load_incumbent_train_module()
+        config = incumbent.TrainConfig(width=6, height=6, arena_count=1,
+                                       rollout_steps=1, total_updates=1,
+                                       update_epochs=1, minibatch_size=1,
+                                       hidden_size=8, device="cpu")
+        class ReachedPolicy(Exception):
+            pass
+
+        class Model:
+            def eval(self):
+                pass
+
+            def __call__(self, observations):
+                raise ReachedPolicy
+
+        torch_stub = type("TorchStub", (), {"no_grad": staticmethod(contextlib.nullcontext)})
+
+        def tensor_obs(_torch, observations, _device):
+            self.assertEqual(observations.shape[0], 2)
+            return np.asarray(observations)
+
+        with patch.object(incumbent, "_tensor_obs", side_effect=tensor_obs):
+            with self.assertRaises(ReachedPolicy):
+                incumbent._collect(torch_stub, Model(), None, config, 41, "cpu", 0)
+
 
     def test_parity_comparison_detects_collector_mismatch(self):
         config, _ = load_principal_config()

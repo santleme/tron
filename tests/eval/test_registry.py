@@ -1,6 +1,8 @@
 import hashlib
 import json
+import stat
 import uuid
+import copy
 
 import pytest
 
@@ -564,8 +566,8 @@ def _append_cycle2_registrations(registry, amendment):
                   "workload_gpu_seconds_cap": 5600 if kind == "benchmark" else 7200,
                   "workload_output_bytes_cap": 100_000_000 if kind == "benchmark" else 1_000_000_000,
                   "accelerator_count": 1, "machine_shape": "NvidiaTeslaT4", "kernel_id": "owner/kernel",
-                  **({"implementation_variants": variants} if kind == "benchmark"
-                     else {"allowed_implementation_variants": variants})}
+                  **({"implementation_variants": copy.deepcopy(variants)} if kind == "benchmark"
+                     else {"allowed_implementation_variants": copy.deepcopy(variants)})}
         registrations.append(registry._append("registration", {
             "registration_id": row["registration_id"], "registration_kind": kind,
             "record": record, "cycle_id": "g008-recovery-cycle-2"}))
@@ -623,6 +625,372 @@ def test_cycle2_attempt_cannot_reference_retired_cycle1_registration(tmp_path, m
                 registration_event_hash=registry.events()[14]["event_hash"])
     with pytest.raises(RegistryError, match="current-cycle|retired|registration"):
         registry.preflight_workload(data)
+
+
+def _cycle3_parent(tmp_path, monkeypatch):
+    registry, parent = _cycle2_parent(tmp_path, monkeypatch)
+    amendment = _cycle2_amendment(parent)
+    _, registrations = _append_cycle2_registrations(registry, amendment)
+    benchmark = registrations[0]
+    preflight_data = _preflight(benchmark, timeout=2800)
+    preflight_data.update(cycle_id="g008-recovery-cycle-2", expected_current_version=11,
+                          attempt_id="cycle2-benchmark-attempt")
+    preflight = registry.preflight_workload(preflight_data)
+    dispatch_data = _dispatch(preflight_data, attempt_id="cycle2-benchmark-attempt")
+    dispatch_data.update(cycle_id="g008-recovery-cycle-2", preflight_event_index=preflight["event_index"],
+                         preflight_event_hash=preflight["event_hash"])
+    dispatch = registry.dispatch_workload_push(dispatch_data)
+    accepted = registry.accept_workload_push({
+        "attempt_id": "cycle2-benchmark-attempt", "cycle_id": "g008-recovery-cycle-2",
+        "registration_event_index": benchmark["event_index"],
+        "registration_event_hash": benchmark["event_hash"],
+        "preflight_event_index": preflight["event_index"], "preflight_event_hash": preflight["event_hash"],
+        "dispatch_event_index": dispatch["event_index"], "dispatch_event_hash": dispatch["event_hash"],
+        "assigned_version": 12, "implementation_variant_id": "paired",
+        "push_response": {"assigned_version": 12},
+        "confirming_metadata": {"current_version_number": 12, "kernel_id": "owner/kernel"},
+        "lock_head_hash": None,
+    })
+    terminal_data = _attempt(preflight, dispatch, accepted_event=accepted)
+    terminal_data.update(cycle_id="g008-recovery-cycle-2", attempt_id="cycle2-benchmark-attempt",
+                         actual_gpu_seconds=115, output_bytes=3763, terminal_status="ERROR",
+                         terminal_metadata={"current_version_number": 12, "kernel_id": "owner/kernel", "status": "ERROR"},
+                         status_evidence=[{"status": "ERROR", "current_version_number": 12,
+                                           "kernel_id": "owner/kernel"}])
+    terminal = registry.resolve_workload_attempt(terminal_data)
+    assert terminal["event_index"] == 26
+    monkeypatch.setattr(registry_module, "_CYCLE3_PARENT_EVENT_HASH", terminal["event_hash"])
+    return registry, terminal
+
+
+def _cycle3_amendment(parent, **overrides):
+    proposal = registry_module._CYCLE3_PROPOSAL_SHA256
+    identities = [
+        {"registration_id": "cycle3-benchmark", "registration_kind": "benchmark", "run_uuid": str(uuid.uuid4())},
+        {"registration_id": "cycle3-train", "registration_kind": "train", "run_uuid": str(uuid.uuid4())},
+    ]
+    record_templates = _cycle3_record_templates(identities)
+    registrations = [{**identity, "record_sha256": registry_module.cycle3_registration_record_sha256(
+        record_templates[identity["registration_kind"]])} for identity in identities]
+    binding_digest = registry_module.cycle3_registration_bindings_sha256(registrations)
+    context = {
+        "kernel_id": "owner/kernel", "current_version_number": 12, "current_terminal_status": "ERROR",
+        "current_status_evidence": {"status": "ERROR", "current_version_number": 12, "kernel_id": "owner/kernel"},
+        "quota_gpu_seconds_remaining_before": 99468,
+        "quota_evidence": {"remaining_gpu_seconds": 99468, "used_gpu_seconds": 8532,
+                           "source": "pinned Kaggle SDK quota_view"},
+    }
+    context_digest = registry_module.cycle3_preflight_context_sha256(context)
+    data = {
+        "schema_id": "g008-kaggle-recovery-cycle-amendment", "schema_version": 2,
+        "cycle_id": "g008-recovery-cycle-3", "created_at_utc": "2026-10-20T22:00:00Z",
+        "prior_head_hash": parent["event_hash"], "prior_final_event_index": 26,
+        "proposal_sha256": proposal, "retired_registration_event_indices": [21, 22],
+        "recovery_registrations": registrations,
+        "registration_bindings_sha256": binding_digest,
+        "preflight_context_sha256": context_digest,
+        "compute_caps_gpu_seconds": {"benchmark": 5600, "train": 7200,
+                                      "project_experiment": 21600, "project_total": 28800},
+        "project_gpu_seconds_before": 8664, "project_output_bytes_before": 34685,
+        "quota_gpu_seconds_remaining_before": 99468, "protected_final_reserve_gpu_seconds": 7200,
+        "output_caps_bytes": {"aggregate": 5_000_000_000, "per_run": 1_000_000_000},
+        "output_category_reservations_bytes": {"benchmark": 1_000_000_000, "training": 1_000_000_000,
+                                                "validation": 1_000_000_000, "final": 1_000_000_000},
+        "kernel_id": context["kernel_id"], "current_version_number": context["current_version_number"],
+        "current_terminal_status": context["current_terminal_status"],
+        "current_status_evidence": context["current_status_evidence"],
+        "quota_evidence": context["quota_evidence"],
+        "quota_gpu_seconds_remaining_before": context["quota_gpu_seconds_remaining_before"],
+        "user_authorization": {"proposal_sha256": proposal,
+                               "registration_bindings_sha256": binding_digest,
+                               "preflight_context_sha256": context_digest,
+                               "statement": registry_module.cycle3_authorization_statement(
+                                   proposal, binding_digest, context_digest),
+                               "confirmed_at_utc": "2026-10-20T22:00:00Z"},
+    }
+    data.update(overrides)
+    return data
+
+
+def _cycle3_record_templates(registration_rows):
+    hashes = {"package_sha256": "1" * 64, "source_sha256": "2" * 64,
+              "config_sha256": "3" * 64, "seed_plan_sha256": registry_module._RECOVERY_SEED_PLAN_SHA256,
+              "backend_sha256": "4" * 64, "trainer_sha256": "5" * 64, "engine_sha256": "6" * 64}
+    variants = [
+        {"variant_id": name, "package_sha256": package * 64, "source_sha256": source * 64,
+         "trainer_sha256": trainer * 64, "backend_sha256": backend * 64,
+         "engine_sha256": engine * 64, "config_sha256": "3" * 64,
+         "seed_plan_sha256": registry_module._RECOVERY_SEED_PLAN_SHA256}
+        for name, package, source, trainer, backend, engine in (
+            ("incumbent", "1", "2", "3", "4", "5"), ("candidate", "7", "8", "9", "a", "b"))
+    ]
+    records = {}
+    for kind, timeout in (("benchmark", 2800), ("train", 7200)):
+        row = next(r for r in registration_rows if r["registration_kind"] == kind)
+        record = {**hashes, "cycle_id": "g008-recovery-cycle-3", "run_uuid": row["run_uuid"],
+                  "session_timeout_seconds": timeout,
+                  "workload_gpu_seconds_cap": 5600 if kind == "benchmark" else 7200,
+                  "workload_output_bytes_cap": 100_000_000 if kind == "benchmark" else 1_000_000_000,
+                  "accelerator_count": 1, "machine_shape": "NvidiaTeslaT4", "kernel_id": "owner/kernel",
+                  **({"implementation_variants": copy.deepcopy(variants)} if kind == "benchmark"
+                     else {"allowed_implementation_variants": copy.deepcopy(variants)})}
+        records[kind] = record
+    return records
+
+
+def _cycle3_workload_candidates(amendment):
+    templates = _cycle3_record_templates(amendment["recovery_registrations"])
+    workloads = []
+    for row in amendment["recovery_registrations"]:
+        kind = row["registration_kind"]
+        workloads.append({"registration_id": row["registration_id"], "registration_kind": kind,
+                          "record": templates[kind]})
+    return workloads
+
+
+def _refresh_cycle3_bindings(amendment, workloads):
+    by_id = {workload["registration_id"]: workload for workload in workloads}
+    for row in amendment["recovery_registrations"]:
+        row["record_sha256"] = registry_module.cycle3_registration_record_sha256(
+            by_id[row["registration_id"]]["record"])
+    digest = registry_module.cycle3_registration_bindings_sha256(amendment["recovery_registrations"])
+    amendment["registration_bindings_sha256"] = digest
+    authorization = amendment["user_authorization"]
+    authorization["registration_bindings_sha256"] = digest
+    authorization["statement"] = registry_module.cycle3_authorization_statement(
+        amendment["proposal_sha256"], digest, amendment["preflight_context_sha256"])
+
+
+def _append_cycle3_registrations(registry, amendment):
+    events = registry.register_recovery_cycle3_batch(amendment, _cycle3_workload_candidates(amendment))
+    return events[0], events[1:]
+
+
+def _cycle3_successful_benchmark(tmp_path, monkeypatch, *, attest=True, record_artifact=True, close_lock=True):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    _, registrations = _append_cycle3_registrations(registry, amendment)
+    benchmark = registrations[0]
+    attempt_id = "cycle3-benchmark-attempt"
+    preflight_data = _preflight(benchmark, attempt_id=attempt_id, timeout=2800)
+    preflight_data.update(cycle_id="g008-recovery-cycle-3", expected_current_version=12)
+    preflight = registry.preflight_workload(preflight_data)
+    dispatch_data = _dispatch(preflight_data, attempt_id=attempt_id)
+    dispatch_data.update(cycle_id="g008-recovery-cycle-3", preflight_event_index=preflight["event_index"],
+                         preflight_event_hash=preflight["event_hash"])
+    dispatch = registry.dispatch_workload_push(dispatch_data)
+    accepted = registry.accept_workload_push({
+        "attempt_id": attempt_id, "cycle_id": "g008-recovery-cycle-3",
+        "registration_event_index": benchmark["event_index"], "registration_event_hash": benchmark["event_hash"],
+        "preflight_event_index": preflight["event_index"], "preflight_event_hash": preflight["event_hash"],
+        "dispatch_event_index": dispatch["event_index"], "dispatch_event_hash": dispatch["event_hash"],
+        "assigned_version": 13, "implementation_variant_id": "paired",
+        "push_response": {"assigned_version": 13},
+        "confirming_metadata": {"current_version_number": 13, "kernel_id": "owner/kernel"},
+        "lock_head_hash": None,
+    })
+    terminal_data = _attempt(preflight, dispatch, accepted_event=accepted)
+    terminal_data.update(cycle_id="g008-recovery-cycle-3", actual_gpu_seconds=10, output_bytes=5,
+                         terminal_status="COMPLETE",
+                         terminal_metadata={"current_version_number": 13, "kernel_id": "owner/kernel", "status": "COMPLETE"},
+                         status_evidence=[{"status": "COMPLETE", "current_version_number": 13,
+                                           "kernel_id": "owner/kernel"}])
+    terminal = registry.resolve_workload_attempt(terminal_data)
+    artifact = None
+    if record_artifact:
+        artifact = registry.register_benchmark_artifact(
+            "a" * 64, benchmark["event_index"], benchmark["event_hash"],
+            attempt_event_index=terminal["event_index"], attempt_event_hash=terminal["event_hash"],
+            report_sha256="b" * 64, selection_evidence=_selection_evidence())
+    lock = registry.close_registrations() if record_artifact and close_lock else None
+    attestation = registry.attest_benchmark(artifact["event_index"]) if attest and lock is not None else None
+    return registry, registrations, terminal, artifact, lock, attestation
+
+
+def test_cycle3_appends_only_after_reconciled_cycle2_and_replays(tmp_path, monkeypatch):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    registry.path.chmod(0o640)
+    before_stat = registry.path.stat()
+    event, registrations = _append_cycle3_registrations(registry, amendment)
+    assert event["event_index"] == 27
+    assert [row["event_index"] for row in registrations] == [28, 29]
+    assert registry.events()[-1] == registrations[-1]
+    after_stat = registry.path.stat()
+    assert stat.S_IMODE(after_stat.st_mode) == stat.S_IMODE(before_stat.st_mode)
+    assert (after_stat.st_uid, after_stat.st_gid) == (before_stat.st_uid, before_stat.st_gid)
+    assert amendment["project_gpu_seconds_before"] == 8549 + 115
+    assert amendment["project_output_bytes_before"] == 30922 + 3763
+
+
+@pytest.mark.parametrize("field,value", [
+    ("prior_final_event_index", 25),
+    ("retired_registration_event_indices", [21]),
+    ("project_gpu_seconds_before", 8665),
+    ("project_output_bytes_before", 34686),
+    ("current_version_number", 11),
+    ("current_terminal_status", "COMPLETE"),
+    ("compute_caps_gpu_seconds", {"benchmark": 5600, "train": 7200, "project_experiment": 21600, "project_total": 30000}),
+])
+def test_cycle3_rejects_parent_budget_status_and_retirement_mutations(tmp_path, monkeypatch, field, value):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    with pytest.raises(RegistryError):
+        amendment = _cycle3_amendment(parent, **{field: value})
+        registry.register_recovery_cycle3_batch(amendment, _cycle3_workload_candidates(amendment))
+    assert registry.head[1] == 26
+
+
+def test_cycle3_requires_proposal_bound_user_authorization(tmp_path, monkeypatch):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    amendment["user_authorization"]["proposal_sha256"] = "1" * 64
+    with pytest.raises(RegistryError, match="authorization"):
+        registry.register_recovery_cycle3_batch(amendment, _cycle3_workload_candidates(amendment))
+
+
+def test_cycle3_authorization_rejects_registration_binding_digest_drift(tmp_path, monkeypatch):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    amendment["user_authorization"]["registration_bindings_sha256"] = "1" * 64
+    with pytest.raises(RegistryError, match="authorization"):
+        registry.register_recovery_cycle3_batch(amendment, _cycle3_workload_candidates(amendment))
+
+
+@pytest.mark.parametrize("field,value", [
+    ("current_version_number", 13),
+    ("quota_gpu_seconds_remaining_before", 12345),
+])
+def test_cycle3_authorization_rejects_live_kernel_or_quota_context_drift(tmp_path, monkeypatch, field, value):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    amendment[field] = value
+    with pytest.raises(RegistryError, match="preflight context digest"):
+        registry.register_recovery_cycle3_batch(amendment, _cycle3_workload_candidates(amendment))
+
+
+def test_cycle3_authorization_rejects_context_digest_mismatch(tmp_path, monkeypatch):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    amendment["user_authorization"]["preflight_context_sha256"] = "1" * 64
+    with pytest.raises(RegistryError, match="authorization"):
+        registry.register_recovery_cycle3_batch(amendment, _cycle3_workload_candidates(amendment))
+
+
+def test_cycle3_registration_rejects_package_record_drift(tmp_path, monkeypatch):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    workloads = _cycle3_workload_candidates(amendment)
+    record = workloads[0]["record"]
+    record["package_sha256"] = "f" * 64
+    with pytest.raises(RegistryError, match="user-authorized binding"):
+        registry.register_recovery_cycle3_batch(amendment, workloads)
+    assert registry.head[1] == 26
+
+
+def test_cycle3_batch_rejects_crossed_variant_hashes_without_partial_append(tmp_path, monkeypatch):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    workloads = _cycle3_workload_candidates(amendment)
+    train = next(workload for workload in workloads if workload["registration_kind"] == "train")
+    candidate = next(v for v in train["record"]["allowed_implementation_variants"]
+                     if v["variant_id"] == "candidate")
+    candidate["source_sha256"] = "f" * 64
+    _refresh_cycle3_bindings(amendment, workloads)
+    before = registry.path.read_bytes()
+    with pytest.raises(RegistryError, match="shared variant hashes"):
+        registry.register_recovery_cycle3_batch(amendment, workloads)
+    assert registry.path.read_bytes() == before
+    assert registry.head[1] == 26
+
+
+@pytest.mark.parametrize("reuse", ["registration_id", "run_uuid"])
+def test_cycle3_batch_rejects_historical_identity_reuse_without_partial_append(tmp_path, monkeypatch, reuse):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    workloads = _cycle3_workload_candidates(amendment)
+    first_row, first_workload = amendment["recovery_registrations"][1], workloads[1]
+    if reuse == "registration_id":
+        first_row["registration_id"] = registry.events()[0]["event_data"]["registration_id"]
+        first_workload["registration_id"] = first_row["registration_id"]
+    else:
+        historical_uuid = registry.events()[14]["event_data"]["record"]["run_uuid"]
+        first_row["run_uuid"] = historical_uuid
+        first_workload["record"]["run_uuid"] = historical_uuid
+    _refresh_cycle3_bindings(amendment, workloads)
+    before = registry.path.read_bytes()
+    with pytest.raises(RegistryError, match="reuses a retired identity"):
+        registry.register_recovery_cycle3_batch(amendment, workloads)
+    assert registry.path.read_bytes() == before
+    assert registry.head[1] == 26
+
+
+@pytest.mark.parametrize("failure_point", ["write", "replace"])
+def test_cycle3_batch_failure_preserves_old_registry_and_cleans_temp(tmp_path, monkeypatch, failure_point):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    amendment = _cycle3_amendment(parent)
+    workloads = _cycle3_workload_candidates(amendment)
+    old_bytes = registry.path.read_bytes()
+    if failure_point == "write":
+        def fail_write(_fd, _data):
+            raise OSError("injected temp write failure")
+        monkeypatch.setattr(registry_module.os, "write", fail_write)
+    else:
+        def fail_replace(_source, _destination):
+            raise OSError("injected atomic replace failure")
+        monkeypatch.setattr(registry_module.os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="injected"):
+        registry.register_recovery_cycle3_batch(amendment, workloads)
+    assert registry.path.read_bytes() == old_bytes
+    assert registry.head[1] == 26
+    assert list(registry.path.parent.glob(f".{registry.path.name}.*.tmp")) == []
+
+
+def test_cycle3_preassignment_rejection_requires_exact_no_assignment_proof(tmp_path, monkeypatch):
+    registry, parent = _cycle3_parent(tmp_path, monkeypatch)
+    _, registrations = _append_cycle3_registrations(registry, _cycle3_amendment(parent))
+    benchmark = registrations[0]
+    pf_data = _preflight(benchmark, timeout=2800)
+    pf_data.update(cycle_id="g008-recovery-cycle-3", expected_current_version=12)
+    pf = registry.preflight_workload(pf_data)
+    ds_data = _dispatch(pf_data)
+    ds_data.update(cycle_id="g008-recovery-cycle-3", preflight_event_index=pf["event_index"],
+                   preflight_event_hash=pf["event_hash"])
+    ds = registry.dispatch_workload_push(ds_data)
+    rejected = _attempt(pf, ds, outcome="pre_assignment_rejected")
+    rejected.update(cycle_id="g008-recovery-cycle-3", rejection_evidence={"server_rejected_before_assignment": False},
+                    no_assignment_metadata={"pre_push_current_version": 12, "post_push_current_version": 12,
+                                            "no_version_assigned": True})
+    with pytest.raises(RegistryError, match="no-assignment proof"):
+        registry.resolve_workload_attempt(rejected)
+
+
+def test_cycle3_training_requires_benchmark_attestation(tmp_path, monkeypatch):
+    registry, registrations, _, _, lock, _ = _cycle3_successful_benchmark(tmp_path, monkeypatch, attest=False)
+    train = registrations[1]
+    pf_data = _preflight(train, attempt_id="cycle3-train-attempt", timeout=7200, variant_id="incumbent",
+                         lock_hash=lock["event_hash"])
+    pf_data.update(cycle_id="g008-recovery-cycle-3", expected_current_version=13,
+                   lock_head_hash=lock["event_hash"])
+    with pytest.raises(RegistryError, match="attestation"):
+        registry.preflight_workload(pf_data)
+
+
+def test_cycle3_artifact_must_bind_successful_benchmark_registration(tmp_path, monkeypatch):
+    registry, registrations, _, _, _, _ = _cycle3_successful_benchmark(tmp_path, monkeypatch, record_artifact=False)
+    with pytest.raises(RegistryError, match="successful terminal benchmark"):
+        registry.register_benchmark_artifact(
+            "c" * 64, 21, registry.events()[21]["event_hash"],
+            attempt_event_index=26, attempt_event_hash=registry.events()[26]["event_hash"],
+            report_sha256="d" * 64, selection_evidence=_selection_evidence())
+
+
+def test_cycle3_registration_lock_must_pin_artifact_exactly(tmp_path, monkeypatch):
+    registry, _, _, artifact, _, _ = _cycle3_successful_benchmark(
+        tmp_path, monkeypatch, attest=False, close_lock=False)
+    with pytest.raises(RegistryError, match="pin exact benchmark artifact"):
+        registry._append("registration_closed", {"pre_lock_head_hash": "0" * 64,
+                                                  "pre_lock_final_event_index": artifact["event_index"]})
 
 
 @pytest.mark.parametrize("field,value", [
