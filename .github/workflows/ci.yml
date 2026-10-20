@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: training/requirements.txt
+
+      - name: Install CPU Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.7,<3"
+          python -m pip install -r training/requirements.txt pytest
+
+      - name: Run Python tests
+        run: python -m pytest -q
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/viewer/package-lock.json
+
+      - name: Install viewer dependencies
+        working-directory: apps/viewer
+        run: npm ci
+
+      - name: Test viewer
+        working-directory: apps/viewer
+        run: npm test
+
+      - name: Typecheck viewer
+        working-directory: apps/viewer
+        run: npm run typecheck
+
+      - name: Build viewer
+        working-directory: apps/viewer
+        run: npm run build
