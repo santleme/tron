@@ -668,6 +668,113 @@ def register_recovery_cycle3_workloads(registry, amendment: dict, workloads: Seq
         raise KaggleError(f"Cycle-3 registry append failed; inspect the append-only head before continuing: {exc}") from exc
 
 
+def register_recovery_cycle3_retry(registry, amendment: dict, workload: dict, *, api=None) -> list[dict]:
+    """Verify exact retry authorization and live Kaggle context before the atomic C3 continuation append."""
+    if (not isinstance(amendment, dict) or not isinstance(workload, dict)
+            or set(workload) != {"registration_id", "registration_kind", "record"}
+            or workload.get("registration_kind") != "benchmark"
+            or not isinstance(workload.get("record"), dict)):
+        raise KaggleError("Cycle-3 retry requires one exact benchmark workload record.")
+    try:
+        from training.eval import registry as registry_module
+        from training.eval.registry import (
+            cycle3_retry_authorization_statement,
+            cycle3_retry_binding_sha256,
+            cycle3_retry_context_sha256,
+            cycle3_retry_registration_record_sha256,
+        )
+    except ImportError as exc:
+        raise KaggleError("Cycle-3 retry authorization helpers are unavailable.") from exc
+
+    record = workload["record"]
+    registration_id = workload["registration_id"]
+    run_uuid = record.get("run_uuid")
+    record_sha = cycle3_retry_registration_record_sha256(record)
+    context_sha = cycle3_retry_context_sha256(amendment)
+    binding_sha = cycle3_retry_binding_sha256(registration_id, "benchmark", run_uuid, record_sha)
+    authorization = amendment.get("user_authorization")
+    proposal_sha = amendment.get("proposal_sha256")
+    if (amendment.get("schema_id") != "g008-kaggle-recovery-cycle-retry-amendment"
+            or amendment.get("schema_version") != 1
+            or amendment.get("cycle_id") != "g008-recovery-cycle-3-retry"
+            or proposal_sha != registry_module._CYCLE3_RETRY_PROPOSAL_SHA256
+            or amendment.get("retry_registration_id") != registration_id
+            or amendment.get("registration_kind") != "benchmark"
+            or amendment.get("retry_run_uuid") != run_uuid
+            or amendment.get("retry_record_sha256") != record_sha
+            or amendment.get("registration_binding_sha256") != binding_sha
+            or amendment.get("preflight_context_sha256") != context_sha
+            or record.get("cycle_id") != "g008-recovery-cycle-3"
+            or record.get("kernel_id") != amendment.get("kernel_id")
+            or any(key in record for key in (
+                "cycle3_retry_amendment_event_index", "cycle3_retry_amendment_event_hash",
+                "recovery_cycle_amendment_event_index", "recovery_cycle_amendment_event_hash"))
+            or not isinstance(authorization, dict)
+            or authorization.get("proposal_sha256") != proposal_sha
+            or authorization.get("record_sha256") != record_sha
+            or authorization.get("preflight_context_sha256") != context_sha
+            or authorization.get("statement") != cycle3_retry_authorization_statement(
+                proposal_sha, record_sha, context_sha)
+            or not isinstance(authorization.get("confirmed_at_utc"), str)
+            or not authorization["confirmed_at_utc"].endswith("Z")):
+        raise KaggleError("Cycle-3 retry authorization does not bind the exact proposal, record, and live context.")
+
+    events = registry.events()
+    if (len(events) != 34 or events[-1].get("event_index") != 33
+            or events[-1].get("event_hash") != amendment.get("prior_head_hash")
+            or amendment.get("prior_final_event_index") != 33
+            or events[-1].get("event_hash") != registry_module._CYCLE3_RETRY_PARENT_EVENT_HASH
+            or amendment.get("cycle3_amendment_event_index") != 27
+            or amendment.get("cycle3_amendment_event_hash") != events[27].get("event_hash")):
+        raise KaggleError("Cycle-3 retry requires the exact immutable registry head through failed event 33.")
+    failed = events[33].get("event_data", {})
+    if (failed.get("outcome") != "terminal" or failed.get("terminal_status") not in {"ERROR", "CANCELLED", "TIMEOUT"}
+            or failed.get("assigned_version") != amendment.get("current_version_number")
+            or failed.get("terminal_metadata", {}).get("kernel_id") != amendment.get("kernel_id")
+            or failed.get("terminal_status") != amendment.get("current_terminal_status")):
+        raise KaggleError("Cycle-3 retry amendment does not bind the reconciled terminal benchmark failure.")
+
+    if api is None:
+        try:
+            from kaggle.api.kaggle_api_extended import KaggleApi
+            api = KaggleApi()
+            api.authenticate()
+        except (ImportError, AttributeError) as exc:
+            raise KaggleError("Pinned Kaggle SDK is required to verify the retry preflight context.") from exc
+    kernel_id = _kernel_id(amendment.get("kernel_id"))
+    try:
+        before = _sdk_metadata(api, kernel_id)
+        live_status, _ = _sdk_status(api, kernel_id)
+        after = _sdk_metadata(api, kernel_id)
+        quota_remaining, quota_used = _quota_seconds(api)
+    except KaggleError as exc:
+        raise KaggleError("Live retry kernel identity/status/quota could not be verified; no events were appended.") from exc
+    if before != after or live_status not in {"COMPLETE", "ERROR", "CANCELLED", "TIMEOUT"}:
+        raise KaggleError("Live retry kernel is changing or nonterminal; no events were appended.")
+    live_context = {
+        "kernel_id": kernel_id,
+        "current_version_number": after["current_version_number"],
+        "current_terminal_status": live_status,
+        "current_status_evidence": {
+            "status": live_status,
+            "current_version_number": after["current_version_number"],
+            "kernel_id": kernel_id,
+        },
+        "quota_gpu_seconds_remaining_before": quota_remaining,
+        "quota_evidence": {
+            "remaining_gpu_seconds": quota_remaining,
+            "used_gpu_seconds": quota_used,
+            "source": "pinned Kaggle SDK quota_view",
+        },
+    }
+    if cycle3_retry_context_sha256(live_context) != context_sha:
+        raise KaggleError("Live retry status/quota differs from the user-authorized context; no events were appended.")
+    try:
+        return registry.register_recovery_cycle3_retry_batch(amendment, workload)
+    except Exception as exc:
+        raise KaggleError(f"Cycle-3 retry registry append failed; inspect the append-only head before continuing: {exc}") from exc
+
+
 def register_recovery_benchmark_artifact(registry, attempt_event: dict,
                                          artifact_root: Path, envelope_path: Path) -> dict:
     """Write and register an immutable post-download envelope for a successful /3 attempt."""
@@ -1210,13 +1317,34 @@ def run_recovery_workload(registry, registration_event_index: int, source_dir: P
         raise KaggleError("Cycle-2 registration has no matching cycle amendment.")
     cycle3_amendment = (_cycle3_amendment(events, registration)
                         if cycle_id == "g008-recovery-cycle-3" else None)
+    cycle3_retry_amendment = next((event["event_data"] for event in events
+                                   if event.get("event_type") == "recovery_cycle_retry_amendment_v1"), None)
     record, hashes = _recovery_record(registration, implementation_variant_id)
     kernel_id = _kernel_id(record["kernel_id"])
     timeout = record["session_timeout_seconds"]
     expected_cap = record["workload_gpu_seconds_cap"]
     if timeout > expected_cap:
         raise KaggleError("Registered timeout exceeds the recovery workload cap.")
-    marker = Path(source_dir) / ".arena-source-revision"
+    source_dir = Path(source_dir)
+    if package_tree_sha256(source_dir) != hashes["package_sha256"]:
+        raise KaggleError("Frozen Kaggle package bytes differ from the registered package_sha256.")
+    frozen_package_temp = tempfile.TemporaryDirectory(prefix="g008-kaggle-package-")
+    frozen_package = Path(frozen_package_temp.name) / "source"
+    try:
+        shutil.copytree(source_dir, frozen_package)
+    except OSError as exc:
+        raise KaggleError("Could not create an immutable local snapshot of the registered Kaggle package.") from exc
+    if package_tree_sha256(frozen_package) != hashes["package_sha256"]:
+        raise KaggleError("Frozen Kaggle package changed while its submission snapshot was copied.")
+    # Freeze files and directories so the exact verified snapshot remains the
+    # object hashed and submitted throughout this attempt.
+    for path in [frozen_package, *frozen_package.rglob("*")]:
+        if path.is_dir():
+            path.chmod(path.stat().st_mode & ~0o222)
+        elif path.is_file():
+            path.chmod(path.stat().st_mode & ~0o222)
+    source_dir = frozen_package
+    marker = source_dir / ".arena-source-revision"
     try:
         source_revision = marker.read_text(encoding="utf-8").strip()
     except OSError as exc:
@@ -1318,6 +1446,47 @@ def run_recovery_workload(registry, registration_event_index: int, source_dir: P
                 registry, registration, timeout, quota_remaining,
                 resuming_attempt_id=attempt_id if phase == "workload_preflight" else None,
             )
+            if (cycle3_retry_amendment is not None and registration_event_index == 35
+                    and not any(event.get("event_type") == "workload_push_dispatched"
+                                and event.get("event_data", {}).get("registration_event_index") == 35
+                                for event in events)):
+                # Freeze package bytes, then sample live context immediately before
+                # writing preflight/dispatch events and calling Kaggle.
+                if package_tree_sha256(Path(source_dir)) != hashes["package_sha256"]:
+                    raise KaggleError("Frozen Kaggle package changed before retry dispatch; no attempt was appended.")
+                retry_before = _sdk_metadata(api, kernel_id)
+                retry_status, _ = _sdk_status(api, kernel_id)
+                retry_after = _sdk_metadata(api, kernel_id)
+                quota_remaining, quota_used_before = _quota_seconds(api)
+                if (retry_before != retry_after or retry_after["current_version_number"] != expected_version
+                        or retry_status != _expected_recovery_terminal_status(events, registration)):
+                    raise KaggleError(
+                        "Live status/version differs from the authorized Cycle-3 retry context; no attempt was dispatched.")
+                from training.eval.registry import cycle3_retry_context_sha256
+                retry_live_context = {
+                    "kernel_id": kernel_id,
+                    "current_version_number": retry_after["current_version_number"],
+                    "current_terminal_status": retry_status,
+                    "current_status_evidence": {
+                        "status": retry_status,
+                        "current_version_number": retry_after["current_version_number"],
+                        "kernel_id": kernel_id,
+                    },
+                    "quota_gpu_seconds_remaining_before": quota_remaining,
+                    "quota_evidence": {
+                        "remaining_gpu_seconds": quota_remaining,
+                        "used_gpu_seconds": quota_used_before,
+                        "source": "pinned Kaggle SDK quota_view",
+                    },
+                }
+                if cycle3_retry_context_sha256(retry_live_context) != cycle3_retry_amendment.get(
+                        "preflight_context_sha256"):
+                    raise KaggleError(
+                        "Live status/quota differs from the authorized Cycle-3 retry context; no push was attempted.")
+                budget = _validate_recovery_budget(
+                    registry, registration, timeout, quota_remaining,
+                    resuming_attempt_id=attempt_id if phase == "workload_preflight" else None,
+                )
             if phase is None:
                 same_registration = [event for event in events if event.get("event_type") == "workload_attempt"
                                      and event.get("event_data", {}).get("registration_event_index") == registration_event_index]
@@ -1366,8 +1535,8 @@ def run_recovery_workload(registry, registration_event_index: int, source_dir: P
                                  preflight_event_hash=preflight_event["event_hash"],
                                  dispatch_timestamp_utc=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                                  request_identity=f"{kernel_id}:{attempt_id}:{timeout}")
-            if package_tree_sha256(Path(source_dir)) != hashes["package_sha256"]:
-                raise KaggleError("Frozen Kaggle package changed after preflight; no dispatch or SDK push was attempted.")
+            if package_tree_sha256(source_dir) != hashes["package_sha256"]:
+                raise KaggleError("Read-only submission snapshot differs from the registered package; no push was attempted.")
             dispatch_event = registry.dispatch_workload_push(dispatch_data)
             push_started = monotonic()
             try:

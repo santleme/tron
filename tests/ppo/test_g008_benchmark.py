@@ -11,6 +11,7 @@ from training.ppo.g008_benchmark import (CONFIG_PATH, MEASURED_REPEATS, WARMUP_R
                                          load_principal_config, prepare_benchmark_schedules,
                                          run_principal_benchmark)
 from training.eval.provenance import benchmark_run_keys, derive_environment_seed
+from training.arena.seeds import stream_set
 from training.ppo.protocol import file_sha256
 from training.ppo.train import G008EnvironmentSeedSchedule
 
@@ -84,6 +85,34 @@ class G008PrincipalBenchmarkTests(unittest.TestCase):
         self.assertEqual(len(state.agents), 2)
         self.assertEqual([seed.label for seed in seeds], ["episode", "agent/0", "agent/1"])
         self.assertEqual(g008_benchmark.implementation_hashes("incumbent"), hashes_before)
+
+    def test_parity_trace_seed_records_are_json_serializable(self):
+        from types import SimpleNamespace
+
+        state = SimpleNamespace(width=6, height=6, tick=0, result=None, agents=[])
+        fake_torch = SimpleNamespace(device=lambda name: name)
+        model = SimpleNamespace(to=lambda _device: None)
+
+        class FakeModule:
+            initialize_episode = staticmethod(lambda *_args: (state, stream_set(1729, 0)))
+            step = staticmethod(lambda *_args, **_kwargs: None)
+            _torch = staticmethod(lambda: fake_torch)
+            _model_class = staticmethod(lambda _torch: lambda *_args: model)
+            G008EnvironmentSeedSchedule = staticmethod(lambda *_args, **_kwargs: object())
+
+            @staticmethod
+            def _collect(_torch, _model, _opponent, _config, seed, _device, _update, _schedule, _metrics):
+                FakeModule.initialize_episode(6, 6, seed, 0)
+
+        config = SimpleNamespace(device="cpu", seed=1729, width=6, height=6, hidden_size=8,
+                                arena_count=1, total_updates=1, rollout_steps=1)
+        with patch.object(g008_benchmark, "_reset_arm_rngs"):
+            digest = g008_benchmark._transition_parity_digest(
+                FakeModule, config, {}, str(uuid.uuid4()), "candidate")
+
+        self.assertEqual(digest["transition_count"], 0)
+        self.assertEqual(digest["reset_count"], 0)
+        self.assertEqual(digest["action_source"], "g008-trainer-model-sampled-collector/1")
 
     def test_incumbent_collector_expands_states_for_both_seats(self):
         import contextlib

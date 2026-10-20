@@ -23,6 +23,7 @@ _REGISTRATION_KINDS = frozenset({"train", "imitation", "ablation", "validation",
 _RECOVERY_EVENT_TYPES = frozenset({
     "recovery_amendment", "workload_preflight", "workload_push_dispatched",
     "workload_push_accepted", "workload_attempt", "recovery_cycle_amendment_v2",
+    "recovery_cycle_retry_amendment_v1",
 })
 _LEGACY_HEAD_INDEX = 12
 _LEGACY_HEAD_HASH = "0208abba4954ffd08b01d5069c674e8bc3f5d1817c95ddb0b0bb4eedd41f3fd7"
@@ -33,6 +34,10 @@ _CYCLE1_FINAL_EVENT_HASH = "7280fb7471484e856b48d1a931cb18d97d5bd2f94949790c41de
 _CYCLE2_EVENT_INDEX = 20
 _CYCLE3_EVENT_INDEX = 27
 _CYCLE3_PARENT_EVENT_HASH = "850b7fe3f0c2afbdf229cda83a3d2dba51bc607fa3a6efa337d7a6d70de309f7"
+# Frozen digest of the reviewed Cycle-3 retry proposal.
+_CYCLE3_RETRY_PROPOSAL_SHA256 = "40bb92c5901c040e9efe4ac7d62cf71a124c18451eb504b53d6c62f44e391f89"
+_CYCLE3_RETRY_PARENT_EVENT_INDEX = 33
+_CYCLE3_RETRY_PARENT_EVENT_HASH = "4f7c8d909349b3a95c91758a2fe6c7490f241ed5db9df9925ce4f600163db966"
 # Frozen Cycle-3 proposal digest; changing the proposal requires a reviewed registry update.
 _CYCLE3_PROPOSAL_SHA256 = "731ad7a7b477bc18e87572f6827fa7f18f38bbdedf130765d600fe5558250527"
 # Provisional Cycle-3 limits copied from the approved Cycle-2 envelope; update
@@ -155,6 +160,59 @@ def cycle3_authorization_statement(proposal_sha256: str, registration_bindings_s
             "Exclusive writer: no other writer updates pascalcoimbra/circuit-ai until the benchmark is terminal and reconciled.")
 
 
+_CYCLE3_RETRY_RECORD_POINTER_FIELDS = frozenset({
+    "cycle3_retry_amendment_event_index", "cycle3_retry_amendment_event_hash",
+    "recovery_cycle_amendment_event_index", "recovery_cycle_amendment_event_hash",
+})
+_CYCLE3_RETRY_CONTEXT_FIELDS = (
+    "kernel_id", "current_version_number", "current_terminal_status", "current_status_evidence",
+    "quota_gpu_seconds_remaining_before", "quota_evidence",
+)
+
+
+def cycle3_retry_registration_record_sha256(record: dict[str, Any]) -> str:
+    """Hash the authorized retry benchmark record before adding derived event pointers."""
+    if not isinstance(record, dict):
+        raise RegistryError("cycle-3 retry registration record must be an object")
+    projection = {key: value for key, value in record.items()
+                  if key not in _CYCLE3_RETRY_RECORD_POINTER_FIELDS}
+    return hashlib.sha256(canonical_bytes(projection)).hexdigest()
+
+
+def cycle3_retry_preflight_context_sha256(context: dict[str, Any]) -> str:
+    """Hash exact live Kaggle status and quota context for the retry authorization."""
+    if not isinstance(context, dict) or any(key not in context for key in _CYCLE3_RETRY_CONTEXT_FIELDS):
+        raise RegistryError("cycle-3 retry preflight context is incomplete")
+    projection = {key: context[key] for key in _CYCLE3_RETRY_CONTEXT_FIELDS}
+    return hashlib.sha256(canonical_bytes(projection)).hexdigest()
+
+
+def cycle3_retry_context_sha256(context: dict[str, Any]) -> str:
+    """Public short name for the retry's frozen live-context digest."""
+    return cycle3_retry_preflight_context_sha256(context)
+
+
+def cycle3_retry_binding_sha256(registration_id: str, registration_kind: str,
+                                run_uuid: str, record_sha256: str) -> str:
+    """Hash the exact single-registration identity and authorized record digest."""
+    row = {"registration_id": registration_id, "registration_kind": registration_kind,
+           "run_uuid": run_uuid, "record_sha256": record_sha256}
+    if (registration_kind != "benchmark" or not isinstance(registration_id, str) or not registration_id
+            or not isinstance(run_uuid, str) or not run_uuid or not _is_hash(record_sha256)):
+        raise RegistryError("cycle-3 retry binding must identify one benchmark registration")
+    return hashlib.sha256(canonical_bytes(row)).hexdigest()
+
+
+def cycle3_retry_authorization_statement(proposal_sha256: str, record_sha256: str,
+                                         context_sha256: str) -> str:
+    """Return the canonical authorization statement binding the retry proposal and package."""
+    if not all(_is_hash(value) for value in (proposal_sha256, record_sha256, context_sha256)):
+        raise RegistryError("cycle-3 retry authorization requires SHA-256 bindings")
+    return (f"Authorize G008 Cycle 3 benchmark retry proposal sha256:{proposal_sha256}. "
+            f"Benchmark record sha256:{record_sha256}. Preflight context sha256:{context_sha256}. "
+            "Exclusive writer: no other writer updates pascalcoimbra/circuit-ai until the retry benchmark is terminal and reconciled.")
+
+
 def _is_hash(value: Any) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(c in _HASH_CHARS for c in value)
 
@@ -193,7 +251,72 @@ def _keys(data: Any, expected: set[str], event_type: str) -> dict[str, Any]:
 
 
 def _validate_data(event_type: str, data: Any) -> None:
-    if event_type == "recovery_cycle_amendment_v2":
+    if event_type == "recovery_cycle_retry_amendment_v1":
+        expected = {
+            "schema_id", "schema_version", "cycle_id", "created_at_utc", "prior_head_hash",
+            "prior_final_event_index", "cycle3_amendment_event_index", "cycle3_amendment_event_hash",
+            "proposal_sha256", "retry_registration_id", "registration_kind", "retry_run_uuid", "retry_record_sha256",
+            "registration_binding_sha256",
+            "preflight_context_sha256", "kernel_id", "current_version_number",
+            "current_terminal_status", "current_status_evidence", "quota_gpu_seconds_remaining_before",
+            "quota_evidence", "user_authorization",
+        }
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-kaggle-recovery-cycle-retry-amendment" or d["schema_version"] != 1
+                or d["cycle_id"] != "g008-recovery-cycle-3-retry"):
+            raise RegistryError("unsupported cycle-3 retry amendment schema")
+        if (d["prior_final_event_index"] != _CYCLE3_RETRY_PARENT_EVENT_INDEX
+                or d["prior_head_hash"] != _CYCLE3_RETRY_PARENT_EVENT_HASH
+                or d["cycle3_amendment_event_index"] != _CYCLE3_EVENT_INDEX
+                or not _is_hash(d["cycle3_amendment_event_hash"])):
+            raise RegistryError("cycle-3 retry amendment must bind exact failed attempt and original amendment")
+        if (not _is_hash(d["proposal_sha256"])
+                or d["proposal_sha256"] != _CYCLE3_RETRY_PROPOSAL_SHA256):
+            raise RegistryError("cycle-3 retry amendment does not bind frozen proposal digest")
+        if (not isinstance(d["retry_registration_id"], str) or not d["retry_registration_id"]
+                or d["registration_kind"] != "benchmark"
+                or not isinstance(d["retry_run_uuid"], str) or not d["retry_run_uuid"]
+                or not _is_hash(d["retry_record_sha256"])):
+            raise RegistryError("cycle-3 retry amendment registration identity or record digest is invalid")
+        if (not _is_hash(d["registration_binding_sha256"])
+                or d["registration_binding_sha256"] != cycle3_retry_binding_sha256(
+                    d["retry_registration_id"], d["registration_kind"], d["retry_run_uuid"], d["retry_record_sha256"])):
+            raise RegistryError("cycle-3 retry registration binding digest is invalid")
+        if (not _is_hash(d["preflight_context_sha256"])
+                or d["preflight_context_sha256"] != cycle3_retry_preflight_context_sha256(d)):
+            raise RegistryError("cycle-3 retry preflight context digest is invalid")
+        if (not isinstance(d["kernel_id"], str) or not d["kernel_id"]
+                or not isinstance(d["current_version_number"], int)
+                or isinstance(d["current_version_number"], bool) or d["current_version_number"] <= 0
+                or d["current_terminal_status"] not in {"ERROR", "CANCELLED", "TIMEOUT"}
+                or d["current_status_evidence"] != {
+                    "status": d["current_terminal_status"],
+                    "current_version_number": d["current_version_number"], "kernel_id": d["kernel_id"]}):
+            raise RegistryError("cycle-3 retry amendment requires exact terminal Kaggle status")
+        quota, qev = d["quota_gpu_seconds_remaining_before"], d["quota_evidence"]
+        if (not isinstance(quota, int) or isinstance(quota, bool) or quota < 20_000
+                or not isinstance(qev, dict)
+                or set(qev) != {"remaining_gpu_seconds", "used_gpu_seconds", "source"}
+                or qev.get("remaining_gpu_seconds") != quota
+                or not isinstance(qev.get("used_gpu_seconds"), int)
+                or isinstance(qev.get("used_gpu_seconds"), bool) or qev["used_gpu_seconds"] < 0
+                or not isinstance(qev.get("source"), str) or not qev["source"]):
+            raise RegistryError("cycle-3 retry requires exact live quota evidence and protected runway")
+        authorization = d["user_authorization"]
+        if (not isinstance(authorization, dict)
+                or set(authorization) != {"proposal_sha256", "record_sha256", "preflight_context_sha256",
+                                         "statement", "confirmed_at_utc"}
+                or authorization.get("proposal_sha256") != d["proposal_sha256"]
+                or authorization.get("record_sha256") != d["retry_record_sha256"]
+                or authorization.get("preflight_context_sha256") != d["preflight_context_sha256"]
+                or authorization.get("statement") != cycle3_retry_authorization_statement(
+                    d["proposal_sha256"], d["retry_record_sha256"], d["preflight_context_sha256"])
+                or not isinstance(authorization.get("confirmed_at_utc"), str)
+                or not authorization["confirmed_at_utc"].endswith("Z")):
+            raise RegistryError("cycle-3 retry requires digest-bound user authorization")
+        if not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z"):
+            raise RegistryError("cycle-3 retry amendment timestamp must be UTC")
+    elif event_type == "recovery_cycle_amendment_v2":
         expected = {"schema_id", "schema_version", "cycle_id", "created_at_utc", "prior_head_hash",
                     "prior_final_event_index", "proposal_sha256", "retired_registration_event_indices",
                     "recovery_registrations", "registration_bindings_sha256", "preflight_context_sha256",
@@ -1574,6 +1697,13 @@ def _validate_recovery_cycle2_suffix(events: list[dict[str, Any]]) -> None:
 
 def _validate_recovery_cycle3_suffix(events: list[dict[str, Any]]) -> None:
     """Replay Cycle 3 after validating the immutable Cycle 1 and 2 prefixes."""
+    if (len(events) > _CYCLE3_RETRY_PARENT_EVENT_INDEX + 1
+            and events[_CYCLE3_RETRY_PARENT_EVENT_INDEX + 1]["event_type"] == "recovery_cycle_retry_amendment_v1"):
+        # Validate the original Cycle-3 suffix exactly as it was before retry support,
+        # then replay the appended retry as its own constrained continuation.
+        _validate_recovery_cycle3_suffix(events[:_CYCLE3_RETRY_PARENT_EVENT_INDEX + 1])
+        _validate_recovery_cycle3_retry_suffix(events)
+        return
     indices = [i for i, event in enumerate(events)
                if event["event_type"] == "recovery_cycle_amendment_v2"]
     if indices != [_CYCLE3_EVENT_INDEX] or len(events) <= _CYCLE3_EVENT_INDEX:
@@ -1824,6 +1954,320 @@ def _validate_recovery_cycle3_suffix(events: list[dict[str, Any]]) -> None:
         raise RegistryError("cycle-3 output reservations exceed aggregate cap")
 
 
+def _validate_recovery_cycle3_retry_suffix(events: list[dict[str, Any]]) -> None:
+    """Replay the one authorized benchmark retry after the terminal Cycle-3 attempt."""
+    amendment_event = events[34]
+    original_amendment = events[27]
+    parent = events[33]
+    if (amendment_event["event_type"] != "recovery_cycle_retry_amendment_v1"
+            or parent["event_type"] != "workload_attempt"
+            or parent["event_hash"] != _CYCLE3_RETRY_PARENT_EVENT_HASH
+            or parent["event_data"]["outcome"] != "terminal"
+            or parent["event_data"]["terminal_status"] not in {"ERROR", "CANCELLED", "TIMEOUT"}):
+        raise RegistryError("cycle-3 retry requires the exact terminal failed benchmark at event 33")
+    amendment = amendment_event["event_data"]
+    _validate_data("recovery_cycle_retry_amendment_v1", amendment)
+    failed = parent["event_data"]
+    original = original_amendment["event_data"]
+    if (amendment["prior_head_hash"] != parent["event_hash"]
+            or amendment["cycle3_amendment_event_hash"] != original_amendment["event_hash"]
+            or amendment["cycle3_amendment_event_index"] != 27
+            or amendment["kernel_id"] != failed["terminal_metadata"]["kernel_id"]
+            or amendment["current_version_number"] != failed["assigned_version"]
+            or amendment["current_terminal_status"] != failed["terminal_status"]
+            or amendment["current_status_evidence"] != {
+                "status": failed["terminal_status"], "current_version_number": failed["assigned_version"],
+                "kernel_id": failed["terminal_metadata"]["kernel_id"]}):
+        raise RegistryError("cycle-3 retry does not bind exact failed attempt, amendment, and live status")
+    if len(events) < 36:
+        raise RegistryError("cycle-3 retry amendment must be followed by its benchmark registration")
+    registration_event = events[35]
+    if registration_event["event_type"] != "registration":
+        raise RegistryError("cycle-3 retry benchmark registration must immediately follow amendment")
+    data = registration_event["event_data"]
+    record = data["record"]
+    if (data.get("cycle_id") != "g008-recovery-cycle-3" or data["registration_kind"] != "benchmark"
+            or data["registration_id"] != amendment["retry_registration_id"]
+            or record.get("run_uuid") != amendment["retry_run_uuid"]
+            or cycle3_retry_registration_record_sha256(record) != amendment["retry_record_sha256"]
+            or record.get("cycle_id") != "g008-recovery-cycle-3"
+            or record.get("cycle3_retry_amendment_event_index") != 34
+            or record.get("cycle3_retry_amendment_event_hash") != amendment_event["event_hash"]
+            or record.get("recovery_cycle_amendment_event_index") != 27
+            or record.get("recovery_cycle_amendment_event_hash") != original_amendment["event_hash"]):
+        raise RegistryError("cycle-3 retry registration differs from authorized identity, record, or pointers")
+    old_ids = {event["event_data"]["registration_id"] for event in events[:35]
+               if event["event_type"] == "registration"}
+    old_uuids = {event["event_data"]["record"].get("run_uuid") for event in events[:35]
+                 if event["event_type"] == "registration"}
+    if amendment["retry_registration_id"] in old_ids or amendment["retry_run_uuid"] in old_uuids:
+        raise RegistryError("cycle-3 retry must use a fresh registration ID and UUID")
+    if (record.get("workload_gpu_seconds_cap") != original["compute_caps_gpu_seconds"]["benchmark"]
+            or record.get("session_timeout_seconds") != 2800
+            or record.get("workload_output_bytes_cap") != 100_000_000
+            or record.get("accelerator_count") != 1 or record.get("machine_shape") != "NvidiaTeslaT4"
+            or record.get("kernel_id") != original["kernel_id"]):
+        raise RegistryError("cycle-3 retry changed frozen benchmark resources or kernel")
+    for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                "backend_sha256", "trainer_sha256", "engine_sha256"):
+        if not _is_hash(record.get(key)):
+            raise RegistryError("cycle-3 retry has invalid workload hashes")
+    variants = record.get("implementation_variants")
+    train_event = events[29]
+    train_variants = {row["variant_id"]: row for row in train_event["event_data"]["record"]["allowed_implementation_variants"]}
+    if not isinstance(variants, list) or len(variants) != 2:
+        raise RegistryError("cycle-3 retry must preserve the two registered implementation variants")
+    parsed = {}
+    for variant in variants:
+        if (not isinstance(variant, dict) or variant.get("variant_id") not in {"incumbent", "candidate"}
+                or variant["variant_id"] in parsed):
+            raise RegistryError("cycle-3 retry variant IDs must be unique incumbent and candidate")
+        parsed[variant["variant_id"]] = variant
+        for key in ("source_sha256", "trainer_sha256", "engine_sha256", "backend_sha256",
+                    "config_sha256", "seed_plan_sha256"):
+            if variant.get(key) != train_variants[variant["variant_id"]][key]:
+                raise RegistryError("cycle-3 retry changed registered training source/component hashes")
+    if set(parsed) != {"incumbent", "candidate"}:
+        raise RegistryError("cycle-3 retry must include incumbent and candidate variants")
+
+    retry_attempts: dict[str, dict[str, Any]] = {}
+    artifact = lock = attestation = None
+    train_state = None
+    current_version = amendment["current_version_number"]
+    for i, event in enumerate(events[36:], 36):
+        typ, ed = event["event_type"], event["event_data"]
+        if typ == "workload_preflight" and ed.get("registration_event_index") == 29:
+            if attestation is None:
+                raise RegistryError("cycle-3 training requires retry benchmark attestation")
+            selected = artifact and events[artifact]["event_data"]["selection_evidence"]["selected_variant_id"]
+            train_record = events[29]["event_data"]["record"]
+            variants = {row["variant_id"]: row for row in train_record["allowed_implementation_variants"]}
+            variant = variants.get(selected)
+            if (train_state is not None or variant is None
+                    or ed.get("cycle_id") != "g008-recovery-cycle-3"
+                    or ed.get("registration_event_hash") != events[29]["event_hash"]
+                    or ed.get("expected_current_version") != current_version
+                    or ed.get("kernel_id") != train_record["kernel_id"]
+                    or ed.get("implementation_variant_id") != selected
+                    or ed.get("session_timeout_seconds") != train_record["session_timeout_seconds"]
+                    or ed.get("lock_head_hash") != events[lock]["event_hash"]):
+                raise RegistryError("cycle-3 training preflight changed selected variant, version, or exact lock")
+            for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                        "backend_sha256", "trainer_sha256", "engine_sha256"):
+                expected = train_record[key] if key == "config_sha256" else variant[key]
+                if ed.get(key) != expected:
+                    raise RegistryError("cycle-3 training preflight differs from selected registered package")
+            train_state = {"phase": "preflight", "last": i, "data": ed, "record": train_record,
+                           "variant": variant, "registration_index": 29}
+            continue
+        if typ == "workload_preflight" and ed.get("registration_event_index") == 35:
+            if artifact is not None or lock is not None:
+                raise RegistryError("cycle-3 retry attempt must precede benchmark artifact and lock")
+            aid = ed["attempt_id"]
+            if aid in retry_attempts or ed.get("cycle_id") != "g008-recovery-cycle-3":
+                raise RegistryError("cycle-3 retry permits one fresh benchmark attempt")
+            if (ed.get("registration_event_hash") != registration_event["event_hash"]
+                    or ed.get("registration_id") != amendment["retry_registration_id"]
+                    or ed.get("expected_current_version") != amendment["current_version_number"]
+                    or ed.get("kernel_id") != record["kernel_id"]
+                    or ed.get("implementation_variant_id") != "paired"
+                    or ed.get("session_timeout_seconds") != record["session_timeout_seconds"]
+                    or ed.get("lock_head_hash") is not None):
+                raise RegistryError("cycle-3 retry preflight changed authorized benchmark binding")
+            for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                        "backend_sha256", "trainer_sha256", "engine_sha256"):
+                if ed.get(key) != record[key]:
+                    raise RegistryError("cycle-3 retry preflight changed registered package hash")
+            retry_attempts[aid] = {"phase": "preflight", "last": i, "reg": 35, "data": ed,
+                                   "preflight": i, "preflight_hash": event["event_hash"]}
+            continue
+        if typ in {"workload_push_dispatched", "workload_push_accepted", "workload_attempt"}:
+            aid = ed["attempt_id"]
+            if ed.get("registration_event_index") == 29:
+                if train_state is None or aid != train_state["data"]["attempt_id"] or i != train_state["last"] + 1:
+                    raise RegistryError("cycle-3 training lifecycle must follow its exact preflight")
+                if typ == "workload_push_dispatched":
+                    if (train_state["phase"] != "preflight"
+                            or ed.get("preflight_event_index") != train_state["last"]
+                            or ed.get("preflight_event_hash") != events[train_state["last"]]["event_hash"]):
+                        raise RegistryError("cycle-3 training dispatch must bind exact preflight")
+                    for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                                "backend_sha256", "trainer_sha256", "engine_sha256", "implementation_variant_id",
+                                "lock_head_hash"):
+                        if ed.get(key) != train_state["data"][key]:
+                            raise RegistryError("cycle-3 training dispatch changed its preflight binding")
+                    train_state.update(phase="dispatched", last=i, dispatch=i)
+                elif typ == "workload_push_accepted":
+                    if (train_state["phase"] != "dispatched" or ed.get("dispatch_event_index") != train_state["dispatch"]
+                            or ed.get("implementation_variant_id") != train_state["data"]["implementation_variant_id"]
+                            or ed.get("lock_head_hash") != events[lock]["event_hash"]
+                            or ed.get("assigned_version", 0) <= current_version):
+                        raise RegistryError("cycle-3 training acceptance changed its selected workload")
+                    train_state.update(phase="accepted", last=i, accepted=i, version=ed["assigned_version"])
+                else:
+                    if (train_state["phase"] != "accepted" or ed.get("accepted_event_index") != train_state["accepted"]
+                            or ed.get("assigned_version") != train_state["version"]
+                            or ed.get("implementation_variant_id") != train_state["data"]["implementation_variant_id"]
+                            or ed.get("lock_head_hash") != events[lock]["event_hash"]):
+                        raise RegistryError("cycle-3 training terminal event changed accepted workload")
+                    for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                                "backend_sha256", "trainer_sha256", "engine_sha256"):
+                        if ed.get(key) != train_state["data"][key]:
+                            raise RegistryError("cycle-3 training terminal event changed frozen hashes")
+                    if (ed.get("actual_gpu_seconds", 0) > train_state["record"]["session_timeout_seconds"]
+                            or ed.get("output_bytes", 0) > train_state["record"]["workload_output_bytes_cap"]):
+                        raise RegistryError("cycle-3 training actual use exceeds registered limits")
+                    train_state.update(phase="terminal", last=i, terminal=i, terminal_data=ed)
+                    current_version = ed["assigned_version"]
+                continue
+            state = retry_attempts.get(aid)
+            if state is None:
+                raise RegistryError("cycle-3 retry lifecycle references an unregistered attempt")
+            if state["phase"] == "terminal" or i != state["last"] + 1:
+                raise RegistryError("cycle-3 retry attempt lifecycle must be contiguous")
+            if ed.get("registration_event_index") != 35:
+                raise RegistryError("cycle-3 retry lifecycle changed registration")
+            if typ == "workload_push_dispatched":
+                if (state["phase"] != "preflight"
+                        or ed.get("registration_event_hash") != registration_event["event_hash"]
+                        or ed.get("preflight_event_index") != state["preflight"]
+                        or ed.get("preflight_event_hash") != state["preflight_hash"]):
+                    raise RegistryError("cycle-3 retry dispatch must immediately follow preflight")
+                for key in ("kernel_id", "package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256", "session_timeout_seconds",
+                            "accelerator_count", "reserved_gpu_seconds", "implementation_variant_id", "lock_head_hash"):
+                    if ed.get(key) != state["data"].get(key):
+                        raise RegistryError("cycle-3 retry dispatch changed preflight workload binding")
+                state.update(phase="dispatched", last=i, dispatch=i, dispatch_hash=event["event_hash"], dispatch_data=ed)
+            elif typ == "workload_push_accepted":
+                if (state["phase"] != "dispatched"
+                        or ed.get("registration_event_hash") != registration_event["event_hash"]
+                        or ed.get("preflight_event_index") != state["preflight"]
+                        or ed.get("preflight_event_hash") != state["preflight_hash"]
+                        or ed.get("dispatch_event_index") != state["dispatch"]
+                        or ed.get("dispatch_event_hash") != state["dispatch_hash"]
+                        or ed.get("implementation_variant_id") != state["data"]["implementation_variant_id"]
+                        or ed.get("lock_head_hash") != state["data"]["lock_head_hash"]
+                        or ed.get("confirming_metadata", {}).get("kernel_id") != record["kernel_id"]):
+                    raise RegistryError("cycle-3 retry acceptance must bind dispatch")
+                if ed.get("assigned_version", 0) <= amendment["current_version_number"]:
+                    raise RegistryError("cycle-3 retry must assign a fresh Kaggle version")
+                state.update(phase="accepted", last=i, accepted=i, accepted_hash=event["event_hash"],
+                             version=ed["assigned_version"])
+            else:
+                if state["phase"] not in {"dispatched", "accepted"}:
+                    raise RegistryError("cycle-3 retry terminal event lacks a dispatched push")
+                if (ed.get("registration_event_hash") != registration_event["event_hash"]
+                        or ed.get("preflight_event_index") != state["preflight"]
+                        or ed.get("preflight_event_hash") != state["preflight_hash"]
+                        or ed.get("dispatch_event_index") != state["dispatch"]
+                        or ed.get("dispatch_event_hash") != state["dispatch_hash"]
+                        or ed.get("implementation_variant_id") != "paired"
+                        or ed.get("lock_head_hash") != state["data"]["lock_head_hash"]):
+                    raise RegistryError("cycle-3 retry terminal event changed preflight, dispatch, or registration binding")
+                for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256"):
+                    if ed.get(key) != state["data"][key]:
+                        raise RegistryError("cycle-3 retry terminal result changed workload hash")
+                if (ed.get("actual_gpu_seconds", 0) > record["session_timeout_seconds"]
+                        or ed.get("output_bytes", 0) > record["workload_output_bytes_cap"]):
+                    raise RegistryError("cycle-3 retry actual use exceeds registered limit")
+                if state["phase"] == "dispatched":
+                    no_assignment = ed["no_assignment_metadata"]
+                    if (ed.get("outcome") != "pre_assignment_rejected"
+                            or ed.get("accepted_event_index") is not None
+                            or ed.get("accepted_event_hash") is not None
+                            or ed.get("assigned_version") is not None
+                            or ed.get("actual_gpu_seconds") != 0
+                            or ed.get("rejection_evidence", {}).get("server_rejected_before_assignment") is not True
+                            or no_assignment.get("no_version_assigned") is not True
+                            or no_assignment.get("pre_push_current_version") != state["data"]["expected_current_version"]
+                            or no_assignment.get("post_push_current_version") != state["data"]["expected_current_version"]):
+                        raise RegistryError("cycle-3 retry rejection lacks exact no-assignment proof")
+                elif (ed.get("outcome") != "terminal"
+                      or ed.get("accepted_event_index") != state["accepted"]
+                      or ed.get("accepted_event_hash") != state["accepted_hash"]
+                      or ed.get("assigned_version") != state["version"]
+                      or ed.get("terminal_metadata", {}).get("kernel_id") != record["kernel_id"]):
+                    raise RegistryError("cycle-3 retry terminal result changed accepted paired workload")
+                state.update(phase="terminal", last=i, terminal=i, terminal_data=ed)
+                if ed.get("outcome") == "terminal":
+                    current_version = ed["assigned_version"]
+            continue
+        if typ == "benchmark_artifact":
+            if artifact is not None or lock is not None or not any(
+                    state.get("phase") == "terminal" and state["terminal_data"]["terminal_status"] == "COMPLETE"
+                    and state["terminal"] == ed.get("attempt_event_index")
+                    and event["event_data"].get("registration_event_index") == 35
+                    and event["event_data"].get("registration_event_hash") == registration_event["event_hash"]
+                    and events[state["terminal"]]["event_hash"] == ed.get("attempt_event_hash")
+                    for state in retry_attempts.values()):
+                raise RegistryError("cycle-3 retry artifact requires its COMPLETE benchmark attempt")
+            artifact = i
+            continue
+        if typ == "registration_closed":
+            if artifact is None or i != artifact + 1 or ed != {
+                    "pre_lock_head_hash": events[artifact]["event_hash"], "pre_lock_final_event_index": artifact}:
+                raise RegistryError("cycle-3 retry lock must pin exact retry artifact")
+            lock = i
+            continue
+        if typ == "benchmark_attestation":
+            if lock is None or i != lock + 1 or artifact is None or ed != {
+                    **events[artifact]["event_data"], "lock_head_hash": events[lock]["event_hash"]}:
+                raise RegistryError("cycle-3 retry attestation must bind exact artifact and lock")
+            attestation = i
+            continue
+        raise RegistryError("event type is not allowed in cycle-3 retry suffix")
+
+    if len(retry_attempts) > 1:
+        raise RegistryError("cycle-3 retry allows exactly one continuation attempt")
+    state = next(iter(retry_attempts.values()), None)
+    if state and state["phase"] not in {"terminal"}:
+        if state["last"] != len(events) - 1:
+            raise RegistryError("pending cycle-3 retry attempt blocks later events")
+    if state and state["phase"] == "terminal" and state["terminal_data"]["terminal_status"] != "COMPLETE":
+        if artifact is not None or lock is not None or attestation is not None or train_state is not None:
+            raise RegistryError("failed cycle-3 retry cannot produce artifact, lock, attestation, or training")
+        if state["last"] != len(events) - 1:
+            raise RegistryError("failed cycle-3 retry is terminal and blocks further workload events")
+    retry_actual = (state["terminal_data"]["actual_gpu_seconds"] if state and state["phase"] == "terminal" else 0)
+    retry_reserved = (record["session_timeout_seconds"] if state and state["phase"] != "terminal" else 0)
+    first_attempt = parent["event_data"]
+    if first_attempt["actual_gpu_seconds"] + retry_actual + retry_reserved > original["compute_caps_gpu_seconds"]["benchmark"]:
+        raise RegistryError("cycle-3 first attempt plus retry exceeds cumulative benchmark GPU cap")
+    if first_attempt["output_bytes"] + (state["terminal_data"]["output_bytes"] if state and state["phase"] == "terminal" else 0) > original["output_category_reservations_bytes"]["benchmark"]:
+        raise RegistryError("cycle-3 first attempt plus retry exceeds cumulative benchmark output cap")
+    train_actual = (train_state["terminal_data"]["actual_gpu_seconds"]
+                    if train_state and train_state["phase"] == "terminal" else 0)
+    train_reserved = (train_state["record"]["session_timeout_seconds"]
+                      if train_state and train_state["phase"] != "terminal" else 0)
+    if train_actual + train_reserved > original["compute_caps_gpu_seconds"]["train"]:
+        raise RegistryError("cycle-3 training use/reservation exceeds registered training cap")
+    retry_output = (state["terminal_data"]["output_bytes"] if state and state["phase"] == "terminal"
+                    else record["workload_output_bytes_cap"] if state else 0)
+    benchmark_output = first_attempt["output_bytes"] + retry_output
+    train_output = (train_state["terminal_data"]["output_bytes"]
+                    if train_state and train_state["phase"] == "terminal"
+                    else train_state["record"]["workload_output_bytes_cap"] if train_state else 0)
+    output_caps = original["output_category_reservations_bytes"]
+    if (benchmark_output > output_caps["benchmark"] or train_output > output_caps["training"]):
+        raise RegistryError("cycle-3 retry and training output use/reservations exceed category cap")
+    project_output = (original["project_output_bytes_before"] + benchmark_output + train_output
+                      + output_caps["validation"] + output_caps["final"])
+    if project_output > original["output_caps_bytes"]["aggregate"]:
+        raise RegistryError("cycle-3 retry and training output use/reservations exceed aggregate cap")
+    if train_state and train_state["phase"] != "terminal" and train_state["last"] != len(events) - 1:
+        raise RegistryError("pending cycle-3 training attempt blocks later events")
+    if train_state and train_state["phase"] == "terminal" and train_state["last"] != len(events) - 1:
+        raise RegistryError("terminal cycle-3 training attempt blocks additional workloads")
+    project_gpu = (original["project_gpu_seconds_before"] + first_attempt["actual_gpu_seconds"]
+                   + retry_actual + retry_reserved + train_actual + train_reserved)
+    if (project_gpu > original["compute_caps_gpu_seconds"]["project_experiment"]
+            or project_gpu + original["protected_final_reserve_gpu_seconds"]
+            > original["compute_caps_gpu_seconds"]["project_total"]):
+        raise RegistryError("cycle-3 retry and training use/reservations exceed project budget")
+
+
 class Registry:
     """Safe registry operations over a JSON-lines file (never creates one implicitly)."""
     def __init__(self, path: str | Path):
@@ -2051,6 +2495,96 @@ class Registry:
                         pass
             _read(self.path)
             return candidate_payloads
+
+    def register_recovery_cycle3_retry_batch(self, amendment: dict[str, Any],
+                                             workload: dict[str, Any]) -> list[dict[str, Any]]:
+        """Atomically append the sole authorized Cycle-3 retry amendment and registration."""
+        if (not isinstance(workload, dict)
+                or set(workload) != {"registration_id", "registration_kind", "record"}
+                or workload.get("registration_kind") != "benchmark"
+                or not isinstance(workload.get("record"), dict)):
+            raise RegistryError("Cycle-3 retry workload candidate shape is invalid")
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = self.path.with_name(self.path.name + ".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open("a+b") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            events = _read(self.path)
+            if (len(events) - 1 != _CYCLE3_RETRY_PARENT_EVENT_INDEX or not events
+                    or events[-1]["event_hash"] != _CYCLE3_RETRY_PARENT_EVENT_HASH):
+                raise RegistryError("Cycle-3 retry requires exact terminal event 33 registry head")
+            if any(event["event_type"] == "recovery_cycle_retry_amendment_v1" for event in events):
+                raise RegistryError("Cycle-3 benchmark retry is already registered")
+            _validate_data("recovery_cycle_retry_amendment_v1", amendment)
+            if (workload["registration_id"] != amendment["retry_registration_id"]
+                    or workload["registration_kind"] != amendment["registration_kind"]
+                    or cycle3_retry_registration_record_sha256(workload["record"])
+                    != amendment["retry_record_sha256"]):
+                raise RegistryError("Cycle-3 retry workload differs from authorized identity or record")
+            if (amendment["prior_head_hash"] != events[-1]["event_hash"]
+                    or amendment["cycle3_amendment_event_hash"] != events[27]["event_hash"]):
+                raise RegistryError("Cycle-3 retry amendment changed immutable parent binding")
+            candidate = list(events)
+            prev = events[-1]["event_hash"]
+            amendment_payload = _payload(34, "recovery_cycle_retry_amendment_v1", amendment, prev)
+            amendment_event = {**amendment_payload, "event_hash": _event_hash(amendment_payload)}
+            candidate.append(amendment_event)
+            record = dict(workload["record"])
+            if _CYCLE3_RETRY_RECORD_POINTER_FIELDS & record.keys():
+                raise RegistryError("Cycle-3 retry record must omit derived event pointers before binding")
+            record.update({
+                "cycle3_retry_amendment_event_index": 34,
+                "cycle3_retry_amendment_event_hash": amendment_event["event_hash"],
+                "recovery_cycle_amendment_event_index": 27,
+                "recovery_cycle_amendment_event_hash": events[27]["event_hash"],
+            })
+            registration_data = {
+                "registration_id": workload["registration_id"],
+                "registration_kind": workload["registration_kind"],
+                "record": record,
+                "cycle_id": "g008-recovery-cycle-3",
+            }
+            _validate_data("registration", registration_data)
+            registration_payload = _payload(35, "registration", registration_data, amendment_event["event_hash"])
+            registration_event = {**registration_payload, "event_hash": _event_hash(registration_payload)}
+            candidate.append(registration_event)
+            _validate_recovery_cycle3_suffix(candidate)
+            encoded = self.path.read_bytes() + b"".join(
+                canonical_bytes(event) + b"\n" for event in candidate[len(events):])
+            original_stat = self.path.stat()
+            temp_fd = -1
+            temp_path: str | None = None
+            try:
+                temp_fd, temp_path = tempfile.mkstemp(
+                    prefix=f".{self.path.name}.", suffix=".tmp", dir=self.path.parent)
+                os.fchown(temp_fd, original_stat.st_uid, original_stat.st_gid)
+                os.fchmod(temp_fd, stat.S_IMODE(original_stat.st_mode))
+                offset = 0
+                while offset < len(encoded):
+                    written = os.write(temp_fd, encoded[offset:])
+                    if written <= 0:
+                        raise RegistryError("short atomic Cycle-3 retry temp write")
+                    offset += written
+                os.fsync(temp_fd)
+                os.close(temp_fd)
+                temp_fd = -1
+                os.replace(temp_path, self.path)
+                temp_path = None
+                directory_fd = os.open(self.path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+            finally:
+                if temp_fd >= 0:
+                    os.close(temp_fd)
+                if temp_path is not None:
+                    try:
+                        os.unlink(temp_path)
+                    except FileNotFoundError:
+                        pass
+            _read(self.path)
+            return [amendment_event, registration_event]
 
     def register_recovery_workload(self, registration_id: str, registration_kind: str,
                                    record: dict[str, Any]) -> dict[str, Any]:

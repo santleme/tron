@@ -1319,6 +1319,287 @@ def test_cycle3_registration_helper_rejects_live_context_drift_without_append(tm
     assert api.push_calls == []
 
 
+def _cycle3_retry_payloads():
+    from training.eval import registry as registry_module
+    from training.eval.registry import (
+        cycle3_retry_authorization_statement,
+        cycle3_retry_binding_sha256,
+        cycle3_retry_context_sha256,
+        cycle3_retry_registration_record_sha256,
+    )
+
+    proposal_hash = registry_module._CYCLE3_RETRY_PROPOSAL_SHA256
+    record = {
+        "cycle_id": "g008-recovery-cycle-3",
+        "run_uuid": "cycle3-benchmark-retry-run",
+        "kernel_id": "owner/kernel",
+        "session_timeout_seconds": 2800,
+        "workload_gpu_seconds_cap": 5600,
+        "workload_output_bytes_cap": 100_000_000,
+        "accelerator_count": 1,
+        "machine_shape": "NvidiaTeslaT4",
+        "implementation_variants": [{"variant_id": "paired"}],
+        "package_sha256": "1" * 64,
+        "source_sha256": "2" * 64,
+        "config_sha256": "3" * 64,
+        "seed_plan_sha256": "4" * 64,
+        "backend_sha256": "5" * 64,
+        "trainer_sha256": "6" * 64,
+        "engine_sha256": "7" * 64,
+    }
+    registration_id = "cycle3-benchmark-retry"
+    record_hash = cycle3_retry_registration_record_sha256(record)
+    context = {
+        "kernel_id": "owner/kernel",
+        "current_version_number": 13,
+        "current_terminal_status": "ERROR",
+        "current_status_evidence": {
+            "status": "ERROR", "current_version_number": 13, "kernel_id": "owner/kernel",
+        },
+        "quota_gpu_seconds_remaining_before": 80_000,
+        "quota_evidence": {
+            "remaining_gpu_seconds": 80_000, "used_gpu_seconds": 20_000,
+            "source": "pinned Kaggle SDK quota_view",
+        },
+    }
+    context_hash = cycle3_retry_context_sha256(context)
+    binding_hash = cycle3_retry_binding_sha256(
+        registration_id, "benchmark", record["run_uuid"], record_hash,
+    )
+    amendment = {
+        "schema_id": "g008-kaggle-recovery-cycle-retry-amendment",
+        "schema_version": 1,
+        "cycle_id": "g008-recovery-cycle-3-retry",
+        "created_at_utc": "2026-10-20T22:00:00Z",
+        "prior_head_hash": "4f7c8d909349b3a95c91758a2fe6c7490f241ed5db9df9925ce4f600163db966",
+        "prior_final_event_index": 33,
+        "cycle3_amendment_event_index": 27,
+        "cycle3_amendment_event_hash": "7c6bf3510e1cc3ccb20da8198e1915e28b5c363c0c65845f910819ba3eabf7c6",
+        "proposal_sha256": proposal_hash,
+        "retry_registration_id": registration_id,
+        "registration_kind": "benchmark",
+        "retry_run_uuid": record["run_uuid"],
+        "retry_record_sha256": record_hash,
+        "registration_binding_sha256": binding_hash,
+        "preflight_context_sha256": context_hash,
+        **context,
+    }
+    amendment["user_authorization"] = {
+        "proposal_sha256": proposal_hash,
+        "record_sha256": record_hash,
+        "preflight_context_sha256": context_hash,
+        "statement": cycle3_retry_authorization_statement(proposal_hash, record_hash, context_hash),
+        "confirmed_at_utc": "2026-10-20T22:01:00Z",
+    }
+    workload = {
+        "registration_id": registration_id,
+        "registration_kind": "benchmark",
+        "record": record,
+    }
+    return amendment, workload
+
+
+class FakeCycle3RetryRegistry:
+    """Capture the retry batch call without touching the project registry."""
+
+    def __init__(self):
+        self.calls = []
+        self.prior_events = [
+            {"event_index": index, "event_hash": "a" * 64, "event_data": {}}
+            for index in range(34)
+        ]
+        self.prior_events[27]["event_hash"] = "7c6bf3510e1cc3ccb20da8198e1915e28b5c363c0c65845f910819ba3eabf7c6"
+        self.prior_events[33].update({
+            "event_hash": "4f7c8d909349b3a95c91758a2fe6c7490f241ed5db9df9925ce4f600163db966",
+            "event_data": {
+                "outcome": "terminal", "terminal_status": "ERROR", "assigned_version": 13,
+                "terminal_metadata": {"kernel_id": "owner/kernel"},
+            },
+        })
+
+    def events(self):
+        return list(self.prior_events)
+
+    def register_recovery_cycle3_retry_batch(self, amendment, workload):
+        self.calls.append((amendment, workload))
+        amendment_event = {
+            "event_index": 34,
+            "event_type": "recovery_cycle_retry_amendment_v1",
+            "event_hash": "e" * 64,
+            "event_data": amendment,
+        }
+        record = {
+            **workload["record"],
+            "cycle3_retry_amendment_event_index": 34,
+            "cycle3_retry_amendment_event_hash": amendment_event["event_hash"],
+            "recovery_cycle_amendment_event_index": 27,
+            "recovery_cycle_amendment_event_hash": amendment["cycle3_amendment_event_hash"],
+        }
+        registration_event = {
+            "event_index": 35,
+            "event_type": "registration",
+            "event_hash": "f" * 64,
+            "event_data": {
+                "registration_id": workload["registration_id"],
+                "registration_kind": workload["registration_kind"],
+                "record": record,
+                "cycle_id": "g008-recovery-cycle-3",
+            },
+        }
+        return [amendment_event, registration_event]
+
+
+def test_cycle3_retry_registration_helper_checks_live_snapshot_and_atomically_appends_34_35():
+    from tools.kaggle.cli import register_recovery_cycle3_retry
+
+    registry = FakeCycle3RetryRegistry()
+    amendment, workload = _cycle3_retry_payloads()
+    api = FakeRecoveryApi(statuses=("ERROR",), version=13,
+                          quota_remaining=80_000, quota_used=20_000)
+
+    events = register_recovery_cycle3_retry(registry, amendment, workload, api=api)
+
+    assert [event["event_index"] for event in events] == [34, 35]
+    assert [event["event_type"] for event in events] == [
+        "recovery_cycle_retry_amendment_v1", "registration",
+    ]
+    assert len(registry.calls) == 1
+    # The live context is sampled around the status call, then quota is captured.
+    assert api.metadata_calls == ["owner/kernel", "owner/kernel"]
+    assert api.status_calls == ["owner/kernel"]
+    assert api.quota_calls == 1
+    assert api.push_calls == []
+    appended_amendment, appended_workload = registry.calls[0]
+    assert appended_amendment == amendment
+    assert appended_workload == workload
+    registered_record = events[1]["event_data"]["record"]
+    assert registered_record == {
+        **workload["record"],
+        "cycle3_retry_amendment_event_index": 34,
+        "cycle3_retry_amendment_event_hash": events[0]["event_hash"],
+        "recovery_cycle_amendment_event_index": 27,
+        "recovery_cycle_amendment_event_hash": amendment["cycle3_amendment_event_hash"],
+    }
+
+
+@pytest.mark.parametrize("drift", ["kernel", "version", "status", "quota", "running"])
+def test_cycle3_retry_registration_helper_rejects_live_context_drift_without_append(drift):
+    from tools.kaggle.cli import register_recovery_cycle3_retry
+
+    registry = FakeCycle3RetryRegistry()
+    amendment, workload = _cycle3_retry_payloads()
+    api = FakeRecoveryApi(statuses=("ERROR",), version=13,
+                          quota_remaining=80_000, quota_used=20_000)
+    if drift == "kernel":
+        api.get_kernel = lambda kernel_id: {
+            "kernel_id": "other/kernel", "current_version_number": 14,
+        }
+    elif drift == "version":
+        api.drift_after_status = True
+    elif drift == "status":
+        api.statuses = ["COMPLETE"]
+    elif drift == "quota":
+        api.quota_remaining -= 1
+    elif drift == "running":
+        api.statuses = ["RUNNING"]
+
+    with pytest.raises(KaggleError):
+        register_recovery_cycle3_retry(registry, amendment, workload, api=api)
+
+    assert registry.calls == []
+    assert api.push_calls == []
+
+
+@pytest.mark.parametrize("drift", ["authorization", "record"])
+def test_cycle3_retry_registration_helper_rejects_frozen_authorization_drift_before_append(drift):
+    from tools.kaggle.cli import register_recovery_cycle3_retry
+
+    registry = FakeCycle3RetryRegistry()
+    amendment, workload = _cycle3_retry_payloads()
+    if drift == "authorization":
+        amendment["user_authorization"]["statement"] += " changed"
+    else:
+        workload["record"]["package_sha256"] = "f" * 64
+    api = FakeRecoveryApi(statuses=("ERROR",), version=13,
+                          quota_remaining=80_000, quota_used=20_000)
+
+    with pytest.raises(KaggleError):
+        register_recovery_cycle3_retry(registry, amendment, workload, api=api)
+
+    assert registry.calls == []
+    assert api.metadata_calls == []
+    assert api.status_calls == []
+    assert api.quota_calls == 0
+    assert api.push_calls == []
+
+
+def test_cycle3_retry_preflight_rejects_quota_drift_before_preflight_or_dispatch(tmp_path, monkeypatch):
+    from tools.kaggle import cli
+
+    base, records = _cycle3_budget_fixture()
+    events = base.events()
+    events[27]["event_hash"] = "7c6bf3510e1cc3ccb20da8198e1915e28b5c363c0c65845f910819ba3eabf7c6"
+    for event in events[28:30]:
+        event["event_data"]["record"]["recovery_cycle_amendment_event_hash"] = events[27]["event_hash"]
+    events.extend({"event_index": index, "event_type": "legacy", "event_data": {}}
+                  for index in range(30, 32))
+    events.append({"event_index": 32, "event_type": "workload_push_dispatched", "event_hash": "d" * 64,
+                   "event_data": {"cycle_id": "g008-recovery-cycle-3", "attempt_id": "cycle3-benchmark-error"}})
+    events.append({"event_index": 33, "event_type": "workload_attempt", "event_hash": "4f7c8d909349b3a95c91758a2fe6c7490f241ed5db9df9925ce4f600163db966",
+                   "event_data": {"cycle_id": "g008-recovery-cycle-3", "attempt_id": "cycle3-benchmark-error",
+                                  "outcome": "terminal", "registration_event_index": 28,
+                                  "assigned_version": 13, "terminal_status": "ERROR",
+                                  "terminal_metadata": {"kernel_id": "owner/kernel"},
+                                  "actual_gpu_seconds": 104, "output_bytes": 4497}})
+
+    class AppendingRetryRegistry:
+        path = tmp_path / "registry.jsonl"
+
+        def __init__(self):
+            self._events = events
+
+        def events(self):
+            return list(self._events)
+
+        def register_recovery_cycle3_retry_batch(self, amendment, workload):
+            amendment_event = {"event_index": 34, "event_type": "recovery_cycle_retry_amendment_v1",
+                               "event_hash": "e" * 64, "event_data": amendment}
+            record = {**workload["record"], "cycle3_retry_amendment_event_index": 34,
+                      "cycle3_retry_amendment_event_hash": amendment_event["event_hash"],
+                      "recovery_cycle_amendment_event_index": 27,
+                      "recovery_cycle_amendment_event_hash": amendment["cycle3_amendment_event_hash"]}
+            registration = {"event_index": 35, "event_type": "registration", "event_hash": "f" * 64,
+                            "event_data": {"registration_id": workload["registration_id"],
+                                           "registration_kind": workload["registration_kind"],
+                                           "record": record, "cycle_id": "g008-recovery-cycle-3"}}
+            self._events.extend((amendment_event, registration))
+            return [amendment_event, registration]
+
+    registry = AppendingRetryRegistry()
+    amendment, workload = _cycle3_retry_payloads()
+    api = FakeRecoveryApi(statuses=("ERROR", "ERROR"), version=13,
+                          quota_remaining=80_000, quota_used=20_000)
+    appended = cli.register_recovery_cycle3_retry(registry, amendment, workload, api=api)
+    assert [event["event_index"] for event in appended] == [34, 35]
+
+    source = make_recovery_source(tmp_path)
+    monkeypatch.setattr(cli, "package_tree_sha256", lambda _: workload["record"]["package_sha256"])
+    before_run = registry.events()
+    api.quota_remaining = 79_999
+    api.quota_used = 20_001
+    with pytest.raises(KaggleError, match="authorized Cycle-3 retry context"):
+        cli.run_recovery_workload(
+            registry, 35, source, attempt_id="cycle3-benchmark-retry-context-drift",
+            implementation_variant_id="paired", no_external_writer_confirmed=True,
+            api=api, output_bytes=lambda kernel, version: 0,
+            monotonic=lambda: 10.0, sleep=lambda _: None, poll_interval_seconds=1,
+        )
+
+    assert registry.events() == before_run
+    assert not any(event["event_type"] == "workload_preflight" for event in registry.events())
+    assert api.push_calls == []
+
+
 class FakeRecoveryApi:
     def __init__(self, statuses=("COMPLETE", "COMPLETE"), *, version=10, assigned=11,
                  quota_remaining=40000, quota_used=1000, drift_after_status=False,
@@ -1510,18 +1791,18 @@ def test_recovery_resumes_preflight_after_package_drift_without_duplicate_events
     original_hash = cli.package_tree_sha256
     calls = []
 
-    def change_on_second_hash(path):
+    def change_before_dispatch(path):
         calls.append(path)
-        return original_hash(path) if len(calls) == 1 else "0" * 64
+        return original_hash(path) if len(calls) < 4 else "0" * 64
 
-    monkeypatch.setattr(cli, "package_tree_sha256", change_on_second_hash)
-    with pytest.raises(KaggleError, match="changed after preflight"):
+    monkeypatch.setattr(cli, "package_tree_sha256", change_before_dispatch)
+    with pytest.raises(KaggleError, match="Read-only submission snapshot"):
         cli.run_recovery_workload(
             registry, registration["event_index"], source,
             attempt_id="attempt-package-race", implementation_variant_id=variant,
             no_external_writer_confirmed=True, api=api, output_bytes=lambda kernel, version: 0,
         )
-    assert len(calls) == 2
+    assert len(calls) == 4
     assert api.push_calls == []
     assert registry.events()[-1]["event_type"] == "workload_preflight"
     assert not any(event["event_type"] == "workload_push_dispatched" for event in registry.events())

@@ -207,6 +207,12 @@ def _state_document(state) -> dict[str, Any]:
                        for agent in state.agents]}
 
 
+def _stream_seed_document(seed) -> dict[str, Any]:
+    """Convert the immutable seed record to the JSON form used in parity traces."""
+    return {"label": seed.label, "initstate": seed.initstate, "initseq": seed.initseq,
+            "digest_hex": seed.digest_hex, "preimage_hex": seed.preimage_hex}
+
+
 def _transition_parity_digest(module, config: TrainConfig, schedule: dict[str, Any],
                               run_id: str, role: str) -> dict[str, Any]:
     """Hash a real model-sampled collector rollout before any timing run."""
@@ -229,7 +235,8 @@ def _transition_parity_digest(module, config: TrainConfig, schedule: dict[str, A
         state, seeds = original_initialize(width, height, master_seed, arena_index)
         event = "initial" if initialized < config.arena_count else "reset"
         events.append({"event": event, "seed": master_seed, "arena_index": arena_index,
-                       "state": _state_document(state), "stream_seeds": list(seeds)})
+                       "state": _state_document(state),
+                       "stream_seeds": [_stream_seed_document(seed) for seed in seeds]})
         initialized += 1
         return state, seeds
 
