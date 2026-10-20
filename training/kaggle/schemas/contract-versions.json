@@ -1,0 +1,21 @@
+{
+  "format": "lc-contract-versions/1",
+  "run": "lc-run/1",
+  "replay": "lc-replay/1",
+  "evaluation": "lc-eval/1",
+  "checkpoint": "lc-checkpoint/1",
+  "observation": "lc-observation/1",
+  "action": "lc-action/1",
+  "reward": "lc-reward/1",
+  "engine": "lc-engine/1",
+  "action_order": [
+    "UP",
+    "RIGHT",
+    "DOWN",
+    "LEFT"
+  ],
+  "action_invalid_token": "INVALID",
+  "digest_algorithm": "SHA-256",
+  "digest_canonicalization": "lc-canonical-json/1",
+  "seed_algorithm": "lc-seed-pcg-xsh-rr/1"
+}

@@ -1,0 +1,129 @@
+{
+  "format": "lc-replay/1",
+  "run_id": "run-0001",
+  "match_id": "match-0001",
+  "engine_version": "lc-engine/1",
+  "observation_schema": "lc-observation/1",
+  "action_schema": "lc-action/1",
+  "master_seed": "0",
+  "arena_index": 0,
+  "derived_streams": [
+    {
+      "label": "episode",
+      "initstate": "13097817001650409514",
+      "initseq": "13682310872408897968"
+    },
+    {
+      "label": "agent/0",
+      "initstate": "1970325947257326680",
+      "initseq": "6269683043135904314"
+    },
+    {
+      "label": "agent/1",
+      "initstate": "8321110053058776183",
+      "initseq": "6641069864940112565"
+    }
+  ],
+  "agents": [
+    {
+      "agent_id": "agent-0",
+      "checkpoint_id": "step-0"
+    },
+    {
+      "agent_id": "agent-1",
+      "checkpoint_id": "step-0"
+    }
+  ],
+  "initial_state": {
+    "width": 8,
+    "height": 6,
+    "positions": [
+      {
+        "x": 1,
+        "y": 2
+      },
+      {
+        "x": 6,
+        "y": 3
+      }
+    ],
+    "headings": [
+      "RIGHT",
+      "LEFT"
+    ],
+    "trails": [
+      [
+        {
+          "x": 1,
+          "y": 2
+        }
+      ],
+      [
+        {
+          "x": 6,
+          "y": 3
+        }
+      ]
+    ]
+  },
+  "ticks": [
+    {
+      "tick": 0,
+      "joint_actions": [
+        1,
+        3
+      ],
+      "collision_causes": [
+        [],
+        []
+      ],
+      "terminal_causes": []
+    },
+    {
+      "tick": 1,
+      "joint_actions": [
+        1,
+        0
+      ],
+      "collision_causes": [
+        [],
+        []
+      ],
+      "terminal_causes": []
+    },
+    {
+      "tick": 2,
+      "joint_actions": [
+        2,
+        3
+      ],
+      "collision_causes": [
+        [],
+        []
+      ],
+      "terminal_causes": []
+    },
+    {
+      "tick": 3,
+      "joint_actions": [
+        1,
+        2
+      ],
+      "collision_causes": [
+        [
+          "same_destination"
+        ],
+        [
+          "same_destination"
+        ]
+      ],
+      "terminal_causes": [
+        "agent_0_dead",
+        "agent_1_dead"
+      ]
+    }
+  ],
+  "result": "draw",
+  "tick_count": 4,
+  "replay_sha256": "ffade970890bf6194a5e07c2d10b8aae6d08d9fb311d55bdb7851eaa49b6c54e"
+}

@@ -1,0 +1,109 @@
+{
+  "format": "lc-run/1",
+  "run_id": "run-0001",
+  "created_utc": "2026-10-19T00:00:00Z",
+  "engine_version": "lc-engine/1",
+  "observation_schema": "lc-observation/1",
+  "action_schema": "lc-action/1",
+  "reward_schema": "lc-reward/1",
+  "replay_schema": "lc-replay/1",
+  "master_seed": "0",
+  "training_config": {
+    "arena_count": 1,
+    "rollout_steps": 8,
+    "update_epochs": 1,
+    "self_play": {
+      "opponent_sampling": "latest",
+      "snapshot_interval": 100
+    }
+  },
+  "training_steps": 0,
+  "checkpoints": [
+    {
+      "checkpoint_id": "step-0",
+      "step": 0,
+      "file": "checkpoints/step-0.pt",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "format": "pytorch",
+      "observation_schema": "lc-observation/1",
+      "action_schema": "lc-action/1"
+    },
+    {
+      "checkpoint_id": "step-0",
+      "step": 0,
+      "file": "checkpoints/step-0.onnx",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "format": "onnx",
+      "observation_schema": "lc-observation/1",
+      "action_schema": "lc-action/1"
+    }
+  ],
+  "evaluation": {
+    "protocol": "lc-eval/1",
+    "held_out_seeds": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29",
+      "30",
+      "31"
+    ],
+    "games_per_matchup": 64,
+    "opponent_ids": [
+      "open-space",
+      "step-0"
+    ],
+    "metrics_file": "evaluation/report.json",
+    "replay_files": [
+      "evaluation/match-000.json"
+    ]
+  },
+  "software": {
+    "python": "3.12",
+    "torch": "2.x",
+    "onnx_exporter": "torch",
+    "onnx_opset": 17,
+    "kaggle_cli": "not-used"
+  },
+  "device": {
+    "device": "cpu"
+  },
+  "benchmark_records": [],
+  "files": [
+    {
+      "path": "checkpoints/step-0.pt",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "path": "checkpoints/step-0.onnx",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "manifest_sha256": "a8b9bd4412310efbb8a8581d3200b601bfbbe4933d24b8c46e6c42d5e47909c9"
+}

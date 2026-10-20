@@ -1,0 +1,199 @@
+{
+  "protocol": "lc-eval/1",
+  "comparison_protocol": "paired held-out seed+seat; 20,000 nonparametric bootstrap resamples of mean survival difference; draws are not wins for Wilson intervals",
+  "bootstrap_seed": 42,
+  "bootstrap_resamples": 20000,
+  "checkpoints": [
+    {
+      "checkpoint_id": "step-0",
+      "matchups": [
+        {
+          "opponent_id": "open-space",
+          "games": 64,
+          "wins": 0,
+          "draws": 2,
+          "losses": 62,
+          "win_rate": 0,
+          "wilson_95": [
+            0,
+            0.05662405979280534
+          ],
+          "mean_survival_ticks": 6.421875,
+          "median_survival_ticks": 7,
+          "paired_mean_survival_delta_vs_step0": 0.0,
+          "paired_bootstrap_95_survival_delta": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "opponent_id": "step-0",
+          "games": 64,
+          "wins": 26,
+          "draws": 12,
+          "losses": 26,
+          "win_rate": 0.40625,
+          "wilson_95": [
+            0.2945690924971961,
+            0.5285479187139549
+          ],
+          "mean_survival_ticks": 4.9375,
+          "median_survival_ticks": 4,
+          "paired_mean_survival_delta_vs_step0": 0.0,
+          "paired_bootstrap_95_survival_delta": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "checkpoint_eval_report_sha256": "a14c5385bf7b6518e1c5151fd48c3fba239b9395d1154c7b8480c945f817094e"
+    },
+    {
+      "checkpoint_id": "step-100",
+      "matchups": [
+        {
+          "opponent_id": "open-space",
+          "games": 64,
+          "wins": 0,
+          "draws": 5,
+          "losses": 59,
+          "win_rate": 0,
+          "wilson_95": [
+            0,
+            0.05662405979280534
+          ],
+          "mean_survival_ticks": 19.515625,
+          "median_survival_ticks": 20,
+          "paired_mean_survival_delta_vs_step0": 13.09375,
+          "paired_bootstrap_95_survival_delta": [
+            10.96875,
+            15.3125
+          ]
+        },
+        {
+          "opponent_id": "step-0",
+          "games": 64,
+          "wins": 61,
+          "draws": 1,
+          "losses": 2,
+          "win_rate": 0.953125,
+          "wilson_95": [
+            0.8710034625990631,
+            0.983930983213707
+          ],
+          "mean_survival_ticks": 6.34375,
+          "median_survival_ticks": 6,
+          "paired_mean_survival_delta_vs_step0": 1.40625,
+          "paired_bootstrap_95_survival_delta": [
+            0.6875,
+            2.171875
+          ]
+        }
+      ],
+      "checkpoint_eval_report_sha256": "187bd46bbd846b4c5d1225351b15678a9d12eed37af809aaa83eb3ac6d76f635"
+    },
+    {
+      "checkpoint_id": "step-200",
+      "matchups": [
+        {
+          "opponent_id": "open-space",
+          "games": 64,
+          "wins": 0,
+          "draws": 4,
+          "losses": 60,
+          "win_rate": 0,
+          "wilson_95": [
+            0,
+            0.05662405979280534
+          ],
+          "mean_survival_ticks": 19.671875,
+          "median_survival_ticks": 20,
+          "paired_mean_survival_delta_vs_step0": 13.25,
+          "paired_bootstrap_95_survival_delta": [
+            11.21875,
+            15.265625
+          ]
+        },
+        {
+          "opponent_id": "step-0",
+          "games": 64,
+          "wins": 59,
+          "draws": 1,
+          "losses": 4,
+          "win_rate": 0.921875,
+          "wilson_95": [
+            0.8298046264583709,
+            0.9661688230914496
+          ],
+          "mean_survival_ticks": 6.328125,
+          "median_survival_ticks": 6,
+          "paired_mean_survival_delta_vs_step0": 1.390625,
+          "paired_bootstrap_95_survival_delta": [
+            0.671875,
+            2.15625
+          ]
+        }
+      ],
+      "checkpoint_eval_report_sha256": "b64a40dd1d350caa015dac02b279728c2e9e98edb08e2d7dd6b628cf5142325f"
+    },
+    {
+      "checkpoint_id": "step-300",
+      "matchups": [
+        {
+          "opponent_id": "open-space",
+          "games": 64,
+          "wins": 1,
+          "draws": 4,
+          "losses": 59,
+          "win_rate": 0.015625,
+          "wilson_95": [
+            0.002763541923337505,
+            0.08334101600094265
+          ],
+          "mean_survival_ticks": 19.546875,
+          "median_survival_ticks": 20,
+          "paired_mean_survival_delta_vs_step0": 13.125,
+          "paired_bootstrap_95_survival_delta": [
+            11.234375,
+            15.0
+          ]
+        },
+        {
+          "opponent_id": "step-0",
+          "games": 64,
+          "wins": 58,
+          "draws": 2,
+          "losses": 4,
+          "win_rate": 0.90625,
+          "wilson_95": [
+            0.810171204003544,
+            0.9563217474148016
+          ],
+          "mean_survival_ticks": 6.3125,
+          "median_survival_ticks": 6,
+          "paired_mean_survival_delta_vs_step0": 1.375,
+          "paired_bootstrap_95_survival_delta": [
+            0.6875,
+            2.125
+          ]
+        }
+      ],
+      "checkpoint_eval_report_sha256": "d9c88d292fee0575d0481b64d6f524609ca100a9362f84661a8c62e131397535"
+    }
+  ],
+  "kaggle_run": {
+    "kernel": "pascalcoimbra/circuit-ai",
+    "version": 5,
+    "run_id": "lc-circuit-ai-selfplay-300",
+    "remote_manifest_sha256": "fff7e2bc6257e755b2f2f76792986b0348a3002640023a681269c88ae579b121",
+    "training_metrics_sha256": "a3c06fa51ee7fd6176017212159d07ff69a2a4e62bd640760c386a3ca3c45247",
+    "benchmark_source_run": "pascalcoimbra/circuit-ai version 4 (lc-circuit-ai-smoke-r4)",
+    "device": "Tesla T4 (two visible, training on cuda:0 only)",
+    "cuda_optimizer_updates": 1200,
+    "training_steps": 1228800,
+    "updates": 300,
+    "mean_environment_steps_per_second": 1439.3217368606347,
+    "wall_environment_steps_per_second": 1433.2566094968681,
+    "elapsed_seconds": 857.3482179380001
+  }
+}

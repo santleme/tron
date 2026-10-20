@@ -1,0 +1,233 @@
+{
+  "benchmark_report": {
+    "agent_decisions_definition": "2 \u00d7 completed joint arena transitions",
+    "baseline_note": "This measures the current Python trainer as-is. No speedup, optimization, or 10,000 transitions/s gate is implied.",
+    "config": {
+      "arena_count": 128,
+      "checkpoint_every": 1,
+      "clip_ratio": 0.2,
+      "device": "cuda",
+      "entropy_coef": 0.01,
+      "gae_lambda": 0.95,
+      "gamma": 0.99,
+      "height": 12,
+      "hidden_size": 128,
+      "learning_rate": 0.0003,
+      "minibatch_size": 1024,
+      "onnx_opset": 17,
+      "rollout_steps": 32,
+      "seed": 1234,
+      "snapshot_opponent_probability": 0.0,
+      "total_updates": 3,
+      "update_epochs": 1,
+      "value_coef": 0.5,
+      "width": 12
+    },
+    "config_artifact_sha256": "8a9436d9cdad8f2f1873965bb96bca536e9577b0b9646b148ae6ba55d81b0681",
+    "config_sha256": "0ec65b7978e26ecb13b893e76ec358d48c41428db96b0a60dd810f9f24f0e484",
+    "cuda_optimizer_updates_total": 60,
+    "device": {
+      "cuda_available": true,
+      "cuda_name": "Tesla T4",
+      "cuda_optimizer_updates": 4,
+      "device": "cuda",
+      "optimizer_updates": 4
+    },
+    "format": "circuit-ai-g008-principal-benchmark/1",
+    "measured_repeats": 5,
+    "numerator_definition": "completed joint arena transitions = arena_count \u00d7 rollout_steps \u00d7 PPO updates; both agents act per joint transition",
+    "optimizer_updates_total": 60,
+    "purpose": "single-baseline measurement; current trainer implementation; no candidate comparison or gate claim",
+    "repeats": [
+      {
+        "agent_decisions": 24576,
+        "checkpoint_inclusive_update_elapsed_seconds": 9.651139779999994,
+        "checkpoint_seconds": 0.01770848199998909,
+        "completed_joint_arena_transitions": 12288,
+        "cuda_optimizer_updates": 12,
+        "optimizer_seconds": 0.049626455999941754,
+        "optimizer_updates": 12,
+        "repeat": 0,
+        "rollout_seconds": 9.60150090399992,
+        "schedule_digest": "aa2e9100b7fda190099a08119c817f1db616662e09813ee6f78b697dc2700625",
+        "training_metrics_sha256": "c5d9ef3b6fa4891278c9c9b821dd93744e77f0b9127a50fb9b963d3801089422",
+        "update_only_agent_decisions_per_second": 2551.115925340353,
+        "update_only_joint_transitions_per_second": 1275.5579626701765,
+        "update_only_seconds": 9.633431298000005,
+        "wall_inclusive_agent_decisions_per_second": 2541.767450910893,
+        "wall_inclusive_joint_transitions_per_second": 1270.8837254554464,
+        "wall_seconds": 9.668862504000003
+      },
+      {
+        "agent_decisions": 24576,
+        "checkpoint_inclusive_update_elapsed_seconds": 9.686434531000032,
+        "checkpoint_seconds": 0.01694370800004208,
+        "completed_joint_arena_transitions": 12288,
+        "cuda_optimizer_updates": 12,
+        "optimizer_seconds": 0.05107362599994758,
+        "optimizer_updates": 12,
+        "repeat": 1,
+        "rollout_seconds": 9.635345377999954,
+        "schedule_digest": "cdc017cfe1146127db30a3a2199274251e82cacffa1f9aca5cd001152ff9eb1b",
+        "training_metrics_sha256": "19b33068996377d9ea593cc5240952cb8f2bf8cc2da3ba23dbb4da5750354fba",
+        "update_only_agent_decisions_per_second": 2541.602288048423,
+        "update_only_joint_transitions_per_second": 1270.8011440242115,
+        "update_only_seconds": 9.66949082299999,
+        "wall_inclusive_agent_decisions_per_second": 2532.7223891234908,
+        "wall_inclusive_joint_transitions_per_second": 1266.3611945617454,
+        "wall_seconds": 9.703392722999979
+      },
+      {
+        "agent_decisions": 24576,
+        "checkpoint_inclusive_update_elapsed_seconds": 9.35049846000004,
+        "checkpoint_seconds": 0.016743378999990455,
+        "completed_joint_arena_transitions": 12288,
+        "cuda_optimizer_updates": 12,
+        "optimizer_seconds": 0.05108095299999604,
+        "optimizer_updates": 12,
+        "repeat": 2,
+        "rollout_seconds": 9.29940448299999,
+        "schedule_digest": "b0d35e518da2d88fd58c91e6d94141e574bd2a34c2ac89250c4c94995bc32d82",
+        "training_metrics_sha256": "fde9bc246578df82bf4078fd89d866a0bcdb094268c0b24a03bec5891f0142fa",
+        "update_only_agent_decisions_per_second": 2633.0238780346103,
+        "update_only_joint_transitions_per_second": 1316.5119390173052,
+        "update_only_seconds": 9.33375508100005,
+        "wall_inclusive_agent_decisions_per_second": 2623.607012078329,
+        "wall_inclusive_joint_transitions_per_second": 1311.8035060391644,
+        "wall_seconds": 9.367256562000023
+      },
+      {
+        "agent_decisions": 24576,
+        "checkpoint_inclusive_update_elapsed_seconds": 9.641428978000022,
+        "checkpoint_seconds": 0.016528831000073296,
+        "completed_joint_arena_transitions": 12288,
+        "cuda_optimizer_updates": 12,
+        "optimizer_seconds": 0.05168847100003404,
+        "optimizer_updates": 12,
+        "repeat": 3,
+        "rollout_seconds": 9.589727282000013,
+        "schedule_digest": "45215f94aa01c69ddfdbb5282b198a92b825df4070d14891f60aafaadef6bfb6",
+        "training_metrics_sha256": "fbbeede4bb5b977d6d1e6bf21d1566f4dd35deb83916d65fa8dc3ea836c339d3",
+        "update_only_agent_decisions_per_second": 2553.3771389472818,
+        "update_only_joint_transitions_per_second": 1276.6885694736409,
+        "update_only_seconds": 9.624900146999948,
+        "wall_inclusive_agent_decisions_per_second": 2544.6332587448496,
+        "wall_inclusive_joint_transitions_per_second": 1272.3166293724248,
+        "wall_seconds": 9.657973271999992
+      },
+      {
+        "agent_decisions": 24576,
+        "checkpoint_inclusive_update_elapsed_seconds": 9.645998187000032,
+        "checkpoint_seconds": 0.016699502999983906,
+        "completed_joint_arena_transitions": 12288,
+        "cuda_optimizer_updates": 12,
+        "optimizer_seconds": 0.0499272010000027,
+        "optimizer_updates": 12,
+        "repeat": 4,
+        "rollout_seconds": 9.596057206999944,
+        "schedule_digest": "a995039f394f77bb36d3abb31458f7c78d25d12caecc8856112dd5c9a9090efb",
+        "training_metrics_sha256": "57eaeaa97c9ed40b6c01e3807648eb766783d48820ed96b9bf877325739b513a",
+        "update_only_agent_decisions_per_second": 2552.210789850693,
+        "update_only_joint_transitions_per_second": 1276.1053949253464,
+        "update_only_seconds": 9.629298684000048,
+        "wall_inclusive_agent_decisions_per_second": 2543.385438478049,
+        "wall_inclusive_joint_transitions_per_second": 1271.6927192390244,
+        "wall_seconds": 9.662711607999995
+      }
+    ],
+    "schedule_spec_digest": "9b3878688d8494211cbde92c7f671653239956a97161263277e0db19b2e7ffec",
+    "source": "artifacts/circuit-ai/runs/lc-circuit-ai-smoke-r4/benchmark-results.json#trials[2]",
+    "summary": {
+      "checkpoint_inclusive_update_elapsed_seconds": {
+        "iqr": 0.1728234364999821,
+        "max": 9.686434531000032,
+        "median": 9.645998187000032,
+        "min": 9.35049846000004
+      },
+      "checkpoint_seconds": {
+        "iqr": 0.0007119279999869832,
+        "max": 0.01770848199998909,
+        "median": 0.016743378999990455,
+        "min": 0.016528831000073296
+      },
+      "optimizer_seconds": {
+        "iqr": 0.001607883500042817,
+        "max": 0.05168847100003404,
+        "median": 0.05107362599994758,
+        "min": 0.049626455999941754
+      },
+      "rollout_seconds": {
+        "iqr": 0.17385725849993605,
+        "max": 9.635345377999954,
+        "median": 9.596057206999944,
+        "min": 9.29940448299999
+      },
+      "update_only_agent_decisions_per_second": {
+        "iqr": 46.841401796557875,
+        "max": 2633.0238780346103,
+        "median": 2552.210789850693,
+        "min": 2541.602288048423
+      },
+      "update_only_joint_transitions_per_second": {
+        "iqr": 23.420700898278938,
+        "max": 1316.5119390173052,
+        "median": 1276.1053949253464,
+        "min": 1270.8011440242115
+      },
+      "update_only_seconds": {
+        "iqr": 0.1721334464999984,
+        "max": 9.66949082299999,
+        "median": 9.629298684000048,
+        "min": 9.33375508100005
+      },
+      "wall_inclusive_agent_decisions_per_second": {
+        "iqr": 46.8752153943974,
+        "max": 2623.607012078329,
+        "median": 2543.385438478049,
+        "min": 2532.7223891234908
+      },
+      "wall_inclusive_joint_transitions_per_second": {
+        "iqr": 23.4376076971987,
+        "max": 1311.8035060391644,
+        "median": 1271.6927192390244,
+        "min": 1266.3611945617454
+      },
+      "wall_seconds": {
+        "iqr": 0.17351269649998358,
+        "max": 9.703392722999979,
+        "median": 9.662711607999995,
+        "min": 9.367256562000023
+      }
+    },
+    "updates_per_repeat": 3,
+    "warmups": {
+      "count": 2,
+      "discarded": true,
+      "runs": [
+        {
+          "completed_joint_arena_transitions": 4096,
+          "discarded": true,
+          "run": 0,
+          "schedule_digest": "7a828b1f68e9c200873f6c34d83d491dd2831561ba360be557b556a4ab35e675"
+        },
+        {
+          "completed_joint_arena_transitions": 4096,
+          "discarded": true,
+          "run": 1,
+          "schedule_digest": "06000d28d93914b737129ac2089ef5b1b4d6cf482a40d21783c49cb1568b64f8"
+        }
+      ],
+      "updates_each": 1
+    }
+  },
+  "benchmark_report_sha256": "e315d38af4a86ef054e5e6d72ffd5f7791c912e7b543c1cb1477420a3e11dbd6",
+  "cuda_version": "12.8",
+  "format": "circuit-ai-kaggle-g008-benchmark-evidence/1",
+  "python_version": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+  "run_id": "g008-principal-baseline-20261020-r1",
+  "torch_version": "2.11.0+cu128",
+  "visible_cuda_devices": [
+    "Tesla T4",
+    "Tesla T4"
+  ]
+}

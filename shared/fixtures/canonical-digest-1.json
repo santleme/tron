@@ -1,0 +1,19 @@
+{
+  "format": "lc-canonical-json-vectors/1",
+  "canonicalization": "lc-canonical-json/1",
+  "vectors": [
+    {
+      "document": {
+        "z": 1,
+        "text": "Café",
+        "values": [
+          3,
+          0.5
+        ]
+      },
+      "canonical_utf8": "{\"text\":\"Café\",\"values\":[3,0.5],\"z\":1}",
+      "sha256": "b11352212ce2e747439b36f82971961fd95867770e176edd32a80cb744c5cd29",
+      "digest_field": "sha256"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080b12" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' blob:; worker-src 'self' blob:;" />
+    <title>Gridline — Neural Arena</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Gridline home"><span class="brand-mark">G</span><span>GRIDLINE<small>NEURAL ARENA / LOCAL SESSION</small></span></a>
+        <div class="live-pill"><i></i> LOCAL SIMULATION</div>
+        <button class="icon-button" id="help" title="About this arena">?</button>
+      </header>
+      <main>
+        <section class="intro"><div><p class="eyebrow">SELF-PLAY LAB <span>•</span> EXPERIMENT 001</p><h1>Watch intelligence<br /><em>find a way.</em></h1><p class="lede">Two minds. One grid. No second chances.</p></div><div class="run-chip"><span>ARENA STATUS</span><strong id="statusText">STANDBY</strong><b class="run-dot" id="statusDot"></b></div></section>
+        <section class="workspace">
+          <div class="arena-card">
+            <div class="arena-head"><div><span class="section-label">LIVE ARENA</span><strong id="arenaTitle">A new match awaits</strong></div><div class="tick-readout"><small>TICK</small><b id="tickValue">000</b></div></div>
+            <div class="canvas-wrap"><canvas id="arena" aria-label="Light cycles arena"></canvas><div class="empty-state" id="emptyState"><div class="empty-orbit">⌘</div><b>Load a checkpoint to enter the grid</b><span>Your model stays on this device.</span></div></div>
+            <div class="arena-controls"><button class="primary-button" id="startMatch">▶ <span>NEW MATCH</span></button><button class="control-button" id="playPause" disabled>Ⅱ</button><button class="control-button" id="restart" disabled>↺</button><button class="quiet-button" id="saveReplay" hidden>SAVE REPLAY ↓</button><div class="speed-control"><span>SPEED</span><select id="speed"><option value="600">1×</option><option value="220">2×</option><option value="80">4×</option><option value="20">8×</option></select></div></div>
+            <div class="timeline"><input type="range" id="scrubber" min="0" max="0" value="0" aria-label="Replay timeline" disabled /><div><span>START</span><span id="timelineTick">TICK 000 / 000</span><span>RESULT</span></div></div>
+          </div>
+          <aside class="side-column">
+            <section class="panel model-panel"><div class="panel-heading"><span class="section-label">POLICY CHECKPOINT</span><span class="file-indicator" id="modelIndicator">NOT LOADED</span></div><label class="upload-zone" for="checkpointFile"><span class="upload-icon">↑</span><span><b id="checkpointName">Choose ONNX checkpoint</b><small>Load metadata first · .onnx · inference stays offline</small></span><input id="checkpointFile" type="file" accept=".onnx,application/onnx" /></label><div class="checkpoint-meta" id="checkpointMeta"><span>ARCHITECTURE<strong>Waiting for model</strong></span><span>STEP<strong>—</strong></span><span>OBSERVATION<strong>lc-observation/1</strong></span></div><label class="seed-field">MATCH SEED <input id="seed" type="number" min="32" value="2026" /></label><button class="quiet-button" id="metadataFileButton">+ Verify checkpoint metadata</button><button class="quiet-button" id="manifestFileButton">+ Verify manifest integrity only</button><input id="runManifestFile" type="file" accept=".json,application/json" hidden /><input id="runBundleFolder" type="file" webkitdirectory directory multiple hidden /><input id="metadataFile" type="file" accept=".json,application/json" hidden /></section>
+            <section class="panel agents-panel"><div class="panel-heading"><span class="section-label">COMPETITORS</span><span class="subtle">SAME POLICY · DIFFERENT SEATS</span></div><div class="agent-row"><span class="agent-avatar cyan">01</span><span class="agent-name"><b>CYAN / PRIME</b><small id="agent0Name">Awaiting checkpoint</small></span><span class="agent-state" id="agent0State">READY</span></div><div class="agent-row"><span class="agent-avatar violet">02</span><span class="agent-name"><b>VIOLET / ECHO</b><small id="agent1Name">Awaiting checkpoint</small></span><span class="agent-state" id="agent1State">READY</span></div></section>
+            <section class="panel metrics-panel"><div class="panel-heading"><span class="section-label">TRAINING SIGNAL</span><label class="mini-upload" for="metricsFile">LOAD EVAL REPORT</label></div><div class="metrics-grid"><div class="metric"><span>WIN RATE</span><b id="winRate">—<small>%</small></b><div class="metric-track"><i id="winTrack"></i></div></div><div class="metric"><span>TRAINING STEPS</span><b id="trainSteps">—</b><small id="runLabel">Select a run report</small></div><div class="metric"><span>MEAN SURVIVAL</span><b id="survival">—<small>ticks</small></b><small id="evalLabel">Evaluation vs open-space</small></div><div class="metric"><span>W / D / L</span><b id="record">—</b><small>64 held-out games</small></div></div><div class="training-evidence" id="trainingEvidence" hidden><div><span>UPDATES · LATEST LOSS</span><b id="trainingUpdates">—</b><small id="latestLoss">—</small></div><div><span>ENV STEPS / SEC</span><b id="envStepsPerSecond">—</b><small id="selectedDevice">—</small></div><div><span>CUDA OPTIMIZER UPDATES</span><b id="cudaUpdates">—</b><small>Actual recorded updates</small></div></div><div class="bundle-tools"><button class="quiet-button" id="bundleFolderButton">LOAD RUN FOLDER</button><span>Chromium/WebKit folder selection</span><input class="mini-upload" id="metricsFile" type="file" accept=".json,application/json" /></div><div class="metrics-foot" id="metricsFoot">Evaluation metrics are evidence, not a promise of improvement.</div></section>
+            <section class="panel replay-panel"><div class="panel-heading"><span class="section-label">REPLAY ARCHIVE</span><label class="mini-upload" for="replayFile">OPEN REPLAY FILE</label></div><p id="replayInfo">Load a replay to inspect a previous match.</p><div class="bundle-replays" id="bundleReplayTools" hidden><select id="bundleReplaySelect" aria-label="Verified run replay"></select><button class="quiet-button" id="openBundleReplay">OPEN VERIFIED REPLAY</button></div><input id="replayFile" type="file" accept=".json,application/json" hidden /></section>
+          </aside>
+        </section>
+        <footer><span>GRIDLINE <b>·</b> A LOCAL REINFORCEMENT-LEARNING EXPERIMENT</span><span>POLICIES RUN IN YOUR BROWSER <i></i></span></footer>
+      </main>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

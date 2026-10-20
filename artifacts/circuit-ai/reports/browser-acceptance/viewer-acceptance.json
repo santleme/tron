@@ -1,0 +1,16 @@
+{
+  "url": "http://127.0.0.1:5173/",
+  "browser": "Chromium headless",
+  "checkpoint_indicator": "VERIFIED \u00b7 WASM",
+  "match_status": "VIOLET VICTORY",
+  "empty_state_overlay_visible": false,
+  "bundle_status": "RUN BUNDLE VERIFIED",
+  "run_label": "lc-circuit-ai-selfplay-300 \u00b7 verified bundle",
+  "training_steps": "1,228,800",
+  "cuda_updates": "1200",
+  "replay_count": 128,
+  "page_errors": [],
+  "console_errors": [],
+  "screenshot": "viewer-acceptance.png",
+  "executed_utc": "2026-10-19T23:53:19Z"
+}

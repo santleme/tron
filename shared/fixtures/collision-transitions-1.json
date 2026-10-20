@@ -1,0 +1,205 @@
+{
+  "format": "lc-collision-vectors/1",
+  "action_order": [
+    "UP",
+    "RIGHT",
+    "DOWN",
+    "LEFT"
+  ],
+  "cases": [
+    {
+      "id": "wall-out-of-bounds",
+      "width": 5,
+      "height": 5,
+      "positions": [
+        [
+          0,
+          0
+        ],
+        [
+          4,
+          4
+        ]
+      ],
+      "headings": [
+        "UP",
+        "LEFT"
+      ],
+      "actions": [
+        0,
+        0
+      ],
+      "expected_causes": [
+        [
+          "out_of_bounds"
+        ],
+        []
+      ],
+      "expected_result": "agent_1_win"
+    },
+    {
+      "id": "same-destination-both-die",
+      "width": 5,
+      "height": 5,
+      "positions": [
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "headings": [
+        "RIGHT",
+        "LEFT"
+      ],
+      "actions": [
+        1,
+        3
+      ],
+      "expected_causes": [
+        [
+          "same_destination"
+        ],
+        [
+          "same_destination"
+        ]
+      ],
+      "expected_result": "draw"
+    },
+    {
+      "id": "head-swap-both-die",
+      "width": 5,
+      "height": 5,
+      "positions": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "headings": [
+        "RIGHT",
+        "LEFT"
+      ],
+      "actions": [
+        1,
+        3
+      ],
+      "expected_causes": [
+        [
+          "occupied_head",
+          "head_swap"
+        ],
+        [
+          "occupied_head",
+          "head_swap"
+        ]
+      ],
+      "expected_result": "draw"
+    },
+    {
+      "id": "invalid-action-dies",
+      "width": 5,
+      "height": 5,
+      "positions": [
+        [
+          1,
+          1
+        ],
+        [
+          3,
+          3
+        ]
+      ],
+      "headings": [
+        "RIGHT",
+        "LEFT"
+      ],
+      "actions": [
+        "INVALID",
+        3
+      ],
+      "expected_causes": [
+        [
+          "invalid_action"
+        ],
+        []
+      ],
+      "expected_result": "agent_1_win"
+    },
+    {
+      "id": "reverse-action-dies",
+      "width": 5,
+      "height": 5,
+      "positions": [
+        [
+          1,
+          1
+        ],
+        [
+          3,
+          3
+        ]
+      ],
+      "headings": [
+        "RIGHT",
+        "LEFT"
+      ],
+      "actions": [
+        3,
+        1
+      ],
+      "expected_causes": [
+        [
+          "reverse_action"
+        ],
+        [
+          "reverse_action"
+        ]
+      ],
+      "expected_result": "draw"
+    },
+    {
+      "id": "occupied-trail-dies",
+      "width": 5,
+      "height": 5,
+      "positions": [
+        [
+          1,
+          1
+        ],
+        [
+          3,
+          3
+        ]
+      ],
+      "headings": [
+        "RIGHT",
+        "LEFT"
+      ],
+      "occupied_cells": [
+        [
+          2,
+          1
+        ]
+      ],
+      "actions": [
+        1,
+        3
+      ],
+      "expected_causes": [
+        [
+          "occupied_trail"
+        ],
+        []
+      ],
+      "expected_result": "agent_1_win"
+    }
+  ]
+}

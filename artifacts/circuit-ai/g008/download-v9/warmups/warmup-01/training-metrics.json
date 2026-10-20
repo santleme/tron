@@ -1,0 +1,26 @@
+{
+  "format": "circuit-ai-g008-benchmark-run-metrics/1",
+  "device": {
+    "device": "cuda",
+    "cuda_available": true,
+    "cuda_name": "Tesla T4",
+    "optimizer_updates": 4,
+    "cuda_optimizer_updates": 4
+  },
+  "training": {
+    "elapsed_seconds": 3.203738622000003,
+    "update_elapsed_seconds": 3.1982909849999714,
+    "mean_rollout_seconds": 3.181273272999988,
+    "updates": [
+      {
+        "device": "cuda",
+        "cuda_updates": 4,
+        "optimizer_updates": 4,
+        "rollout_seconds": 3.181273272999988,
+        "optimizer_seconds": 0.017012528000009297,
+        "checkpoint_seconds": 0.005440790000022844,
+        "update_latency_seconds": 3.1982909849999714
+      }
+    ]
+  }
+}

@@ -1,0 +1,899 @@
+{
+  "action_schema": "lc-action/1",
+  "benchmark_records": [
+    {
+      "checkpoint_elapsed_seconds": 3.611522683000203,
+      "device": "cuda",
+      "environment_steps_per_second": 1439.3217368606347,
+      "mean_optimizer_seconds": 0.020143860650004702,
+      "mean_rollout_seconds": 2.8256355458033378,
+      "mean_update_latency_seconds": 2.8457848548400015,
+      "optimizer_updates": 1200,
+      "rollout_to_optimizer_ratio": 140.27279054885034,
+      "update_elapsed_seconds": 853.7354564520004,
+      "wall_environment_steps_per_second": 1433.2566094968681
+    }
+  ],
+  "checkpoints": [
+    {
+      "action_schema": "lc-action/1",
+      "checkpoint_id": "step-0",
+      "file": "checkpoints/step-0.pt",
+      "format": "pytorch",
+      "observation_schema": "lc-observation/1",
+      "sha256": "c543cf6be9d81216ba98bb49137630aece71ae2929946c4e7eea443fb5bce212",
+      "step": 0
+    },
+    {
+      "action_schema": "lc-action/1",
+      "checkpoint_id": "step-0",
+      "file": "checkpoints/step-0.onnx",
+      "format": "onnx",
+      "observation_schema": "lc-observation/1",
+      "sha256": "f6b761e1b85fefca9aa4758b0f482627fbd73d8a019406862a384ac38a33c2c9",
+      "step": 0
+    },
+    {
+      "action_schema": "lc-action/1",
+      "checkpoint_id": "step-100",
+      "file": "checkpoints/step-100.pt",
+      "format": "pytorch",
+      "observation_schema": "lc-observation/1",
+      "sha256": "e49cd0cfe31a723820b9a8a94cd0c2d336351be157390c440b771509546af40c",
+      "step": 100
+    },
+    {
+      "action_schema": "lc-action/1",
+      "checkpoint_id": "step-100",
+      "file": "checkpoints/step-100.onnx",
+      "format": "onnx",
+      "observation_schema": "lc-observation/1",
+      "sha256": "d7440dda6442cbb321307ef3e85e0d22a50874e3ea0d17d17951baf22cb57813",
+      "step": 100
+    },
+    {
+      "action_schema": "lc-action/1",
+      "checkpoint_id": "step-200",
+      "file": "checkpoints/step-200.pt",
+      "format": "pytorch",
+      "observation_schema": "lc-observation/1",
+      "sha256": "2df882c846299ee5f205cf8b81ecb09bb9b531abb199fde29867a2b995c727b4",
+      "step": 200
+    },
+    {
+      "action_schema": "lc-action/1",
+      "checkpoint_id": "step-200",
+      "file": "checkpoints/step-200.onnx",
+      "format": "onnx",
+      "observation_schema": "lc-observation/1",
+      "sha256": "5698c9c023a2f10868f7f90e959fbf512555bc85a153e170bd2a035ee6578aa6",
+      "step": 200
+    },
+    {
+      "action_schema": "lc-action/1",
+      "checkpoint_id": "step-300",
+      "file": "checkpoints/step-300.pt",
+      "format": "pytorch",
+      "observation_schema": "lc-observation/1",
+      "sha256": "f79ed460afc6d4419e2e1b0bd084a4f1cf77058fcb8cdcebb7122a2864304412",
+      "step": 300
+    },
+    {
+      "action_schema": "lc-action/1",
+      "checkpoint_id": "step-300",
+      "file": "checkpoints/step-300.onnx",
+      "format": "onnx",
+      "observation_schema": "lc-observation/1",
+      "sha256": "0a894fad19fb9761545719419b0b40586de9e8b53cddd99642db6cbb8a3a5b2b",
+      "step": 300
+    }
+  ],
+  "created_utc": "2026-10-19T23:42:31Z",
+  "device": {
+    "cuda_available": true,
+    "cuda_name": "Tesla T4",
+    "cuda_optimizer_updates": 1200,
+    "device": "cuda",
+    "optimizer_updates": 1200
+  },
+  "engine_version": "lc-engine/1",
+  "evaluation": {
+    "games_per_matchup": 64,
+    "held_out_seeds": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29",
+      "30",
+      "31"
+    ],
+    "metrics_file": "evaluation/report.json",
+    "opponent_ids": [
+      "open-space",
+      "step-0"
+    ],
+    "protocol": "lc-eval/1",
+    "replay_files": [
+      "evaluation/replays/open-space-00-0.json",
+      "evaluation/replays/open-space-00-1.json",
+      "evaluation/replays/open-space-01-0.json",
+      "evaluation/replays/open-space-01-1.json",
+      "evaluation/replays/open-space-02-0.json",
+      "evaluation/replays/open-space-02-1.json",
+      "evaluation/replays/open-space-03-0.json",
+      "evaluation/replays/open-space-03-1.json",
+      "evaluation/replays/open-space-04-0.json",
+      "evaluation/replays/open-space-04-1.json",
+      "evaluation/replays/open-space-05-0.json",
+      "evaluation/replays/open-space-05-1.json",
+      "evaluation/replays/open-space-06-0.json",
+      "evaluation/replays/open-space-06-1.json",
+      "evaluation/replays/open-space-07-0.json",
+      "evaluation/replays/open-space-07-1.json",
+      "evaluation/replays/open-space-08-0.json",
+      "evaluation/replays/open-space-08-1.json",
+      "evaluation/replays/open-space-09-0.json",
+      "evaluation/replays/open-space-09-1.json",
+      "evaluation/replays/open-space-10-0.json",
+      "evaluation/replays/open-space-10-1.json",
+      "evaluation/replays/open-space-11-0.json",
+      "evaluation/replays/open-space-11-1.json",
+      "evaluation/replays/open-space-12-0.json",
+      "evaluation/replays/open-space-12-1.json",
+      "evaluation/replays/open-space-13-0.json",
+      "evaluation/replays/open-space-13-1.json",
+      "evaluation/replays/open-space-14-0.json",
+      "evaluation/replays/open-space-14-1.json",
+      "evaluation/replays/open-space-15-0.json",
+      "evaluation/replays/open-space-15-1.json",
+      "evaluation/replays/open-space-16-0.json",
+      "evaluation/replays/open-space-16-1.json",
+      "evaluation/replays/open-space-17-0.json",
+      "evaluation/replays/open-space-17-1.json",
+      "evaluation/replays/open-space-18-0.json",
+      "evaluation/replays/open-space-18-1.json",
+      "evaluation/replays/open-space-19-0.json",
+      "evaluation/replays/open-space-19-1.json",
+      "evaluation/replays/open-space-20-0.json",
+      "evaluation/replays/open-space-20-1.json",
+      "evaluation/replays/open-space-21-0.json",
+      "evaluation/replays/open-space-21-1.json",
+      "evaluation/replays/open-space-22-0.json",
+      "evaluation/replays/open-space-22-1.json",
+      "evaluation/replays/open-space-23-0.json",
+      "evaluation/replays/open-space-23-1.json",
+      "evaluation/replays/open-space-24-0.json",
+      "evaluation/replays/open-space-24-1.json",
+      "evaluation/replays/open-space-25-0.json",
+      "evaluation/replays/open-space-25-1.json",
+      "evaluation/replays/open-space-26-0.json",
+      "evaluation/replays/open-space-26-1.json",
+      "evaluation/replays/open-space-27-0.json",
+      "evaluation/replays/open-space-27-1.json",
+      "evaluation/replays/open-space-28-0.json",
+      "evaluation/replays/open-space-28-1.json",
+      "evaluation/replays/open-space-29-0.json",
+      "evaluation/replays/open-space-29-1.json",
+      "evaluation/replays/open-space-30-0.json",
+      "evaluation/replays/open-space-30-1.json",
+      "evaluation/replays/open-space-31-0.json",
+      "evaluation/replays/open-space-31-1.json",
+      "evaluation/replays/step-0-00-0.json",
+      "evaluation/replays/step-0-00-1.json",
+      "evaluation/replays/step-0-01-0.json",
+      "evaluation/replays/step-0-01-1.json",
+      "evaluation/replays/step-0-02-0.json",
+      "evaluation/replays/step-0-02-1.json",
+      "evaluation/replays/step-0-03-0.json",
+      "evaluation/replays/step-0-03-1.json",
+      "evaluation/replays/step-0-04-0.json",
+      "evaluation/replays/step-0-04-1.json",
+      "evaluation/replays/step-0-05-0.json",
+      "evaluation/replays/step-0-05-1.json",
+      "evaluation/replays/step-0-06-0.json",
+      "evaluation/replays/step-0-06-1.json",
+      "evaluation/replays/step-0-07-0.json",
+      "evaluation/replays/step-0-07-1.json",
+      "evaluation/replays/step-0-08-0.json",
+      "evaluation/replays/step-0-08-1.json",
+      "evaluation/replays/step-0-09-0.json",
+      "evaluation/replays/step-0-09-1.json",
+      "evaluation/replays/step-0-10-0.json",
+      "evaluation/replays/step-0-10-1.json",
+      "evaluation/replays/step-0-11-0.json",
+      "evaluation/replays/step-0-11-1.json",
+      "evaluation/replays/step-0-12-0.json",
+      "evaluation/replays/step-0-12-1.json",
+      "evaluation/replays/step-0-13-0.json",
+      "evaluation/replays/step-0-13-1.json",
+      "evaluation/replays/step-0-14-0.json",
+      "evaluation/replays/step-0-14-1.json",
+      "evaluation/replays/step-0-15-0.json",
+      "evaluation/replays/step-0-15-1.json",
+      "evaluation/replays/step-0-16-0.json",
+      "evaluation/replays/step-0-16-1.json",
+      "evaluation/replays/step-0-17-0.json",
+      "evaluation/replays/step-0-17-1.json",
+      "evaluation/replays/step-0-18-0.json",
+      "evaluation/replays/step-0-18-1.json",
+      "evaluation/replays/step-0-19-0.json",
+      "evaluation/replays/step-0-19-1.json",
+      "evaluation/replays/step-0-20-0.json",
+      "evaluation/replays/step-0-20-1.json",
+      "evaluation/replays/step-0-21-0.json",
+      "evaluation/replays/step-0-21-1.json",
+      "evaluation/replays/step-0-22-0.json",
+      "evaluation/replays/step-0-22-1.json",
+      "evaluation/replays/step-0-23-0.json",
+      "evaluation/replays/step-0-23-1.json",
+      "evaluation/replays/step-0-24-0.json",
+      "evaluation/replays/step-0-24-1.json",
+      "evaluation/replays/step-0-25-0.json",
+      "evaluation/replays/step-0-25-1.json",
+      "evaluation/replays/step-0-26-0.json",
+      "evaluation/replays/step-0-26-1.json",
+      "evaluation/replays/step-0-27-0.json",
+      "evaluation/replays/step-0-27-1.json",
+      "evaluation/replays/step-0-28-0.json",
+      "evaluation/replays/step-0-28-1.json",
+      "evaluation/replays/step-0-29-0.json",
+      "evaluation/replays/step-0-29-1.json",
+      "evaluation/replays/step-0-30-0.json",
+      "evaluation/replays/step-0-30-1.json",
+      "evaluation/replays/step-0-31-0.json",
+      "evaluation/replays/step-0-31-1.json"
+    ]
+  },
+  "files": [
+    {
+      "path": "checkpoints/step-0.pt",
+      "sha256": "c543cf6be9d81216ba98bb49137630aece71ae2929946c4e7eea443fb5bce212"
+    },
+    {
+      "path": "checkpoints/step-0.onnx",
+      "sha256": "f6b761e1b85fefca9aa4758b0f482627fbd73d8a019406862a384ac38a33c2c9"
+    },
+    {
+      "path": "checkpoints/step-0.metadata.json",
+      "sha256": "115c96a530c978302c33451fcd33928f796e3cf564ebf9f3b8601f028bbbdf08"
+    },
+    {
+      "path": "checkpoints/step-100.pt",
+      "sha256": "e49cd0cfe31a723820b9a8a94cd0c2d336351be157390c440b771509546af40c"
+    },
+    {
+      "path": "checkpoints/step-100.onnx",
+      "sha256": "d7440dda6442cbb321307ef3e85e0d22a50874e3ea0d17d17951baf22cb57813"
+    },
+    {
+      "path": "checkpoints/step-100.metadata.json",
+      "sha256": "3ff127f140581fb5b2e3d855a0da1f3ba2582641071c31d09086ccdae8d82db3"
+    },
+    {
+      "path": "checkpoints/step-200.pt",
+      "sha256": "2df882c846299ee5f205cf8b81ecb09bb9b531abb199fde29867a2b995c727b4"
+    },
+    {
+      "path": "checkpoints/step-200.onnx",
+      "sha256": "5698c9c023a2f10868f7f90e959fbf512555bc85a153e170bd2a035ee6578aa6"
+    },
+    {
+      "path": "checkpoints/step-200.metadata.json",
+      "sha256": "fea488261c4a18172cf96cd69c36d24106c751f87ff0ce4a94c429965b5bb247"
+    },
+    {
+      "path": "checkpoints/step-300.pt",
+      "sha256": "f79ed460afc6d4419e2e1b0bd084a4f1cf77058fcb8cdcebb7122a2864304412"
+    },
+    {
+      "path": "checkpoints/step-300.onnx",
+      "sha256": "0a894fad19fb9761545719419b0b40586de9e8b53cddd99642db6cbb8a3a5b2b"
+    },
+    {
+      "path": "checkpoints/step-300.metadata.json",
+      "sha256": "2085a217d160fba5d7b6cdbbd8de2a8e284e6b323d9ead537da138315f40c038"
+    },
+    {
+      "path": "evaluation/report.json",
+      "sha256": "c3e7cce2cf7f77a7e07ef69b047089522bc2776f7be6ba0e36eda370f628230d"
+    },
+    {
+      "path": "evaluation/replays/open-space-00-0.json",
+      "sha256": "c8a14a33508a865e87a0602bc2de68ba77953e38abe6879b97a19290eafb02d5"
+    },
+    {
+      "path": "evaluation/replays/open-space-00-1.json",
+      "sha256": "8c83c8e2ef993f4af7f845f28308bb4d5a89789862d24058758489ee5b864135"
+    },
+    {
+      "path": "evaluation/replays/open-space-01-0.json",
+      "sha256": "5ccd8031d5553104645ba00f6e8ae50dcf5e9497dbc59ffeaa9be0283d339118"
+    },
+    {
+      "path": "evaluation/replays/open-space-01-1.json",
+      "sha256": "dbc85dfb362999bc55d709ff7507bfbd68c91ce4bceee283e209a45210b61801"
+    },
+    {
+      "path": "evaluation/replays/open-space-02-0.json",
+      "sha256": "248f751335f8886d58284219ce65b2687960903ee7d70886daedd645f676bdee"
+    },
+    {
+      "path": "evaluation/replays/open-space-02-1.json",
+      "sha256": "b2e377820bbcda13d3ac96f7f64bbdf51d805f5209abcf1ce0eaf89b7f2cbf01"
+    },
+    {
+      "path": "evaluation/replays/open-space-03-0.json",
+      "sha256": "f9ad72ce099077a39f3fefadf548b7cebf6454ed4c15fd47d53d7f29c9c59543"
+    },
+    {
+      "path": "evaluation/replays/open-space-03-1.json",
+      "sha256": "479be9c6f083c31674e58fb42d5436b4ee1a1576ca966ad2f025068416603335"
+    },
+    {
+      "path": "evaluation/replays/open-space-04-0.json",
+      "sha256": "dc3c671019489b94be6169936bb7270919537d362b1a78c3715262c11fcb9547"
+    },
+    {
+      "path": "evaluation/replays/open-space-04-1.json",
+      "sha256": "0914e2e91343c626424c16519f2b4c618161bcea29208385a34f9a0bee46d82b"
+    },
+    {
+      "path": "evaluation/replays/open-space-05-0.json",
+      "sha256": "a939cfe2eb4bcb0a87f4670dfdc063b0d86ecd69dce5da6387f5c9462d8dfc73"
+    },
+    {
+      "path": "evaluation/replays/open-space-05-1.json",
+      "sha256": "246fe37353015127aba44ae0622224da2235f2ca9061ab6b7e510979b80133b9"
+    },
+    {
+      "path": "evaluation/replays/open-space-06-0.json",
+      "sha256": "46a3e464fdf7895010ebfcae2dcf79a9751c0a64b7ba0768710bd86a993d7ccd"
+    },
+    {
+      "path": "evaluation/replays/open-space-06-1.json",
+      "sha256": "c9b1b9b0eef403b0f2f5d9d56318fc636dee7e220f77e3bbe43ecc461031f43c"
+    },
+    {
+      "path": "evaluation/replays/open-space-07-0.json",
+      "sha256": "673daa7ec2692bca01735eb5366da214d78d9c96b8aa4452ea3bde358d5cef0d"
+    },
+    {
+      "path": "evaluation/replays/open-space-07-1.json",
+      "sha256": "d021e4a95f1c75c8a495353040df3834db9a9612e730708d6ac9cc22caba75a1"
+    },
+    {
+      "path": "evaluation/replays/open-space-08-0.json",
+      "sha256": "f3d7c276d103e69fc14faec683c01fa9fe717117f912a7af030988bd2ced52cc"
+    },
+    {
+      "path": "evaluation/replays/open-space-08-1.json",
+      "sha256": "05bd105962d018fe07b806e15bc6c12c70208587b6dd77de8e8e66eb089c8cf3"
+    },
+    {
+      "path": "evaluation/replays/open-space-09-0.json",
+      "sha256": "3a2369e2ae14ff11ec8157651b1fc4997664078b4b272d12004e225cefd6e7e2"
+    },
+    {
+      "path": "evaluation/replays/open-space-09-1.json",
+      "sha256": "f0731852f78d4bc2b3b20f7cf71cbda94320ed60a32f081ef46163af7200978e"
+    },
+    {
+      "path": "evaluation/replays/open-space-10-0.json",
+      "sha256": "8dd76b1abc709b1b5669eead3000a88d898836b779effdc57bc08e3d8c9adad9"
+    },
+    {
+      "path": "evaluation/replays/open-space-10-1.json",
+      "sha256": "c3eb13caf72ececb00a4bd8d404caccfa73a4e8c0946dd0853fde8d605bc11ec"
+    },
+    {
+      "path": "evaluation/replays/open-space-11-0.json",
+      "sha256": "40982ce065193f899410fcdd04156dcb8ad3141cad1677c55c59bdda4da516ff"
+    },
+    {
+      "path": "evaluation/replays/open-space-11-1.json",
+      "sha256": "f503db6711385beee445aa4d07e5be8a7389177b5f3b68b916a03a01b951ccd7"
+    },
+    {
+      "path": "evaluation/replays/open-space-12-0.json",
+      "sha256": "accd9d465c7827a39b17a0ecc16d76eee51d623041e8d08849a740a5ceca5804"
+    },
+    {
+      "path": "evaluation/replays/open-space-12-1.json",
+      "sha256": "0691688fe77906ee38f83dbb03df76f565401ba970daa95fb90c94de51295593"
+    },
+    {
+      "path": "evaluation/replays/open-space-13-0.json",
+      "sha256": "3ea44779c8a26e27c7680be407b6f2d7a8bf138341d85cf88b13fd0e981e9c42"
+    },
+    {
+      "path": "evaluation/replays/open-space-13-1.json",
+      "sha256": "1a5ea0d358f3c11f755b6942ad7128574dad2e7e8388671502a8e9b51a5847f5"
+    },
+    {
+      "path": "evaluation/replays/open-space-14-0.json",
+      "sha256": "991748d1bd574119f66fdc3613d237bd5f21767288f2f044a872936adef29b2e"
+    },
+    {
+      "path": "evaluation/replays/open-space-14-1.json",
+      "sha256": "a89f7f5c21f19dd79c5d1cf6223883a41431ba4ab86921db1ac12cb007d2087a"
+    },
+    {
+      "path": "evaluation/replays/open-space-15-0.json",
+      "sha256": "c62a5a542a77492b463845b51f29d4ccaddb4abafaaf8cc7e6d232c73b277a16"
+    },
+    {
+      "path": "evaluation/replays/open-space-15-1.json",
+      "sha256": "2441cb6c79c0740e886b8fcfee7d37d8c2f411eaf6f7f11fd7436fc4c33e50c8"
+    },
+    {
+      "path": "evaluation/replays/open-space-16-0.json",
+      "sha256": "39757a87e194dc22fc714de27f94e9603266d4dc9a616004901271f98ac27ec6"
+    },
+    {
+      "path": "evaluation/replays/open-space-16-1.json",
+      "sha256": "f3735c05e0d373733115acea0b8cf102ad8c27a38570ff8db1e2d2fa31c1be8c"
+    },
+    {
+      "path": "evaluation/replays/open-space-17-0.json",
+      "sha256": "4a1927f1cf682e083889233d5013b7db2d63aebce3db6a5cb58e9d4e928cb250"
+    },
+    {
+      "path": "evaluation/replays/open-space-17-1.json",
+      "sha256": "cf1dcb4028c42e3fda735e02790ec649aefbf0a4716619b85c5160770752332f"
+    },
+    {
+      "path": "evaluation/replays/open-space-18-0.json",
+      "sha256": "aebf2b50c8919ed76dbaeee0b99328b692b493ab1b2f263b89695c1655805904"
+    },
+    {
+      "path": "evaluation/replays/open-space-18-1.json",
+      "sha256": "49458cb25ed9554697dd94524385873264b086e5c7a604111892665a0f54dd73"
+    },
+    {
+      "path": "evaluation/replays/open-space-19-0.json",
+      "sha256": "cd92f32a19b5164673e69942246dca7289237bf151ff3345cee5715998f01101"
+    },
+    {
+      "path": "evaluation/replays/open-space-19-1.json",
+      "sha256": "9bd3a92e74037fc44b676439ec5dcc36cf7517ea0e73147800e9048f545818e1"
+    },
+    {
+      "path": "evaluation/replays/open-space-20-0.json",
+      "sha256": "7650142d9c7cf20d910c6233d7ae0f8958b116a4382b0d4bfbdf0a057a0c3364"
+    },
+    {
+      "path": "evaluation/replays/open-space-20-1.json",
+      "sha256": "aea8a241de6e2526129124401d3ed1a7c31e6e42745173e7434adbba7f569a46"
+    },
+    {
+      "path": "evaluation/replays/open-space-21-0.json",
+      "sha256": "e1e3e8deafc5c8177a8c7e25a408e65f6cf77bc586524441728a5333bf8bcddb"
+    },
+    {
+      "path": "evaluation/replays/open-space-21-1.json",
+      "sha256": "ed2601dbe1f18a2578b2d647063e18fdd0a786e17c1cc0110cacbfd198c247bb"
+    },
+    {
+      "path": "evaluation/replays/open-space-22-0.json",
+      "sha256": "da7d7c945e5a5777b5e82c9795cd410e1272faa96269a7c155dd6e2203fc7fdf"
+    },
+    {
+      "path": "evaluation/replays/open-space-22-1.json",
+      "sha256": "88b55a432e5c5f01f90d1eaaa30f48f3a8d8a27ee5813aa15150aaf17555dbf2"
+    },
+    {
+      "path": "evaluation/replays/open-space-23-0.json",
+      "sha256": "c3a7cf12efe295b308ba51bf0cf9ff4bc30c4cd851436f63c3b0bc1a32fdebbb"
+    },
+    {
+      "path": "evaluation/replays/open-space-23-1.json",
+      "sha256": "44b795f8e0666c9fec9b2ae3b79ac2fe5f25c826493a52c6814789ae8d47b269"
+    },
+    {
+      "path": "evaluation/replays/open-space-24-0.json",
+      "sha256": "6b49473bc2a7360b6cad91722feb9d840e173f0b3a6cf312a978238b9153d0b7"
+    },
+    {
+      "path": "evaluation/replays/open-space-24-1.json",
+      "sha256": "10bd63673afbc17f5b654279acee03ff73e8315f650cd4327ab7d147b5d37750"
+    },
+    {
+      "path": "evaluation/replays/open-space-25-0.json",
+      "sha256": "dbc086442732113126cfcfef06ab461a07b578732b45e5a5340b9708b0b16a8e"
+    },
+    {
+      "path": "evaluation/replays/open-space-25-1.json",
+      "sha256": "e5956f6bda0ecc7118a4187369c8c4779c1e42cae3098365f00fc3832d72650a"
+    },
+    {
+      "path": "evaluation/replays/open-space-26-0.json",
+      "sha256": "cc42e4eb09802c6b15e7bed807b3a909932e8e0170e5e102d0d82ab101947d24"
+    },
+    {
+      "path": "evaluation/replays/open-space-26-1.json",
+      "sha256": "79bf96685393e63bc2ea57805ef3b73a4164b3b1946e089d1f90a6f54dbe23a7"
+    },
+    {
+      "path": "evaluation/replays/open-space-27-0.json",
+      "sha256": "e06339316d981d8171bd2c187d6d63d797d5f2f191228a17243199a74bfead47"
+    },
+    {
+      "path": "evaluation/replays/open-space-27-1.json",
+      "sha256": "dbf604862c32900f4b489ddbdf7e7bbbe95bd1f9cabe9e74195eca8cb1978a2b"
+    },
+    {
+      "path": "evaluation/replays/open-space-28-0.json",
+      "sha256": "a19139c9c44dbd4daacecca232612aa3510859329a637e721afb8706297bd54f"
+    },
+    {
+      "path": "evaluation/replays/open-space-28-1.json",
+      "sha256": "bd37cfd5d7355f0084cda45f825907b7caa7efc6a3cf2bceba58372a4fcba92a"
+    },
+    {
+      "path": "evaluation/replays/open-space-29-0.json",
+      "sha256": "5a9e0606282b3caeb3e02c335f3d438a22ff2ebe1f1c6e55d02cfa11584eddf1"
+    },
+    {
+      "path": "evaluation/replays/open-space-29-1.json",
+      "sha256": "2a8f5025e84f93b2c7913bb9dffbaa08a83949e115060f85b884c594f69f29c3"
+    },
+    {
+      "path": "evaluation/replays/open-space-30-0.json",
+      "sha256": "0fc85e507bdd6e902be3f20c6cc8c8bf9184fbedccdfb9ca1b9be69d7fe44684"
+    },
+    {
+      "path": "evaluation/replays/open-space-30-1.json",
+      "sha256": "ce62f4383729d7c58435ec84e5b5eb2042eed02fa1e16b31f80e12cda6fb2a6d"
+    },
+    {
+      "path": "evaluation/replays/open-space-31-0.json",
+      "sha256": "cd115402d8d9813940aa339827cd0fc2268d13608457fec448a8f0ce43ec06e6"
+    },
+    {
+      "path": "evaluation/replays/open-space-31-1.json",
+      "sha256": "61a765677b2e98dcf77bae2c286a6b8ba1560348b97b0f57488d836fde06b53b"
+    },
+    {
+      "path": "evaluation/replays/step-0-00-0.json",
+      "sha256": "b4c075380e456f7c50a3596d042f26dc26ea17851caef7febdace04e89310acc"
+    },
+    {
+      "path": "evaluation/replays/step-0-00-1.json",
+      "sha256": "921061058ec57da2f321aa2779aa086a774ff82b782ddd8b9e5ea8d5a65a96f3"
+    },
+    {
+      "path": "evaluation/replays/step-0-01-0.json",
+      "sha256": "c78c5171e2c4fad7347834597ecf2fef35fedb0c6381f07d508e86595044a88e"
+    },
+    {
+      "path": "evaluation/replays/step-0-01-1.json",
+      "sha256": "afef4790b8f42d1b49577aa289ace82b4620a1f8dd1e253ec3695fca6aa932d9"
+    },
+    {
+      "path": "evaluation/replays/step-0-02-0.json",
+      "sha256": "da69953d167ad4ac657bdf72af142f84dde95b626b0ebf1fd352d5dac87c5bcc"
+    },
+    {
+      "path": "evaluation/replays/step-0-02-1.json",
+      "sha256": "7b6a4ea64743af4c97384d8a55d5245d9309fd977be4de0039ba606795dcc24c"
+    },
+    {
+      "path": "evaluation/replays/step-0-03-0.json",
+      "sha256": "1bc2f9a4d25b400be28d4ac9a09df8406f35fd47dc9f3836b20219c67383e479"
+    },
+    {
+      "path": "evaluation/replays/step-0-03-1.json",
+      "sha256": "7e1c11f127d1d9b0c00d985886b9881752e314a118776378b7f4b313c1fa4f0d"
+    },
+    {
+      "path": "evaluation/replays/step-0-04-0.json",
+      "sha256": "e6a6db4abc461821b444b930ffd7a7ac375589529931b2cfa83782362b45a243"
+    },
+    {
+      "path": "evaluation/replays/step-0-04-1.json",
+      "sha256": "024ad048eba93043088f5b9f5f0574d8c7e7d584692dd70fa5450c5e7bf334d5"
+    },
+    {
+      "path": "evaluation/replays/step-0-05-0.json",
+      "sha256": "86afcf7e0c96bc54e5254757480c6d76792a405ae110d01a1b6fcb63e24913f2"
+    },
+    {
+      "path": "evaluation/replays/step-0-05-1.json",
+      "sha256": "24108baadca8bf4a2dd6a5baa8693cfa02a341cdf5ff34ecb3debfe649ea95a7"
+    },
+    {
+      "path": "evaluation/replays/step-0-06-0.json",
+      "sha256": "8265ff0edbaeb4a0f5ce08b052b13074ef135db72324a968008265bf38e71bd8"
+    },
+    {
+      "path": "evaluation/replays/step-0-06-1.json",
+      "sha256": "25fa0d97d14cbc8063ff325330fb040c2d5b049df0e4d9930b672e0c66322307"
+    },
+    {
+      "path": "evaluation/replays/step-0-07-0.json",
+      "sha256": "54fdd0442e3d880912b0c0f59d456b9fab6a7d7e7b36f82953b7c2c8fe6e43b7"
+    },
+    {
+      "path": "evaluation/replays/step-0-07-1.json",
+      "sha256": "88f3bacdd90491fbc567ac3e761fd6a3f6c63467b02468cd08779071ceb44d20"
+    },
+    {
+      "path": "evaluation/replays/step-0-08-0.json",
+      "sha256": "5473e554b88c4e98c26d5094cf4ec6d8e9f3a4df6211f91e237c75a4d443a642"
+    },
+    {
+      "path": "evaluation/replays/step-0-08-1.json",
+      "sha256": "36054de32a492f8e18d151b85c9aa3949c0f5df02ffb67bc4795afc0660a49bd"
+    },
+    {
+      "path": "evaluation/replays/step-0-09-0.json",
+      "sha256": "cec1c734a87b1698c86422ae1585b874b5ce3881de5804d7dc0b5f1199442ebb"
+    },
+    {
+      "path": "evaluation/replays/step-0-09-1.json",
+      "sha256": "6f892fb95baff2029b731fa3b4670eecb1b1cbdd663960b03200cda2840336a8"
+    },
+    {
+      "path": "evaluation/replays/step-0-10-0.json",
+      "sha256": "ab5a61f582fa8be7ace5645d93269caafd1da054ac7e6c91cae155e25b31b60b"
+    },
+    {
+      "path": "evaluation/replays/step-0-10-1.json",
+      "sha256": "9e2d35b25413cffe8683e5b0b91824292e1e82b396d64be06442bb27f22a2ccb"
+    },
+    {
+      "path": "evaluation/replays/step-0-11-0.json",
+      "sha256": "b5b2509ac5ba80834929bc3dde81e41d483930ba4ad8e300d2f015a86109a5d7"
+    },
+    {
+      "path": "evaluation/replays/step-0-11-1.json",
+      "sha256": "45be367793f385a1caead020b0cabde313ba14359edf76d886df19c436db0798"
+    },
+    {
+      "path": "evaluation/replays/step-0-12-0.json",
+      "sha256": "b9988bfe0868f706694f8ef19f8181bbb5ed3027578c56a649227b496e72edd0"
+    },
+    {
+      "path": "evaluation/replays/step-0-12-1.json",
+      "sha256": "756f683947a01e5bee0426d71740a5ab60057a675b7f71f62e2b375e96f9b85a"
+    },
+    {
+      "path": "evaluation/replays/step-0-13-0.json",
+      "sha256": "20e376135d4c1292abb98f10ab2da27289cc1dfe0a3593a03c3bd48c0f85583f"
+    },
+    {
+      "path": "evaluation/replays/step-0-13-1.json",
+      "sha256": "47e2b2417ad5471fa2338bfb40257a691fc384ec58b05c640b96f2c7d42cedfb"
+    },
+    {
+      "path": "evaluation/replays/step-0-14-0.json",
+      "sha256": "d9b9841fabff67bec0d355d568c3bc974a85d569eecf969a8383625fff6694c8"
+    },
+    {
+      "path": "evaluation/replays/step-0-14-1.json",
+      "sha256": "d9e78b66ee5016ab512ee20f4a20cf8039ee5f9feab208bbffb41ddb063346d1"
+    },
+    {
+      "path": "evaluation/replays/step-0-15-0.json",
+      "sha256": "913699ab9803824c5f724a2e4fc0ef492cdffaf1f1c05e03352c977e7376280b"
+    },
+    {
+      "path": "evaluation/replays/step-0-15-1.json",
+      "sha256": "f7482de6cc2b02a0712d4c98457e70d69d7bad21daec9ccbf314ee8d4006ccb5"
+    },
+    {
+      "path": "evaluation/replays/step-0-16-0.json",
+      "sha256": "226d184dcb4c19ae325a53dce35f1c17aaaf87bc576232ff313ce455d705cfcb"
+    },
+    {
+      "path": "evaluation/replays/step-0-16-1.json",
+      "sha256": "6eb9ef56bcdf4a7ed7c72bf1bedba4416cd8ad5a67ff33201fdb1ff779ae8919"
+    },
+    {
+      "path": "evaluation/replays/step-0-17-0.json",
+      "sha256": "803e973f253443c3ddf8e0ee10db8cb30ecd017d2e1175d35dff12db698668ec"
+    },
+    {
+      "path": "evaluation/replays/step-0-17-1.json",
+      "sha256": "5721bf0be0270196b2d5f6ff2e3f48665beec6cadca584fd18c6fa3535b64b4d"
+    },
+    {
+      "path": "evaluation/replays/step-0-18-0.json",
+      "sha256": "9a5ff1f448d06dccefd9bd3d1ddd4b00965816188dbf66a6434b02089e7b6666"
+    },
+    {
+      "path": "evaluation/replays/step-0-18-1.json",
+      "sha256": "d6e3c45ad738fad700568b475cedabe608d43c6de089cac9075c5320bd13ebfd"
+    },
+    {
+      "path": "evaluation/replays/step-0-19-0.json",
+      "sha256": "b9f544a22f48b428c73087e51fad626968c6bc72dda868e263f71845595fb257"
+    },
+    {
+      "path": "evaluation/replays/step-0-19-1.json",
+      "sha256": "9a16fd5b9ca5064099eb404f2ce056948155a3884b0a595622b15b62a98ac896"
+    },
+    {
+      "path": "evaluation/replays/step-0-20-0.json",
+      "sha256": "c6344e88c0f39d53af8f01fa1f4ce942e8234aebabd61ad8c69253e86bfb57fd"
+    },
+    {
+      "path": "evaluation/replays/step-0-20-1.json",
+      "sha256": "e4c47c3e9d509e5228e11215cda0c8e1ae2ae7cca5c9c9ffee2896fb54e5dca5"
+    },
+    {
+      "path": "evaluation/replays/step-0-21-0.json",
+      "sha256": "ee3018ed69c9c4b003e5dce2bad39dc0ef4392abb057fd18719219398ca75c04"
+    },
+    {
+      "path": "evaluation/replays/step-0-21-1.json",
+      "sha256": "a25fb4b03cfe3d624821a3d7f4f4997ba09638b1af0270e438ce571251f014f7"
+    },
+    {
+      "path": "evaluation/replays/step-0-22-0.json",
+      "sha256": "5f059b1b39892dac11cf612058193fa29a626bba03b3cb72afb999b1f1dd0f64"
+    },
+    {
+      "path": "evaluation/replays/step-0-22-1.json",
+      "sha256": "db2c7cb11bea227aaab51832ff16a220c6675998ba3a096b38578a54e8d78fbf"
+    },
+    {
+      "path": "evaluation/replays/step-0-23-0.json",
+      "sha256": "60dc59ba1c354b67540d488ece1bc0f97435b6af7e4c602220aeab0121c5a4c8"
+    },
+    {
+      "path": "evaluation/replays/step-0-23-1.json",
+      "sha256": "c8732e439f13f8f208330447af6e6d13d40adc46640578c72cb32f96790b4d09"
+    },
+    {
+      "path": "evaluation/replays/step-0-24-0.json",
+      "sha256": "922d1b1d2055cfc1553c5d71a19d858155d6690fb195c4abd174339020cc8e2b"
+    },
+    {
+      "path": "evaluation/replays/step-0-24-1.json",
+      "sha256": "1872f741e427abb598f1be9d14a21a74e3a2adde7d1fa38ed730bd1d7a941807"
+    },
+    {
+      "path": "evaluation/replays/step-0-25-0.json",
+      "sha256": "5cc76499723315cf7cdfe1ec88229df504554b43ee10fffb7a6cdc89dfff33d3"
+    },
+    {
+      "path": "evaluation/replays/step-0-25-1.json",
+      "sha256": "a2d2fd44ec6c568d9558eee5ed4b7b2a756231b1a99395396c7c32094e639ec8"
+    },
+    {
+      "path": "evaluation/replays/step-0-26-0.json",
+      "sha256": "88a8a0d40f0415bf3e96b4e1561f8239094e6288db02e7a12161dd6e49e8d5c0"
+    },
+    {
+      "path": "evaluation/replays/step-0-26-1.json",
+      "sha256": "ebe48dd52e45c2f22e7d506c1d36e05f7e31637baa67c9e66acab2e5dcac9f8a"
+    },
+    {
+      "path": "evaluation/replays/step-0-27-0.json",
+      "sha256": "5b14e144160b4bce6b331080dad61b3b01a6b05feffb0f81d313eaace600380a"
+    },
+    {
+      "path": "evaluation/replays/step-0-27-1.json",
+      "sha256": "392ed5d50dc38b587bdf276217b73cfac852b8b278db7546bc2ebe18432e5ec6"
+    },
+    {
+      "path": "evaluation/replays/step-0-28-0.json",
+      "sha256": "b1a33722728ce50fa710e0f78645763c5c11058634bf124492f8cef6c20fe86e"
+    },
+    {
+      "path": "evaluation/replays/step-0-28-1.json",
+      "sha256": "878fd4b58b826169aa605f2a1f7fb622c92e884136901f6270cfa0638dd7d7ee"
+    },
+    {
+      "path": "evaluation/replays/step-0-29-0.json",
+      "sha256": "07c4c6e85b4b6e8ba80c5136068e004a7b9da39ae1519b2ba3e6e625df1f6b98"
+    },
+    {
+      "path": "evaluation/replays/step-0-29-1.json",
+      "sha256": "2de38709a15270a768d6a9697ebe89e3a8c7b237efde1017d82ecb82f7c9cfc2"
+    },
+    {
+      "path": "evaluation/replays/step-0-30-0.json",
+      "sha256": "6cfe4b1e44fad57d66d2a80cde21508c381e0aabf550e151b9de66073c0c47c7"
+    },
+    {
+      "path": "evaluation/replays/step-0-30-1.json",
+      "sha256": "50090b9c1f0ca9f5011e93ff1d610eb96dc6147f6cade9c46c7b54912b5a2594"
+    },
+    {
+      "path": "evaluation/replays/step-0-31-0.json",
+      "sha256": "6bf877359d73902dae0c7f8958469b36eb727868cedb52fd2514271520fcf625"
+    },
+    {
+      "path": "evaluation/replays/step-0-31-1.json",
+      "sha256": "89b56b9cc483cb45a84589764bdd252c5f693f7d9efe862b255dbcae16f86584"
+    },
+    {
+      "path": "training-metrics.json",
+      "sha256": "a3c06fa51ee7fd6176017212159d07ff69a2a4e62bd640760c386a3ca3c45247"
+    },
+    {
+      "path": "remote-export-hashes.json",
+      "sha256": "78f3f11c50d508834abcaf04d175579e29ed97d056f4378c9b4cd32955ad03b8"
+    }
+  ],
+  "format": "lc-run/1",
+  "manifest_sha256": "fd787d2e34346dcdfdf29014d617fa442d607b47060fac409a49fcf1c6310a49",
+  "master_seed": "1234",
+  "observation_schema": "lc-observation/1",
+  "replay_schema": "lc-replay/1",
+  "reward_schema": "lc-reward/1",
+  "run_id": "lc-circuit-ai-selfplay-300",
+  "software": {
+    "cpu_count": 4,
+    "cuda": "12.8",
+    "kaggle_cli": "not-used",
+    "onnx_exporter": "torch.onnx.export",
+    "onnx_opset": 17,
+    "post_training_onnx_export": {
+      "device": "cpu",
+      "external_data": false,
+      "onnx": "1.23.2",
+      "provenance": "re-exported from the unchanged Kaggle CUDA-trained .pt state_dicts for single-file browser WASM loading",
+      "torch": "2.7.1+cpu"
+    },
+    "python": "3.13.15",
+    "torch": "2.11.0+cu128"
+  },
+  "training_config": {
+    "arena_count": 128,
+    "checkpoint_every": 100,
+    "clip_ratio": 0.2,
+    "device": "cuda",
+    "entropy_coef": 0.01,
+    "gae_lambda": 0.95,
+    "gamma": 0.99,
+    "height": 12,
+    "hidden_size": 128,
+    "learning_rate": 0.0003,
+    "minibatch_size": 1024,
+    "onnx_opset": 17,
+    "rollout_steps": 32,
+    "seed": 1234,
+    "self_play": {
+      "opponent_sampling": "latest",
+      "sampling_rng": "checkpointed-python-random-state",
+      "sampling_unit": "arena-per-rollout",
+      "snapshot_checkpoint_id": null,
+      "snapshot_opponent_probability": 0
+    },
+    "snapshot_opponent_probability": 0,
+    "total_updates": 300,
+    "update_epochs": 1,
+    "value_coef": 0.5,
+    "width": 12
+  },
+  "training_steps": 1228800
+}

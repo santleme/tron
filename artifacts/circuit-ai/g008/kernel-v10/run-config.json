@@ -1,0 +1,31 @@
+{
+  "g008_principal_benchmark": {
+    "run_ids": {
+      "pair-00": "eef15d06-ca5f-5acc-8d04-3d048f05f32b",
+      "pair-01": "441b64b8-0c14-597f-aea6-d3212cfa2dc2",
+      "pair-02": "a16f1f46-daa4-5527-a789-ffee39ee7e18",
+      "pair-03": "590ba1d6-feb8-5f48-aaad-d2f64769dcee",
+      "pair-04": "a5920ce8-8776-5b92-aa32-66c0d58dc4c3",
+      "warmup-low-risk-candidate-00": "659ad68c-55a1-579c-adee-6ed05f9d146a",
+      "warmup-low-risk-candidate-01": "3dc8bdd9-9dc7-5226-91ca-262e4b019439",
+      "warmup-low-risk-incumbent-00": "3d31bad7-9e67-55b6-95de-13920313ffed",
+      "warmup-low-risk-incumbent-01": "2c6ff098-48b7-5436-9984-28b761091d50",
+      "warmup-numba-candidate-candidate-00": "5ff3c988-8985-50ae-92e2-8858bd162fe4",
+      "warmup-numba-candidate-candidate-01": "17920645-a67b-5e3a-a022-af1edd1160a3",
+      "warmup-numba-candidate-incumbent-00": "d275da59-8a8a-5588-a9de-95d1d4f38b9b",
+      "warmup-numba-candidate-incumbent-01": "280055e4-7d37-5843-b6bd-48f8b78f6a96",
+      "warmup-numpy-control-candidate-00": "d9a9c6cc-f2c1-5b19-9a25-74969083fc56",
+      "warmup-numpy-control-candidate-01": "3405849b-49c1-5247-8b2e-fba12d1d4cdb",
+      "warmup-numpy-control-incumbent-00": "3f61c4aa-ae83-5cf6-8401-31aaf6c0a0fa",
+      "warmup-numpy-control-incumbent-01": "f4dadb8c-f0cb-554e-81e1-a33618c813bd",
+      "warmup-python-oracle-candidate-00": "522e2892-6b32-5bc2-a220-2325b9023683",
+      "warmup-python-oracle-candidate-01": "05ee1f7f-f1dd-54e8-af14-ab79b29b8443",
+      "warmup-python-oracle-incumbent-00": "ad5bcd0c-f184-5777-b7ca-aef3766ed9d4",
+      "warmup-python-oracle-incumbent-01": "fd5784e7-f282-565d-ad1a-0f262db73c1f"
+    }
+  },
+  "run_id": "g008-principal-observation-batch-20261020-r1",
+  "train_config": {
+    "device": "auto"
+  }
+}

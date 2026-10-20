@@ -1,0 +1,1103 @@
+{
+  "format": "lc-eval/1",
+  "run_id": "run-0001",
+  "checkpoint_id": "step-0",
+  "protocol": "lc-eval/1",
+  "held_out_seeds": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "21",
+    "22",
+    "23",
+    "24",
+    "25",
+    "26",
+    "27",
+    "28",
+    "29",
+    "30",
+    "31"
+  ],
+  "matchups": [
+    {
+      "opponent_id": "open-space",
+      "games": [
+        {
+          "seed": "0",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-00-0.json"
+        },
+        {
+          "seed": "0",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-00-1.json"
+        },
+        {
+          "seed": "1",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-01-0.json"
+        },
+        {
+          "seed": "1",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-01-1.json"
+        },
+        {
+          "seed": "2",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-02-0.json"
+        },
+        {
+          "seed": "2",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-02-1.json"
+        },
+        {
+          "seed": "3",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-03-0.json"
+        },
+        {
+          "seed": "3",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-03-1.json"
+        },
+        {
+          "seed": "4",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-04-0.json"
+        },
+        {
+          "seed": "4",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-04-1.json"
+        },
+        {
+          "seed": "5",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-05-0.json"
+        },
+        {
+          "seed": "5",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-05-1.json"
+        },
+        {
+          "seed": "6",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-06-0.json"
+        },
+        {
+          "seed": "6",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-06-1.json"
+        },
+        {
+          "seed": "7",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-07-0.json"
+        },
+        {
+          "seed": "7",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-07-1.json"
+        },
+        {
+          "seed": "8",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-08-0.json"
+        },
+        {
+          "seed": "8",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-08-1.json"
+        },
+        {
+          "seed": "9",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-09-0.json"
+        },
+        {
+          "seed": "9",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-09-1.json"
+        },
+        {
+          "seed": "10",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-10-0.json"
+        },
+        {
+          "seed": "10",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-10-1.json"
+        },
+        {
+          "seed": "11",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-11-0.json"
+        },
+        {
+          "seed": "11",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-11-1.json"
+        },
+        {
+          "seed": "12",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-12-0.json"
+        },
+        {
+          "seed": "12",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-12-1.json"
+        },
+        {
+          "seed": "13",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-13-0.json"
+        },
+        {
+          "seed": "13",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-13-1.json"
+        },
+        {
+          "seed": "14",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-14-0.json"
+        },
+        {
+          "seed": "14",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-14-1.json"
+        },
+        {
+          "seed": "15",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-15-0.json"
+        },
+        {
+          "seed": "15",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-15-1.json"
+        },
+        {
+          "seed": "16",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-16-0.json"
+        },
+        {
+          "seed": "16",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-16-1.json"
+        },
+        {
+          "seed": "17",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-17-0.json"
+        },
+        {
+          "seed": "17",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-17-1.json"
+        },
+        {
+          "seed": "18",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-18-0.json"
+        },
+        {
+          "seed": "18",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-18-1.json"
+        },
+        {
+          "seed": "19",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-19-0.json"
+        },
+        {
+          "seed": "19",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-19-1.json"
+        },
+        {
+          "seed": "20",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-20-0.json"
+        },
+        {
+          "seed": "20",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-20-1.json"
+        },
+        {
+          "seed": "21",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-21-0.json"
+        },
+        {
+          "seed": "21",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-21-1.json"
+        },
+        {
+          "seed": "22",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-22-0.json"
+        },
+        {
+          "seed": "22",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-22-1.json"
+        },
+        {
+          "seed": "23",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-23-0.json"
+        },
+        {
+          "seed": "23",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-23-1.json"
+        },
+        {
+          "seed": "24",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-24-0.json"
+        },
+        {
+          "seed": "24",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-24-1.json"
+        },
+        {
+          "seed": "25",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-25-0.json"
+        },
+        {
+          "seed": "25",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-25-1.json"
+        },
+        {
+          "seed": "26",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-26-0.json"
+        },
+        {
+          "seed": "26",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-26-1.json"
+        },
+        {
+          "seed": "27",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-27-0.json"
+        },
+        {
+          "seed": "27",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-27-1.json"
+        },
+        {
+          "seed": "28",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-28-0.json"
+        },
+        {
+          "seed": "28",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-28-1.json"
+        },
+        {
+          "seed": "29",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-29-0.json"
+        },
+        {
+          "seed": "29",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-29-1.json"
+        },
+        {
+          "seed": "30",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-30-0.json"
+        },
+        {
+          "seed": "30",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-30-1.json"
+        },
+        {
+          "seed": "31",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-31-0.json"
+        },
+        {
+          "seed": "31",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/open-space-31-1.json"
+        }
+      ],
+      "summary": {
+        "wins": 0,
+        "draws": 64,
+        "losses": 0,
+        "win_rate": 0,
+        "wilson_95": [
+          0.0,
+          0.0
+        ],
+        "mean_survival_ticks": 2,
+        "median_survival_ticks": 2,
+        "collision_causes": {}
+      }
+    },
+    {
+      "opponent_id": "step-0",
+      "games": [
+        {
+          "seed": "0",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-00-0.json"
+        },
+        {
+          "seed": "0",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-00-1.json"
+        },
+        {
+          "seed": "1",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-01-0.json"
+        },
+        {
+          "seed": "1",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-01-1.json"
+        },
+        {
+          "seed": "2",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-02-0.json"
+        },
+        {
+          "seed": "2",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-02-1.json"
+        },
+        {
+          "seed": "3",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-03-0.json"
+        },
+        {
+          "seed": "3",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-03-1.json"
+        },
+        {
+          "seed": "4",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-04-0.json"
+        },
+        {
+          "seed": "4",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-04-1.json"
+        },
+        {
+          "seed": "5",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-05-0.json"
+        },
+        {
+          "seed": "5",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-05-1.json"
+        },
+        {
+          "seed": "6",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-06-0.json"
+        },
+        {
+          "seed": "6",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-06-1.json"
+        },
+        {
+          "seed": "7",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-07-0.json"
+        },
+        {
+          "seed": "7",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-07-1.json"
+        },
+        {
+          "seed": "8",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-08-0.json"
+        },
+        {
+          "seed": "8",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-08-1.json"
+        },
+        {
+          "seed": "9",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-09-0.json"
+        },
+        {
+          "seed": "9",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-09-1.json"
+        },
+        {
+          "seed": "10",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-10-0.json"
+        },
+        {
+          "seed": "10",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-10-1.json"
+        },
+        {
+          "seed": "11",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-11-0.json"
+        },
+        {
+          "seed": "11",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-11-1.json"
+        },
+        {
+          "seed": "12",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-12-0.json"
+        },
+        {
+          "seed": "12",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-12-1.json"
+        },
+        {
+          "seed": "13",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-13-0.json"
+        },
+        {
+          "seed": "13",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-13-1.json"
+        },
+        {
+          "seed": "14",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-14-0.json"
+        },
+        {
+          "seed": "14",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-14-1.json"
+        },
+        {
+          "seed": "15",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-15-0.json"
+        },
+        {
+          "seed": "15",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-15-1.json"
+        },
+        {
+          "seed": "16",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-16-0.json"
+        },
+        {
+          "seed": "16",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-16-1.json"
+        },
+        {
+          "seed": "17",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-17-0.json"
+        },
+        {
+          "seed": "17",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-17-1.json"
+        },
+        {
+          "seed": "18",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-18-0.json"
+        },
+        {
+          "seed": "18",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-18-1.json"
+        },
+        {
+          "seed": "19",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-19-0.json"
+        },
+        {
+          "seed": "19",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-19-1.json"
+        },
+        {
+          "seed": "20",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-20-0.json"
+        },
+        {
+          "seed": "20",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-20-1.json"
+        },
+        {
+          "seed": "21",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-21-0.json"
+        },
+        {
+          "seed": "21",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-21-1.json"
+        },
+        {
+          "seed": "22",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-22-0.json"
+        },
+        {
+          "seed": "22",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-22-1.json"
+        },
+        {
+          "seed": "23",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-23-0.json"
+        },
+        {
+          "seed": "23",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-23-1.json"
+        },
+        {
+          "seed": "24",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-24-0.json"
+        },
+        {
+          "seed": "24",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-24-1.json"
+        },
+        {
+          "seed": "25",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-25-0.json"
+        },
+        {
+          "seed": "25",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-25-1.json"
+        },
+        {
+          "seed": "26",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-26-0.json"
+        },
+        {
+          "seed": "26",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-26-1.json"
+        },
+        {
+          "seed": "27",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-27-0.json"
+        },
+        {
+          "seed": "27",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-27-1.json"
+        },
+        {
+          "seed": "28",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-28-0.json"
+        },
+        {
+          "seed": "28",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-28-1.json"
+        },
+        {
+          "seed": "29",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-29-0.json"
+        },
+        {
+          "seed": "29",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-29-1.json"
+        },
+        {
+          "seed": "30",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-30-0.json"
+        },
+        {
+          "seed": "30",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-30-1.json"
+        },
+        {
+          "seed": "31",
+          "target_seat": 0,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-31-0.json"
+        },
+        {
+          "seed": "31",
+          "target_seat": 1,
+          "result": "draw",
+          "ticks": 2,
+          "collision_causes": [],
+          "replay_file": "evaluation/step-0-31-1.json"
+        }
+      ],
+      "summary": {
+        "wins": 0,
+        "draws": 64,
+        "losses": 0,
+        "win_rate": 0,
+        "wilson_95": [
+          0.0,
+          0.0
+        ],
+        "mean_survival_ticks": 2,
+        "median_survival_ticks": 2,
+        "collision_causes": {}
+      }
+    }
+  ],
+  "report_sha256": "8cddb6c821a6293b3a8416e2a865700db8d0026ae9b953a7db5eea51f72f12bf"
+}

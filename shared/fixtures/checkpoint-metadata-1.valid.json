@@ -1,0 +1,41 @@
+{
+  "format": "lc-checkpoint/1",
+  "checkpoint_id": "step-0",
+  "step": 0,
+  "model_architecture": {
+    "name": "mlp",
+    "version": "1",
+    "config": {
+      "hidden_sizes": [
+        64,
+        64
+      ]
+    }
+  },
+  "observation_schema": "lc-observation/1",
+  "action_schema": "lc-action/1",
+  "onnx": {
+    "file": "checkpoints/step-0.onnx",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "opset": 17,
+    "runtime": "onnxruntime-web"
+  },
+  "pytorch": {
+    "file": "checkpoints/step-0.pt",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "format": "state_dict"
+  },
+  "artifacts": [
+    {
+      "format": "onnx",
+      "file": "checkpoints/step-0.onnx",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "format": "pytorch",
+      "file": "checkpoints/step-0.pt",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "metadata_sha256": "567a523b98a46749fb898520abac7f79598c3b914caa5a593571c6080e196a1c"
+}

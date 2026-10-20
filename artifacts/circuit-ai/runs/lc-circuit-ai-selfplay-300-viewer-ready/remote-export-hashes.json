@@ -1,0 +1,18 @@
+{
+  "step-0": {
+    "remote_external_data_sha256": "8f49f74a9a6eea22140d4d12bf8e04a80e1d911dbf1216a3a01483773be2145a",
+    "remote_onnx_sha256": "be5230bfc9792fd9d8075bc3629e2947fb71cae214a8f09297bff89eee467264"
+  },
+  "step-100": {
+    "remote_external_data_sha256": "660c114988039b6c4fb760a08da85da0fb875febcf0955c19266a1bcd75a33e3",
+    "remote_onnx_sha256": "864ade41f10a93af3c54361ee6df58bf030b452b4dd6af12b89fa907583c2e20"
+  },
+  "step-200": {
+    "remote_external_data_sha256": "9feee7d8f50e94fc1fbf860de6c7ad66c2c7d39ad63c9ade0679ff9b938b3a65",
+    "remote_onnx_sha256": "36bc380b79b1be5fa9646b37676c3fc3a81433c548f0a7fb09a2615658653757"
+  },
+  "step-300": {
+    "remote_external_data_sha256": "2dc76c474a59e1e60c88e1a831864db066375169cb2b4640b8b0ab0ac6b981f1",
+    "remote_onnx_sha256": "4b83cd80288eea41bef67cdc01a521c0bdf439d2c3f93abc6da9c2530b8e24b9"
+  }
+}

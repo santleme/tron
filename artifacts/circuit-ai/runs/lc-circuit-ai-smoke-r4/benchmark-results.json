@@ -1,0 +1,232 @@
+{
+  "device_mode": "cuda",
+  "execution_model": "single-device; no DDP or multi-GPU comparison",
+  "format": "lc-throughput-benchmark/1",
+  "max_training_jobs": 20,
+  "measured_repeats_per_candidate": 3,
+  "selected_trial": 2,
+  "selection_metric": "median_environment_steps_per_second (update-only; excludes checkpoint I/O)",
+  "selection_rationale": "Selected trial 2 (trial-02) with the highest observed median update-only environment steps/s (1275.171); median wall-inclusive throughput was 1272.767 steps/s. Checkpoint I/O is excluded from the selection metric. Median PPO update latency (3.212117s) is the tie-breaker. Its median rollout/optimizer time is 3.194609s/0.017926s (ratio 178.213); it performed 36 CUDA optimizer updates out of 36. Selection compares measured throughput on the selected single device; GPU occupancy is not used.",
+  "trials": [
+    {
+      "config": {
+        "arena_count": 32,
+        "checkpoint_every": 1,
+        "clip_ratio": 0.2,
+        "device": "cuda",
+        "entropy_coef": 0.01,
+        "gae_lambda": 0.95,
+        "gamma": 0.99,
+        "height": 12,
+        "hidden_size": 128,
+        "learning_rate": 0.0003,
+        "minibatch_size": 256,
+        "onnx_opset": 17,
+        "rollout_steps": 32,
+        "seed": 1234,
+        "snapshot_opponent_probability": 0.0,
+        "total_updates": 3,
+        "update_epochs": 1,
+        "value_coef": 0.5,
+        "width": 12
+      },
+      "cuda_optimizer_updates": 36,
+      "device": {
+        "cuda_available": true,
+        "cuda_name": "Tesla T4",
+        "cuda_optimizer_updates": 4,
+        "device": "cuda",
+        "optimizer_updates": 4
+      },
+      "index": 0,
+      "measured_repeats": [
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1262.9490719240239,
+          "mean_update_latency_seconds": 0.8108007066666593,
+          "optimizer_seconds": 0.017647878333349354,
+          "optimizer_updates": 12,
+          "repeat": 0,
+          "rollout_seconds": 0.7931470423333261,
+          "wall_environment_steps_per_second": 1253.6102045731493
+        },
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1204.777427233652,
+          "mean_update_latency_seconds": 0.8499495233333315,
+          "optimizer_seconds": 0.01745854566667049,
+          "optimizer_updates": 12,
+          "repeat": 1,
+          "rollout_seconds": 0.832485333666663,
+          "wall_environment_steps_per_second": 1195.8895710509364
+        },
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1177.5736471578648,
+          "mean_update_latency_seconds": 0.8695846773333263,
+          "optimizer_seconds": 0.017810090999982247,
+          "optimizer_updates": 12,
+          "repeat": 2,
+          "rollout_seconds": 0.8517685183333393,
+          "wall_environment_steps_per_second": 1169.4094047632016
+        }
+      ],
+      "median_environment_steps_per_second": 1204.777427233652,
+      "median_optimizer_seconds": 0.017647878333349354,
+      "median_rollout_seconds": 0.832485333666663,
+      "median_rollout_to_optimizer_ratio": 47.17197829347611,
+      "median_update_latency_seconds": 0.8499495233333315,
+      "median_wall_environment_steps_per_second": 1195.8895710509364,
+      "optimizer_updates": 36,
+      "trial_id": "trial-00"
+    },
+    {
+      "config": {
+        "arena_count": 64,
+        "checkpoint_every": 1,
+        "clip_ratio": 0.2,
+        "device": "cuda",
+        "entropy_coef": 0.01,
+        "gae_lambda": 0.95,
+        "gamma": 0.99,
+        "height": 12,
+        "hidden_size": 128,
+        "learning_rate": 0.0003,
+        "minibatch_size": 512,
+        "onnx_opset": 17,
+        "rollout_steps": 32,
+        "seed": 1234,
+        "snapshot_opponent_probability": 0.0,
+        "total_updates": 3,
+        "update_epochs": 1,
+        "value_coef": 0.5,
+        "width": 12
+      },
+      "cuda_optimizer_updates": 36,
+      "device": {
+        "cuda_available": true,
+        "cuda_name": "Tesla T4",
+        "cuda_optimizer_updates": 4,
+        "device": "cuda",
+        "optimizer_updates": 4
+      },
+      "index": 1,
+      "measured_repeats": [
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1272.8795452370348,
+          "mean_update_latency_seconds": 1.6089503579999966,
+          "optimizer_seconds": 0.017212474666659244,
+          "optimizer_updates": 12,
+          "repeat": 0,
+          "rollout_seconds": 1.5917317509999787,
+          "wall_environment_steps_per_second": 1267.9185838868939
+        },
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1215.9544545639608,
+          "mean_update_latency_seconds": 1.6842736110000185,
+          "optimizer_seconds": 0.020117493333335307,
+          "optimizer_updates": 12,
+          "repeat": 1,
+          "rollout_seconds": 1.6641493320000034,
+          "wall_environment_steps_per_second": 1211.006605349596
+        },
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1265.5421931407755,
+          "mean_update_latency_seconds": 1.618278719666667,
+          "optimizer_seconds": 0.017311145333318716,
+          "optimizer_updates": 12,
+          "repeat": 2,
+          "rollout_seconds": 1.600961757000012,
+          "wall_environment_steps_per_second": 1260.8937453747535
+        }
+      ],
+      "median_environment_steps_per_second": 1265.5421931407755,
+      "median_optimizer_seconds": 0.017311145333318716,
+      "median_rollout_seconds": 1.600961757000012,
+      "median_rollout_to_optimizer_ratio": 92.48156180161259,
+      "median_update_latency_seconds": 1.618278719666667,
+      "median_wall_environment_steps_per_second": 1260.8937453747535,
+      "optimizer_updates": 36,
+      "trial_id": "trial-01"
+    },
+    {
+      "config": {
+        "arena_count": 128,
+        "checkpoint_every": 1,
+        "clip_ratio": 0.2,
+        "device": "cuda",
+        "entropy_coef": 0.01,
+        "gae_lambda": 0.95,
+        "gamma": 0.99,
+        "height": 12,
+        "hidden_size": 128,
+        "learning_rate": 0.0003,
+        "minibatch_size": 1024,
+        "onnx_opset": 17,
+        "rollout_steps": 32,
+        "seed": 1234,
+        "snapshot_opponent_probability": 0.0,
+        "total_updates": 3,
+        "update_epochs": 1,
+        "value_coef": 0.5,
+        "width": 12
+      },
+      "cuda_optimizer_updates": 36,
+      "device": {
+        "cuda_available": true,
+        "cuda_name": "Tesla T4",
+        "cuda_optimizer_updates": 4,
+        "device": "cuda",
+        "optimizer_updates": 4
+      },
+      "index": 2,
+      "measured_repeats": [
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1271.6706839224469,
+          "mean_update_latency_seconds": 3.220959680666662,
+          "optimizer_seconds": 0.018390668666673566,
+          "optimizer_updates": 12,
+          "repeat": 0,
+          "rollout_seconds": 3.202562741666668,
+          "wall_environment_steps_per_second": 1269.2128307184576
+        },
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1289.5259771643669,
+          "mean_update_latency_seconds": 3.1763609826666652,
+          "optimizer_seconds": 0.017925800333330244,
+          "optimizer_updates": 12,
+          "repeat": 1,
+          "rollout_seconds": 3.1584291739999912,
+          "wall_environment_steps_per_second": 1287.0550000267385
+        },
+        {
+          "cuda_optimizer_updates": 12,
+          "environment_steps_per_second": 1275.1713114515335,
+          "mean_update_latency_seconds": 3.212117433333333,
+          "optimizer_seconds": 0.017502911000008226,
+          "optimizer_updates": 12,
+          "repeat": 2,
+          "rollout_seconds": 3.194608685666651,
+          "wall_environment_steps_per_second": 1272.7665978893579
+        }
+      ],
+      "median_environment_steps_per_second": 1275.1713114515335,
+      "median_optimizer_seconds": 0.017925800333330244,
+      "median_rollout_seconds": 3.194608685666651,
+      "median_rollout_to_optimizer_ratio": 178.21289015067137,
+      "median_update_latency_seconds": 3.212117433333333,
+      "median_wall_environment_steps_per_second": 1272.7665978893579,
+      "optimizer_updates": 36,
+      "trial_id": "trial-02"
+    }
+  ],
+  "warmup": {
+    "discarded": true,
+    "updates_per_candidate": 1
+  }
+}

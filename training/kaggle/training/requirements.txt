@@ -1,0 +1,10 @@
+# Local development only. Use a compatible stable release rather than pinning
+# one framework minor across changing Python/platform/CUDA combinations.
+torch>=2.7,<3
+onnx>=1.18,<2
+onnxscript>=0.5,<1
+onnx-ir>=0.1.16,<2
+ml_dtypes>=0.5
+packaging>=24
+typing_extensions>=4.10
+jsonschema>=4.18,<5

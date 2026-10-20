@@ -1,0 +1,16 @@
+# Python bytecode and local test/build state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.tox/
+coverage/
+
+# JavaScript dependencies and build output
+node_modules/
+dist/
+
+# Editor and operating-system metadata
+.DS_Store
+Thumbs.db
