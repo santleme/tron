@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.kaggle.cli import KaggleError, _load_run_settings, download, poll_status, prepare, submit
+from tools.kaggle.cli import KaggleError, _load_run_settings, _sdk_metadata, download, poll_status, prepare, submit
 from training.arena.engine import ACTION_ORDER, initialize_episode, step
 from training.ppo.protocol import digest_json, file_sha256
 from training.ppo.train import TrainConfig
@@ -806,6 +806,62 @@ class FakeRecoveryApi:
             self.quota_remaining -= 20
         return {"gpu_quota": {"remaining_gpu_seconds": self.quota_remaining,
                               "used_gpu_seconds": self.quota_used}}
+
+
+def test_sdk_metadata_uses_generated_client_context_without_version_selector(monkeypatch):
+    requests = []
+
+    class GeneratedGetKernelRequest:
+        def __init__(self):
+            self.user_name = None
+            self.kernel_slug = None
+            self.version_label = None
+
+    class GeneratedGetKernelResponse:
+        def __init__(self):
+            self.metadata = types.SimpleNamespace(ref="owner/slug", current_version_number=17)
+
+    class KernelsApiClient:
+        def get_kernel(self, request):
+            requests.append(request)
+            return GeneratedGetKernelResponse()
+
+    generated_module = types.ModuleType("kagglesdk.kernels.types.kernels_api_service")
+    generated_module.ApiGetKernelRequest = GeneratedGetKernelRequest
+    monkeypatch.setitem(sys.modules, generated_module.__name__, generated_module)
+
+    client = types.SimpleNamespace(
+        kernels=types.SimpleNamespace(kernels_api_client=KernelsApiClient()),
+    )
+    client_context = {"entered": 0, "exited": 0}
+
+    class KaggleApiWithoutConvenienceMetadata:
+        def build_kaggle_client(self):
+            class ContextManager:
+                def __enter__(self):
+                    client_context["entered"] += 1
+                    return client
+
+                def __exit__(self, exc_type, exc_value, traceback):
+                    client_context["exited"] += 1
+                    return False
+
+            return ContextManager()
+
+    api = KaggleApiWithoutConvenienceMetadata()
+    assert not hasattr(api, "get_kernel")
+    assert not hasattr(api, "kernels")
+
+    assert _sdk_metadata(api, "owner/slug") == {
+        "kernel_id": "owner/slug", "current_version_number": 17,
+    }
+    assert client_context == {"entered": 1, "exited": 1}
+    assert len(requests) == 1
+    request = requests[0]
+    assert type(request) is GeneratedGetKernelRequest
+    assert request.user_name == "owner"
+    assert request.kernel_slug == "slug"
+    assert request.version_label is None
 
 
 def make_recovery_source(tmp_path):

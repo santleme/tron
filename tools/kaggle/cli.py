@@ -615,7 +615,8 @@ def _sdk_metadata(api, kernel_id: str) -> dict:
             request = ApiGetKernelRequest()
             request.user_name = owner
             request.kernel_slug = slug
-            response = api.kernels.kernels_api_client.get_kernel(request)
+            with api.build_kaggle_client() as kaggle:
+                response = kaggle.kernels.kernels_api_client.get_kernel(request)
         except (ImportError, AttributeError, TypeError, ValueError) as exc:
             raise KaggleError("Pinned Kaggle SDK get_kernel metadata interface is unavailable.") from exc
     metadata = getattr(response, "metadata", response)
