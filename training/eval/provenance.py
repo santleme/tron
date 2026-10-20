@@ -57,6 +57,7 @@ SEED_TUPLE_FIELDS = ("split", "domain_label", "env_root_seed", "run_key",
                      "update_index", "rollout_index", "arena_index", "game_index", "reset_index")
 SEED_DOMAIN_LABELS = (
     "g008/train/initial", "g008/train/reset",
+    "g008/imitation_demo/initial", "g008/imitation_demo/reset",
     "g008/benchmark/measured/initial", "g008/benchmark/measured/reset",
     "g008/benchmark/warmup/initial", "g008/benchmark/warmup/reset",
     "g008/eval/validation/initial", "g008/eval/validation/reset",
@@ -124,24 +125,19 @@ def _validate_tuple_protocol(seed_tuple: Mapping[str, Any]) -> None:
     domain = seed_tuple["domain_label"]
     root = seed_tuple["env_root_seed"]
     run_key = seed_tuple["run_key"]
-    domain_ok = {
-        "train": domain.startswith("g008/train/"),
-        "benchmark": domain.startswith("g008/benchmark/"),
-        "validation": domain.startswith("g008/eval/validation/"),
-        "final": domain.startswith("g008/eval/final/"),
-    }
-    if split == "imitation_demo":
-        raise ProvenanceError("G008 plan needs explicit imitation_demo environment domain labels")
-    if not domain_ok[split]:
+    plan, _ = _read_seed_plan()
+    allowed_domains = plan["environment_seed_codec"]["split_domain_mapping"][split]
+    if domain not in allowed_domains:
         raise ProvenanceError("seed tuple domain label does not match its split")
-    if split == "train" and not re.fullmatch(r"train-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", run_key):
-        raise ProvenanceError("train run_key must contain a lowercase canonical UUID")
+    if split in {"train", "imitation_demo"}:
+        prefix = "train" if split == "train" else "imitation"
+        if not re.fullmatch(rf"{prefix}-[0-9a-f]{{8}}-[0-9a-f]{{4}}-[1-5][0-9a-f]{{3}}-[89ab][0-9a-f]{{3}}-[0-9a-f]{{12}}", run_key):
+            raise ProvenanceError(f"{prefix} run_key must contain a lowercase canonical UUID")
     if split == "validation" and run_key != "validation-suite-v1":
         raise ProvenanceError("validation run_key must be validation-suite-v1")
     if split == "final" and run_key != "final-suite-v1":
         raise ProvenanceError("final run_key must be final-suite-v1")
     if split != "benchmark":
-        plan, _ = _read_seed_plan()
         lower, upper = plan["partitions"][split]["root_seed_range_inclusive"]
         if not lower <= root <= upper:
             raise ProvenanceError(f"environment root is outside frozen {split} partition")
@@ -310,6 +306,14 @@ def build_expanded_schedule(*, suite_id: str, run_id: str, run_key: str,
     normalized_slots.sort(key=order)
     if len({slot["slot_id"] for slot in normalized_slots}) != len(normalized_slots):
         raise ProvenanceError("slot_id collision in expanded schedule")
+    split_names = {slot["split"] for slot in normalized_slots}
+    if len(split_names) == 1:
+        split = next(iter(split_names))
+        if split in {"train", "imitation_demo"}:
+            prefix = "train" if split == "train" else "imitation"
+            expected_run_key = f"{prefix}-{run_id}"
+            if run_key != expected_run_key:
+                raise ProvenanceError(f"{split} run_key must bind exactly to run_id")
     scan = collision_scan(normalized_slots)
     body_slots = [{key: value for key, value in slot.items() if key != "backend_id"} for slot in normalized_slots]
     body = {"schedule_spec_digest": spec_digest, "suite_id": suite_id, "run_id": run_id,

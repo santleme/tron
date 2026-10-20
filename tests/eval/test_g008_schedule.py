@@ -97,9 +97,42 @@ class G008SeedCodecTests(unittest.TestCase):
             derive_environment_seed(invalid)
         invalid = _tuple()
         invalid["split"] = "imitation_demo"
-        invalid["run_key"] = "imitation-00000000-0000-0000-0000-000000000000"
-        with self.assertRaisesRegex(ProvenanceError, "explicit imitation_demo"):
+        invalid["domain_label"] = "g008/imitation_demo/initial"
+        invalid["env_root_seed"] = 3_000_000
+        run_id = "12345678-1234-4234-8234-123456789abc"
+        invalid["run_key"] = f"imitation-{run_id}"
+        initial_digest = derive_environment_seed(invalid)[0]
+        invalid["domain_label"] = "g008/imitation_demo/reset"
+        reset_digest = derive_environment_seed(invalid)[0]
+        self.assertNotEqual(initial_digest, reset_digest)
+        invalid["domain_label"] = "g008/train/initial"
+        with self.assertRaisesRegex(ProvenanceError, "domain label does not match"):
             derive_environment_seed(invalid)
+        invalid["domain_label"] = "g008/imitation_demo/initial"
+        invalid["run_key"] = "imitation-12345678-1234-0000-8234-123456789abc"
+        with self.assertRaisesRegex(ProvenanceError, "lowercase canonical UUID"):
+            derive_environment_seed(invalid)
+
+    def test_imitation_schedule_binds_run_key_to_registered_run_id(self):
+        run_id = "12345678-1234-4234-8234-123456789abc"
+        imitation = _tuple()
+        imitation.update({
+            "split": "imitation_demo",
+            "domain_label": "g008/imitation_demo/initial",
+            "env_root_seed": 3_000_000,
+            "run_key": f"imitation-{run_id}",
+        })
+        slot = _slot(imitation, suite_ordinal=1, root_ordinal=0)
+        expanded = build_expanded_schedule(
+            suite_id="g008-imitation-demo", run_id=run_id,
+            run_key=f"imitation-{run_id}", slots=[slot])
+        self.assertEqual(expanded["slots"][0]["domain_label"], "g008/imitation_demo/initial")
+
+        mismatched = "12345678-1234-4234-8234-123456789abd"
+        with self.assertRaisesRegex(ProvenanceError, "bind exactly to run_id"):
+            build_expanded_schedule(
+                suite_id="g008-imitation-demo", run_id=run_id,
+                run_key=f"imitation-{mismatched}", slots=[{**slot, "run_key": f"imitation-{mismatched}"}])
         invalid = _tuple()
         invalid["domain_label"] = "g008/eval/final/initial"
         with self.assertRaisesRegex(ProvenanceError, "domain label does not match"):
