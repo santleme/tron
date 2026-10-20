@@ -74,6 +74,17 @@ class G008PrincipalBenchmarkTests(unittest.TestCase):
                                      "engine_sha256": "cfd6fe1817e06e5e892306f1fac2b5eef3cdeb4e68da2e83b26c8f4f23a6c7d0"})
         self.assertEqual(g008_benchmark.select_implementation("candidate")[1]["role"], "candidate")
 
+    def test_incumbent_engine_resolves_seed_import_without_snapshot_drift(self):
+        hashes_before = g008_benchmark.implementation_hashes("incumbent")
+        incumbent = g008_benchmark._load_incumbent_train_module()
+
+        state, seeds = incumbent.initialize_episode(24, 24, 1729, 0)
+
+        self.assertEqual((state.width, state.height), (24, 24))
+        self.assertEqual(len(state.agents), 2)
+        self.assertEqual([seed.label for seed in seeds], ["episode", "agent/0", "agent/1"])
+        self.assertEqual(g008_benchmark.implementation_hashes("incumbent"), hashes_before)
+
     def test_parity_comparison_detects_collector_mismatch(self):
         config, _ = load_principal_config()
         traces = [{"sha256": "1" * 64, "transition_count": 4096, "reset_count": 12},

@@ -133,7 +133,9 @@ def implementation_hashes(role: str) -> dict[str, str]:
 def _load_incumbent_train_module():
     """Load the checked-in historical trainer with its matching historical engine."""
     implementation_hashes("incumbent")
-    engine_name = "training.ppo._g008_incumbent_engine"
+    # The frozen engine's relative `.seeds` import is intentionally resolved
+    # against the current arena package without changing the archived bytes.
+    engine_name = "training.arena._g008_incumbent_engine"
     train_name = "training.ppo._g008_incumbent_train"
     engine_spec = importlib.util.spec_from_file_location(engine_name, INCUMBENT_DIR / "engine.py")
     if engine_spec is None or engine_spec.loader is None:
