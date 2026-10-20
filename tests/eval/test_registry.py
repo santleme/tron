@@ -141,7 +141,12 @@ def test_bad_lock_anchor_is_rejected_on_replay(tmp_path):
 
 def _legacy_registry_with_recovery_amendment(tmp_path, monkeypatch):
     registry = Registry(tmp_path / "registry.jsonl")
-    for index in range(13):
+    legacy_benchmark = registry.register("legacy-0", "benchmark", {"legacy_index": 0})
+    for index in range(1, 10):
+        registry.register(f"legacy-{index}", "train", {"legacy_index": index})
+    # The immutable 0–12 prefix includes its historical benchmark artifact at index 10.
+    registry.register_benchmark_artifact("a" * 64, 0, legacy_benchmark["event_hash"])
+    for index in range(11, 13):
         registry.register(f"legacy-{index}", "train", {"legacy_index": index})
     monkeypatch.setattr(registry_module, "_LEGACY_HEAD_INDEX", 12)
     monkeypatch.setattr(registry_module, "_LEGACY_HEAD_HASH", registry.head[0])
@@ -214,9 +219,65 @@ def _legacy_registry_with_recovery_amendment(tmp_path, monkeypatch):
             "backend_sha256": "6" * 64, "trainer_sha256": "7" * 64, "engine_sha256": "8" * 64,
             **({"allowed_implementation_variants": variants} if kind == "train" else {"implementation_variants": variants}),
         })
-    bench = register("benchmark", "recovery-bench", benchmark_uuid, 3600, 3600)
-    train = register("train", "recovery-train", training_uuid, 7200, 7200)
+    # Construct the fully authorized pair independently of the validator under regression. The
+    # suffix validator currently rejects the second append because it mistakes legacy artifact 10
+    # for a recovery artifact while reading the otherwise valid one-registration prefix.
+    with monkeypatch.context() as setup:
+        setup.setattr(registry_module, "_validate_recovery_suffix", lambda _events: None)
+        bench = register("benchmark", "recovery-bench", benchmark_uuid, 3600, 3600)
+        train = register("train", "recovery-train", training_uuid, 7200, 7200)
     return registry, bench, train, amendment_event
+
+
+def test_recovery_registration_prefix_allows_one_of_two_before_execution(tmp_path, monkeypatch):
+    registry, benchmark, train, amendment = _legacy_registry_with_recovery_amendment(tmp_path, monkeypatch)
+
+    # The historical prefix remains byte-for-byte intact and contains its old artifact.
+    prefix = registry.path.read_bytes().splitlines()
+    assert len(prefix) == 16  # 13 legacy events, amendment, benchmark registration, train registration
+    legacy_events = [json.loads(line) for line in prefix[:13]]
+    assert legacy_events[10]["event_type"] == "benchmark_artifact"
+    assert legacy_events[12]["event_hash"] == amendment["event_data"]["legacy_head_hash"]
+
+    # Start from the valid amended prefix with no recovery workload registrations.
+    registry.path.write_bytes(b"\n".join(prefix[:14]) + b"\n")
+    events = registry.events()
+    assert [event["event_type"] for event in events[13:]] == ["recovery_amendment"]
+
+    first = registry.register_recovery_workload(
+        benchmark["event_data"]["registration_id"], benchmark["event_data"]["registration_kind"],
+        benchmark["event_data"]["record"],
+    )
+    assert first["event_hash"] == benchmark["event_hash"]
+    assert [event["event_type"] for event in registry.events()[13:]] == [
+        "recovery_amendment", "registration",
+    ]
+
+    # Neither workload execution nor locking may begin with only one frozen registration.
+    with pytest.raises(RegistryError, match="both recovery registrations"):
+        registry.preflight_workload(_preflight(benchmark))
+    with pytest.raises(RegistryError, match="both recovery registrations"):
+        registry.close_registrations()
+    before_artifact_attempt = registry.path.read_bytes()
+    with pytest.raises(RegistryError, match="both recovery registrations"):
+        registry.register_benchmark_artifact(
+            "8" * 64, first["event_index"], first["event_hash"],
+            attempt_event_index=first["event_index"], attempt_event_hash="9" * 64,
+            report_sha256="a" * 64, selection_evidence=_selection_evidence(),
+        )
+    assert registry.path.read_bytes() == before_artifact_attempt
+
+    # Appending the second named workload completes the valid registration prefix.
+    second = registry.register_recovery_workload(
+        train["event_data"]["registration_id"], train["event_data"]["registration_kind"],
+        train["event_data"]["record"],
+    )
+    completed_prefix = registry.events()
+    assert [event["event_type"] for event in completed_prefix[13:]] == [
+        "recovery_amendment", "registration", "registration",
+    ]
+    assert second["event_hash"] == train["event_hash"]
+    assert completed_prefix[-1]["event_hash"] == train["event_hash"]
 
 
 def _preflight(registration, attempt_id="attempt-1", *, lock_hash=None, timeout=3600, variant_id=None):

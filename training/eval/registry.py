@@ -625,15 +625,21 @@ def _validate_recovery_suffix(events: list[dict[str, Any]]) -> None:
     attempt_state: dict[str, dict[str, Any]] = {}
     attempt_order: list[str] = []
     seen_run_ids: set[str] = set()
-    lock_index = next((i for i, e in enumerate(events) if e["event_type"] == "registration_closed"), None)
+    recovery_start = amendments[0] + 1
+    recovery_events = events[recovery_start:]
+    lock_index = next((i for i, e in enumerate(recovery_events, recovery_start)
+                       if e["event_type"] == "registration_closed"), None)
     recovery_artifact_index = None
     recovery_artifact_data = None
     recovery_attestation_index = None
     current_kernel_version = amendment["historical_overrun_evidence"]["current_version_number"]
 
     # The two authorized workload registrations are the only registration events after the amendment.
-    for i, event in enumerate(events[amendments[0] + 1:], amendments[0] + 1):
+    for i, event in enumerate(recovery_events, recovery_start):
         typ, data = event["event_type"], event["event_data"]
+        if (typ in {"workload_preflight", "registration_closed", "benchmark_artifact"}
+                and set(id_to_index) != set(named)):
+            raise RegistryError("both recovery registrations must precede execution and lock")
         if recovery_artifact_index is not None and (lock_index is None or i < lock_index) and typ != "registration_closed":
             raise RegistryError("recovery benchmark artifact must immediately precede registration lock")
         if lock_index is not None and i > lock_index:
@@ -903,12 +909,6 @@ def _validate_recovery_suffix(events: list[dict[str, Any]]) -> None:
 
     if len(id_to_index) > 2:
         raise RegistryError("recovery permits exactly two workload registrations")
-    if id_to_index and set(id_to_index) != set(named):
-        # A partial prefix is valid only while the amendment is being appended; once any attempt or
-        # lock exists, both frozen workloads must already be registered.
-        if any(e["event_type"] in {"workload_preflight", "registration_closed", "benchmark_artifact"} for e in events):
-            raise RegistryError("both recovery registrations must precede execution and lock")
-
     unresolved = [state for state in attempt_state.values() if state["phase"] != "terminal"]
     if unresolved:
         latest_unresolved = max(state.get("last_index", state["preflight_index"]) for state in unresolved)
