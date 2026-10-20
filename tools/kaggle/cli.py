@@ -147,7 +147,9 @@ def _load_run_settings(path: Path | None) -> dict:
         settings = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise KaggleError("Run config must be readable JSON.") from exc
-    if not isinstance(settings, dict) or set(settings) - {"run_id", "train_config", "throughput_benchmark", "g008_principal_benchmark"}:
+    if not isinstance(settings, dict) or set(settings) - {
+            "run_id", "train_config", "throughput_benchmark", "g008_principal_benchmark",
+            "g008_train_schedule"}:
         raise KaggleError("Run config contains unsupported fields.")
     run_id = settings.get("run_id", "kaggle-run")
     config = settings.get("train_config", {})
@@ -157,6 +159,40 @@ def _load_run_settings(path: Path | None) -> dict:
     if not isinstance(config, dict) or set(config) - allowed_config:
         raise KaggleError("Run config train_config contains unknown fields or is not an object.")
     settings_out = {"run_id": run_id, "train_config": config}
+    if "g008_train_schedule" in settings:
+        training = settings["g008_train_schedule"]
+        if not isinstance(training, dict) or set(training) != {"run_uuid", "root_seed"}:
+            raise KaggleError("g008_train_schedule must contain exactly run_uuid and root_seed.")
+        run_uuid = training["run_uuid"]
+        if (not isinstance(run_uuid, str) or not re.fullmatch(
+                r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+                run_uuid)):
+            raise KaggleError("g008_train_schedule run_uuid must be a canonical lowercase RFC 4122 UUID.")
+        if run_id != run_uuid:
+            raise KaggleError("G008 training run_id must equal its preregistered run_uuid.")
+        if "throughput_benchmark" in settings or "g008_principal_benchmark" in settings:
+            raise KaggleError("G008 train-only schedule cannot be combined with benchmark workloads.")
+        try:
+            from training.eval.provenance import _read_seed_plan, build_training_run_schedule
+            from training.ppo.train import TrainConfig
+            train_config = TrainConfig(**config)
+            train_config.validate()
+            plan, plan_sha = _read_seed_plan()
+            if train_config.seed != plan["model_ppo_seed"]:
+                raise ValueError("G008 TrainConfig.seed must equal the frozen model_ppo_seed")
+            schedule = build_training_run_schedule(
+                run_id=run_uuid, root_seed=training["root_seed"],
+                arena_count=train_config.arena_count, total_updates=train_config.total_updates,
+                rollout_steps=train_config.rollout_steps, seed_plan_sha=plan_sha)
+        except (TypeError, ValueError) as exc:
+            raise KaggleError(f"Invalid preregistered G008 training schedule: {exc}") from exc
+        settings_out["g008_train_schedule"] = {
+            "run_uuid": run_uuid,
+            "root_seed": training["root_seed"],
+            "expanded_schedule_digest": schedule["expanded_schedule_digest"],
+            "schedule_spec_digest": schedule["schedule_spec_digest"],
+            "seed_plan_sha256": plan_sha,
+        }
     if "g008_principal_benchmark" in settings:
         benchmark = settings["g008_principal_benchmark"]
         if not isinstance(benchmark, dict) or set(benchmark) != {"run_ids"}:
@@ -226,10 +262,10 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
             "is_private": True,
             "enable_gpu": True,
             "enable_internet": True,
-            # Request the Kaggle dual-T4 shape for the G008 benchmark. Ordinary
-            # kernels keep the default accelerator shape; G008 uses one CUDA
-            # device and does not enable DDP.
-            "machine_shape": "NvidiaTeslaT4" if "g008_principal_benchmark" in settings else "",
+            # Both frozen G008 workloads use a single CUDA device on the T4;
+            # ordinary kernels retain Kaggle's default accelerator shape.
+            "machine_shape": "NvidiaTeslaT4" if any(
+                key in settings for key in ("g008_principal_benchmark", "g008_train_schedule")) else "",
             "dataset_sources": [],
             "competition_sources": [],
             "kernel_sources": [],
@@ -329,6 +365,21 @@ def main():
     config = TrainConfig(**settings["train_config"])
     if config.device != "cuda":
         raise RuntimeError("Kaggle training device must resolve to CUDA.")
+    g008_train = settings.get("g008_train_schedule")
+    if g008_train is not None:
+        from training.eval.provenance import build_training_run_schedule, seed_plan_sha256
+        schedule = build_training_run_schedule(
+            run_id=g008_train["run_uuid"], root_seed=g008_train["root_seed"],
+            arena_count=config.arena_count, total_updates=config.total_updates,
+            rollout_steps=config.rollout_steps)
+        if (schedule["expanded_schedule_digest"] != g008_train["expanded_schedule_digest"]
+                or schedule["schedule_spec_digest"] != g008_train["schedule_spec_digest"]
+                or seed_plan_sha256() != g008_train["seed_plan_sha256"]):
+            raise RuntimeError("G008 training schedule differs from its frozen package binding.")
+        train(config, output, export_onnx=True, run_evaluation=False,
+              g008_schedule=schedule, run_id=g008_train["run_uuid"])
+        print(f"Completed G008 train-only workload {run_id}; artifacts: {output}")
+        return
     train(config, output, export_onnx=True)
     benchmark_settings = settings.get("throughput_benchmark")
     if benchmark_settings is not None:

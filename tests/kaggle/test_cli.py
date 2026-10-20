@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.kaggle.cli import KaggleError, download, poll_status, prepare, submit
+from tools.kaggle.cli import KaggleError, _load_run_settings, download, poll_status, prepare, submit
 from training.arena.engine import ACTION_ORDER, initialize_episode, step
 from training.ppo.protocol import digest_json, file_sha256
 from training.ppo.train import TrainConfig
@@ -1656,6 +1656,76 @@ def test_prepare_rejects_modified_frozen_seed_plan_before_publishing_package(tmp
     assert not (tmp_path / "package").exists()
 
 
+def test_prepare_freezes_g008_train_schedule_and_uuid(tmp_path):
+    import uuid
+    from training.eval.provenance import build_training_run_schedule, seed_plan_sha256
+
+    run_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, "g008-train-package"))
+    config = tmp_path / "g008-train-config.json"
+    config.write_text(json.dumps({
+        "run_id": run_uuid,
+        "train_config": {"device": "auto", "seed": 1234, "arena_count": 2,
+                         "rollout_steps": 2, "total_updates": 1},
+        "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": 2_000_000},
+    }))
+
+    settings = _load_run_settings(config)
+    expected = build_training_run_schedule(run_id=run_uuid, root_seed=2_000_000,
+                                           arena_count=2, rollout_steps=2, total_updates=1)
+    assert settings["g008_train_schedule"] == {
+        "run_uuid": run_uuid,
+        "root_seed": 2_000_000,
+        "expanded_schedule_digest": expected["expanded_schedule_digest"],
+        "schedule_spec_digest": expected["schedule_spec_digest"],
+        "seed_plan_sha256": seed_plan_sha256(),
+    }
+    assert settings == _load_run_settings(config)
+
+    package = prepare("me/circuit-ai", "g008-train", tmp_path / "package", config)
+    staged = json.loads((package / "run-config.json").read_text())
+    assert staged["g008_train_schedule"] == settings["g008_train_schedule"]
+    metadata = json.loads((package / "kernel-metadata.json").read_text())
+    assert metadata["machine_shape"] == "NvidiaTeslaT4"
+
+
+@pytest.mark.parametrize(("run_uuid", "root_seed", "run_id", "extra", "match"), [
+    ("ABCDEFAB-1234-4234-8234-123456789abc", 2_000_000, None, {}, "canonical lowercase"),
+    ("23456789-1234-4234-8234-123456789abc", True, None, {}, "Invalid preregistered"),
+    ("23456789-1234-4234-8234-123456789abc", 1_000_000, None, {}, "outside the frozen train partition"),
+    ("23456789-1234-4234-8234-123456789abc", 2_000_000, "different-run-id", {}, "must equal"),
+    ("23456789-1234-4234-8234-123456789abc", 2_000_000, None,
+     {"g008_principal_benchmark": {"run_ids": {}}}, "cannot be combined"),
+    ("23456789-1234-4234-8234-123456789abc", 2_000_000, None,
+     {"g008_train_schedule_extra": {}}, "unsupported fields"),
+])
+def test_load_run_settings_rejects_invalid_g008_train_schedule(
+        tmp_path, run_uuid, root_seed, run_id, extra, match):
+    config = tmp_path / "invalid-g008-train-config.json"
+    document = {
+        "run_id": run_id or run_uuid,
+        "train_config": {"seed": 1234, "arena_count": 1, "rollout_steps": 1, "total_updates": 1},
+        "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": root_seed},
+        **extra,
+    }
+    config.write_text(json.dumps(document))
+    with pytest.raises(KaggleError, match=match):
+        _load_run_settings(config)
+
+
+def test_load_run_settings_rejects_nonfrozen_g008_model_seed(tmp_path):
+    import uuid
+
+    run_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, "g008-train-wrong-model-seed"))
+    config = tmp_path / "wrong-model-seed.json"
+    config.write_text(json.dumps({
+        "run_id": run_uuid,
+        "train_config": {"seed": 1235, "arena_count": 1, "rollout_steps": 1, "total_updates": 1},
+        "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": 2_000_000},
+    }))
+    with pytest.raises(KaggleError, match="model_ppo_seed"):
+        _load_run_settings(config)
+
+
 @pytest.mark.parametrize("benchmark", [
     {"configs": [{"arena_count": 4}], "updates": 0},
     {"configs": [{"arena_count": 4}], "updates": 11},
@@ -1713,6 +1783,50 @@ def test_kaggle_runner_resolves_auto_to_cuda_and_trains_on_gpu(tmp_path, monkeyp
     exec(compile(source, str(package / "run_kaggle.py"), "exec"), namespace)
     namespace["main"]()
     assert trained == [("cuda", str(output_root / "kaggle-run"), True)]
+
+
+def test_kaggle_runner_passes_frozen_g008_train_schedule_and_uuid_to_train(tmp_path, monkeypatch):
+    import uuid
+    from training.eval.provenance import build_training_run_schedule
+
+    run_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, "g008-train-runner"))
+    run_config = tmp_path / "g008-train-run-config.json"
+    run_config.write_text(json.dumps({
+        "run_id": run_uuid,
+        "train_config": {"device": "auto", "seed": 1234, "arena_count": 2,
+                         "rollout_steps": 2, "total_updates": 1},
+        "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": 2_000_000},
+    }))
+    package = prepare("me/circuit-ai", "g008-train-runner", tmp_path / "package", run_config)
+    fake_torch = types.ModuleType("torch")
+    fake_torch.__version__ = "torch-test"
+    fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
+    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 1,
+                                            get_device_name=lambda index: "Tesla T4")
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setenv("ARENA_OUTPUT_DIR", str(tmp_path / "kaggle-output"))
+    monkeypatch.setattr(importlib.util, "find_spec", lambda _: object())
+    calls = []
+    training_module = types.ModuleType("training.ppo.train")
+    training_module.TrainConfig = TrainConfig
+    training_module.train = lambda *args, **kwargs: calls.append((args, kwargs))
+    monkeypatch.setitem(sys.modules, "training.ppo.train", training_module)
+
+    namespace = {"__name__": "runner_test", "__file__": str(package / "run_kaggle.py")}
+    source = (package / "run_kaggle.py").read_text()
+    exec(compile(source, str(package / "run_kaggle.py"), "exec"), namespace)
+    namespace["main"]()
+
+    assert len(calls) == 1
+    args, kwargs = calls[0]
+    config, output = args[:2]
+    assert isinstance(config, TrainConfig) and config.device == "cuda"
+    assert output == tmp_path / "kaggle-output" / run_uuid
+    assert kwargs == {"export_onnx": True, "run_evaluation": False,
+                      "g008_schedule": build_training_run_schedule(
+                          run_id=run_uuid, root_seed=2_000_000, arena_count=2,
+                          rollout_steps=2, total_updates=1),
+                      "run_id": run_uuid}
 
 
 def test_kaggle_runner_runs_bounded_cuda_sweep_and_hashes_report_in_manifest(tmp_path, monkeypatch):
