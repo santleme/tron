@@ -825,6 +825,80 @@ def test_benchmark_budget_rejects_future_training_over_experiment_cap(tmp_path):
         _validate_recovery_budget(registry, benchmark, 3600, quota_remaining=50000)
 
 
+class _Cycle2BudgetRegistry:
+    def __init__(self, events):
+        self._events = events
+
+    def events(self):
+        return self._events
+
+
+def _cycle2_budget_fixture(*, benchmark_attempt=None):
+    events = [{"event_index": index, "event_type": "legacy", "event_data": {}}
+              for index in range(13)]
+    events.append({"event_index": 13, "event_type": "recovery_amendment", "event_data": {
+        "reservation_metadata": {"campaign_gpu_seconds_before": 8424,
+                                  "campaign_output_bytes_before": 26403}}})
+    events += [
+        {"event_index": 14, "event_type": "registration", "event_data": {"registration_id": "old-bench"}},
+        {"event_index": 15, "event_type": "registration", "event_data": {"registration_id": "old-train"}},
+        {"event_index": 16, "event_type": "workload_preflight", "event_data": {}},
+        {"event_index": 17, "event_type": "workload_push_dispatched", "event_data": {}},
+        {"event_index": 18, "event_type": "workload_push_accepted", "event_data": {}},
+        {"event_index": 19, "event_type": "workload_attempt", "event_data": {
+            "actual_gpu_seconds": 125, "output_bytes": 4519}},
+    ]
+    categories = {name: 1_000_000_000 for name in ("benchmark", "training", "validation", "final")}
+    events.append({"event_index": 20, "event_type": "recovery_cycle_amendment", "event_data": {
+        "cycle_id": "g008-recovery-cycle-2", "project_gpu_seconds_before": 8549,
+        "project_output_bytes_before": 30922, "compute_caps_gpu_seconds": {
+            "benchmark": 5600, "train": 7200, "project_experiment": 21600, "project_total": 28800},
+        "protected_final_reserve_gpu_seconds": 7200,
+        "output_caps_bytes": {"aggregate": 5_000_000_000, "per_run": 1_000_000_000},
+        "output_category_reservations_bytes": categories,
+        "quota_evidence": {"remaining_gpu_seconds": 99468}}})
+    records = {}
+    for index, kind, timeout, output_cap in (
+            (21, "benchmark", 2800, 100_000_000), (22, "train", 7200, 1_000_000_000)):
+        record = {"cycle_id": "g008-recovery-cycle-2", "session_timeout_seconds": timeout,
+                  "workload_gpu_seconds_cap": 5600 if kind == "benchmark" else 7200,
+                  "workload_output_bytes_cap": output_cap}
+        event = {"event_index": index, "event_type": "registration", "event_data": {
+            "registration_id": f"cycle2-{kind}", "registration_kind": kind,
+            "cycle_id": "g008-recovery-cycle-2", "record": record}}
+        events.append(event)
+        records[kind] = event
+    if benchmark_attempt is not None:
+        attempt = {"attempt_id": "cycle2-bench-01", "cycle_id": "g008-recovery-cycle-2",
+                   "registration_event_index": 21, "actual_gpu_seconds": 125, "output_bytes": 4519}
+        attempt.update(benchmark_attempt)
+        events.append({"event_index": 23, "event_type": "workload_attempt", "event_data": attempt})
+    return _Cycle2BudgetRegistry(events), records
+
+
+def test_cycle2_budget_counts_terminal_event19_once_and_reserves_cycle2_categories():
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    registry, records = _cycle2_budget_fixture()
+    budget = _validate_recovery_budget(registry, records["benchmark"], 2800, quota_remaining=99468)
+
+    assert budget["campaign_gpu_seconds_current_attempt_projected"] == 8549 + 2800
+    assert budget["campaign_gpu_seconds_projected"] == 8549 + 2800 + 7200
+    assert budget["campaign_gpu_seconds_with_final_reserve"] == 8549 + 2800 + 7200 + 7200
+    assert budget["project_output_bytes_projected_with_reserves"] == 30922 + 4_000_000_000
+
+
+def test_cycle2_retry_counts_only_cycle2_usage_after_event19_boundary():
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    registry, records = _cycle2_budget_fixture(benchmark_attempt={})
+    budget = _validate_recovery_budget(registry, records["benchmark"], 2800, quota_remaining=99468)
+
+    assert budget["actual"] == {"benchmark": 125, "train": 0}
+    assert budget["campaign_gpu_seconds_current_attempt_projected"] == 8549 + 125 + 2800
+    assert budget["output_bytes"] == {"benchmark": 4519, "training": 0}
+
+
 class FakeRecoveryApi:
     def __init__(self, statuses=("COMPLETE", "COMPLETE"), *, version=10, assigned=11,
                  quota_remaining=40000, quota_used=1000, drift_after_status=False,
