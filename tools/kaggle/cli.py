@@ -174,9 +174,20 @@ def _load_run_settings(path: Path | None) -> dict:
             raise KaggleError("G008 train-only schedule cannot be combined with benchmark workloads.")
         try:
             from training.eval.provenance import _read_seed_plan, build_training_run_schedule
+            from training.ppo.g008_benchmark import load_principal_config
             from training.ppo.train import TrainConfig
-            train_config = TrainConfig(**config)
+            if config.get("device", "auto") not in {"auto", "cuda"}:
+                raise ValueError("G008 train-only workload requires CUDA execution")
+            train_config = TrainConfig(**{**config, "device": "auto"})
             train_config.validate()
+            frozen_config, _ = load_principal_config()
+            frozen_config = replace(frozen_config, device="auto")
+            changed_fields = [field.name for field in fields(TrainConfig)
+                              if getattr(train_config, field.name) != getattr(frozen_config, field.name)]
+            if changed_fields:
+                raise ValueError(
+                    "G008 train-only TrainConfig differs from the frozen principal config in "
+                    f"{', '.join(changed_fields)}")
             plan, plan_sha = _read_seed_plan()
             if train_config.seed != plan["model_ppo_seed"]:
                 raise ValueError("G008 TrainConfig.seed must equal the frozen model_ppo_seed")

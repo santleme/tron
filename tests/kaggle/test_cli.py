@@ -2,6 +2,7 @@ import json
 import importlib.util
 import sys
 import types
+from dataclasses import fields
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,14 @@ from tools.kaggle.cli import KaggleError, _load_run_settings, download, poll_sta
 from training.arena.engine import ACTION_ORDER, initialize_episode, step
 from training.ppo.protocol import digest_json, file_sha256
 from training.ppo.train import TrainConfig
+
+
+def g008_principal_train_config() -> dict:
+    from training.ppo.g008_benchmark import load_principal_config
+
+    config, _ = load_principal_config()
+    return {field.name: "auto" if field.name == "device" else getattr(config, field.name)
+            for field in fields(TrainConfig)}
 
 
 def make_run(root: Path, run_id="run-42") -> None:
@@ -1664,14 +1673,13 @@ def test_prepare_freezes_g008_train_schedule_and_uuid(tmp_path):
     config = tmp_path / "g008-train-config.json"
     config.write_text(json.dumps({
         "run_id": run_uuid,
-        "train_config": {"device": "auto", "seed": 1234, "arena_count": 2,
-                         "rollout_steps": 2, "total_updates": 1},
+        "train_config": g008_principal_train_config(),
         "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": 2_000_000},
     }))
 
     settings = _load_run_settings(config)
     expected = build_training_run_schedule(run_id=run_uuid, root_seed=2_000_000,
-                                           arena_count=2, rollout_steps=2, total_updates=1)
+                                           arena_count=128, rollout_steps=32, total_updates=3)
     assert settings["g008_train_schedule"] == {
         "run_uuid": run_uuid,
         "root_seed": 2_000_000,
@@ -1703,7 +1711,7 @@ def test_load_run_settings_rejects_invalid_g008_train_schedule(
     config = tmp_path / "invalid-g008-train-config.json"
     document = {
         "run_id": run_id or run_uuid,
-        "train_config": {"seed": 1234, "arena_count": 1, "rollout_steps": 1, "total_updates": 1},
+        "train_config": g008_principal_train_config(),
         "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": root_seed},
         **extra,
     }
@@ -1719,11 +1727,47 @@ def test_load_run_settings_rejects_nonfrozen_g008_model_seed(tmp_path):
     config = tmp_path / "wrong-model-seed.json"
     config.write_text(json.dumps({
         "run_id": run_uuid,
-        "train_config": {"seed": 1235, "arena_count": 1, "rollout_steps": 1, "total_updates": 1},
+        "train_config": {**g008_principal_train_config(), "seed": 1235},
         "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": 2_000_000},
     }))
-    with pytest.raises(KaggleError, match="model_ppo_seed"):
+    with pytest.raises(KaggleError, match="frozen principal config"):
         _load_run_settings(config)
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("arena_count", 127),
+    ("rollout_steps", 31),
+    ("total_updates", 2),
+    ("learning_rate", 0.0002),
+])
+def test_load_run_settings_rejects_g008_train_config_drift(tmp_path, field, value):
+    import uuid
+
+    run_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, f"g008-train-config-drift:{field}"))
+    train_config = {**g008_principal_train_config(), field: value}
+    config = tmp_path / f"g008-config-drift-{field}.json"
+    config.write_text(json.dumps({
+        "run_id": run_uuid,
+        "train_config": train_config,
+        "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": 2_000_000},
+    }))
+    with pytest.raises(KaggleError, match="differs from the frozen principal config"):
+        _load_run_settings(config)
+
+
+def test_load_run_settings_normalizes_frozen_cuda_config_for_local_validation(tmp_path):
+    import uuid
+
+    run_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, "g008-train-frozen-cuda-config"))
+    train_config = {**g008_principal_train_config(), "device": "cuda"}
+    config = tmp_path / "g008-frozen-cuda-config.json"
+    config.write_text(json.dumps({
+        "run_id": run_uuid,
+        "train_config": train_config,
+        "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": 2_000_000},
+    }))
+    settings = _load_run_settings(config)
+    assert settings["train_config"]["device"] == "cuda"
 
 
 @pytest.mark.parametrize("benchmark", [
@@ -1793,8 +1837,7 @@ def test_kaggle_runner_passes_frozen_g008_train_schedule_and_uuid_to_train(tmp_p
     run_config = tmp_path / "g008-train-run-config.json"
     run_config.write_text(json.dumps({
         "run_id": run_uuid,
-        "train_config": {"device": "auto", "seed": 1234, "arena_count": 2,
-                         "rollout_steps": 2, "total_updates": 1},
+        "train_config": g008_principal_train_config(),
         "g008_train_schedule": {"run_uuid": run_uuid, "root_seed": 2_000_000},
     }))
     package = prepare("me/circuit-ai", "g008-train-runner", tmp_path / "package", run_config)
@@ -1824,8 +1867,8 @@ def test_kaggle_runner_passes_frozen_g008_train_schedule_and_uuid_to_train(tmp_p
     assert output == tmp_path / "kaggle-output" / run_uuid
     assert kwargs == {"export_onnx": True, "run_evaluation": False,
                       "g008_schedule": build_training_run_schedule(
-                          run_id=run_uuid, root_seed=2_000_000, arena_count=2,
-                          rollout_steps=2, total_updates=1),
+                          run_id=run_uuid, root_seed=2_000_000, arena_count=128,
+                          rollout_steps=32, total_updates=3),
                       "run_id": run_uuid}
 
 
