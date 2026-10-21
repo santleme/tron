@@ -10,7 +10,7 @@
 - `artifacts/circuit-ai/registry/g008-experiment-registry.jsonl` is the append-only event authority. Its 177 events end at event 176, hash `76838932dbabd5906eafd0f5e89d5f3ff9b788fb6b282c39fed293b13cb2ada2`.
 - Campaign `g008-competitive-20261021-v2` consumed its registered train, validation, and final workloads. The 512-game independent final result was 18 wins, 24 draws, and 470 losses against `open-space` (3.5156% observed wins); promotion failed.
 - No workload remains authorized in that campaign. The final-only opponent roster was consumed and must not be reused. Old cycle budgets or account quota are not authorization.
-- The evidence and historical plans formerly stored under ignored `.omx` paths are being exported byte-for-byte to `artifacts/circuit-ai/history/`; `MIGRATION_MANIFEST.json` records every migrated path, size, and SHA-256. The two existing untracked evidence trees under `artifacts/circuit-ai` are user data and are retained.
+- Evidence and historical plans formerly stored in the removed local orchestration runtime were exported byte-for-byte to `artifacts/circuit-ai/history/`; `MIGRATION_MANIFEST.json` records every former path, size, and SHA-256. The two existing untracked evidence trees under `artifacts/circuit-ai` are user data and are retained.
 
 ## Authority and preservation rules
 
@@ -23,7 +23,7 @@
 
 ## Work sequence
 
-1. Finish the byte-preserving history export, verify every manifest entry, and remove local OMX/skill integration while keeping the project-specific Kaggle rules in `AGENTS.md`.
+1. Finish the byte-preserving history export, verify every manifest entry, and remove local orchestration/skill integration while keeping the project-specific Kaggle rules in `AGENTS.md`.
 2. Publish architecture, experiment eligibility, artifact retention, and G008 status documents; correct the contradictory Kaggle history statements without editing result reports.
 3. Add source manifests to newly prepared Kaggle packages. Include exact staged source paths and hashes, caller revision, Git commit, dirty-tree indicator, and propagate the manifest hash into runtime evidence. Keep historical provenance gaps labeled as legacy.
 4. Align dependency locks and CI with the documented supported matrix; keep training and hardware benchmarks on Kaggle.
@@ -33,7 +33,7 @@
 
 ## Completion criteria
 
-- No project-local OMX runtime, skill tree, or code dependency remains; project Kaggle constraints remain intact.
+- No project-local agent orchestration runtime, skill tree, or code dependency remains; project Kaggle constraints remain intact.
 - Historical evidence and plans are hash-verified at the neutral archive destination; current registry validation succeeds at the recorded head.
 - Current docs accurately state the failed v2 result, distinguish exploratory from promotion-eligible evidence, and identify the next authorization gate.
 - New prepared packages carry verifiable source manifests and remain deterministic for the same source state.
