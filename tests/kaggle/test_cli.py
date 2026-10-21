@@ -650,7 +650,8 @@ def test_g008_report_import_rejects_repeat_summary_values_not_derived_from_metri
         validate_principal_benchmark_artifacts(root, "g008-run")
 
 
-@pytest.mark.parametrize("mutation", ["missing-version", "empty-version", "missing-gpus", "multiple-gpus", "gpu-mismatch"])
+@pytest.mark.parametrize("mutation", ["missing-version", "empty-version", "missing-gpus",
+                                     "multiple-training-gpus", "gpu-mismatch"])
 def test_g008_report_import_rejects_incomplete_or_contradictory_kaggle_environment(tmp_path, mutation):
     from tools.kaggle.cli import validate_principal_benchmark_artifacts
 
@@ -664,8 +665,8 @@ def test_g008_report_import_rejects_incomplete_or_contradictory_kaggle_environme
         evidence["cuda_version"] = "  "
     elif mutation == "missing-gpus":
         evidence["visible_cuda_devices"] = []
-    elif mutation == "multiple-gpus":
-        evidence["visible_cuda_devices"] = ["Tesla T4", "Tesla T4"]
+    elif mutation == "multiple-training-gpus":
+        evidence["training_cuda_device_count"] = 2
     else:
         evidence["visible_cuda_devices"] = ["NVIDIA A100"]
     evidence_path.write_text(json.dumps(evidence))
@@ -3400,6 +3401,7 @@ def test_kaggle_runner_resolves_auto_to_cuda_and_trains_on_gpu(tmp_path, monkeyp
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
     fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
                                             get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     output_root = tmp_path / "kaggle-output"
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(output_root))
@@ -3433,6 +3435,7 @@ def test_kaggle_runner_passes_frozen_g008_train_schedule_and_uuid_to_train(tmp_p
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
     fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
                                             get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(tmp_path / "kaggle-output"))
     monkeypatch.setattr(importlib.util, "find_spec", lambda _: object())
@@ -3506,6 +3509,7 @@ def test_prepared_kaggle_runner_dispatches_registered_g008_final_evaluation(tmp_
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
     fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
                                             get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     output_root = tmp_path / "kaggle-output"
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(output_root))
@@ -3575,6 +3579,7 @@ def test_kaggle_runner_runs_bounded_cuda_sweep_and_hashes_report_in_manifest(tmp
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
     fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
                                             get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     output_root = tmp_path / "kaggle-output"
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(output_root))
@@ -3634,6 +3639,7 @@ def test_kaggle_runner_executes_g008_benchmark_only_and_records_cuda_evidence(tm
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
     fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
                                             get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     output_root = tmp_path / "kaggle-output"
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(output_root))

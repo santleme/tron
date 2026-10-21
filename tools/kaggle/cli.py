@@ -495,11 +495,13 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
                 if (f"training/{relative_file}" in excluded_training_files
                         or relative_file == "ppo/g008_incumbent"):
                     ignored.add(name)
+                if (relative_file == "eval/assets/g007-step-300.pt"
+                        and not (settings.get("g008_evaluation", {}).get("mode") == "validation")):
+                    ignored.add(name)
             return ignored
 
         shutil.copytree(repo / "training", stage / "training", ignore=ignore_training)
-        if ("g008_evaluation" in settings and settings["g008_evaluation"]["mode"] == "validation"
-                and not v2_nonfinal_package):
+        if "g008_evaluation" in settings and settings["g008_evaluation"]["mode"] == "validation":
             opponent_source = repo / "artifacts/circuit-ai/runs/lc-circuit-ai-selfplay-300-viewer-ready/checkpoints/step-300.pt"
             if not opponent_source.is_file():
                 raise KaggleError("Frozen G007 step-300 opponent checkpoint is missing from the local source tree.")
@@ -796,12 +798,18 @@ if __name__ == "__main__":
         with zipfile.ZipFile(source_buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             for relative in ("run-config.json", "source-manifest.json", "training", "schemas"):
                 source_path = stage / relative
-                if source_path.is_file():
-                    archive.write(source_path, relative)
-                else:
-                    for child in sorted(source_path.rglob("*")):
-                        if child.is_file():
-                            archive.write(child, child.relative_to(stage).as_posix())
+                paths = [source_path] if source_path.is_file() else sorted(
+                    (child for child in source_path.rglob("*") if child.is_file()),
+                    key=lambda child: child.relative_to(stage).as_posix(),
+                )
+                for path in paths:
+                    archive_path = (relative if source_path.is_file()
+                                    else path.relative_to(stage).as_posix())
+                    item = zipfile.ZipInfo(archive_path, date_time=(1980, 1, 1, 0, 0, 0))
+                    item.compress_type = zipfile.ZIP_DEFLATED
+                    item.create_system = 3
+                    item.external_attr = 0o100644 << 16
+                    archive.writestr(item, path.read_bytes())
         embedded_source = base64.b64encode(source_buffer.getvalue()).decode("ascii")
         entrypoint = entrypoint.replace("__SOURCE_ARCHIVE_B64__", embedded_source)
         (stage / "run_kaggle.py").write_text(entrypoint, encoding="utf-8")
@@ -3137,13 +3145,13 @@ def validate_principal_benchmark_artifacts(root: Path, expected_run_id: str) -> 
             or not isinstance(warmups.get("runs"), list) or len(warmups["runs"]) != 2
             or report.get("measured_repeats") != 5):
         raise KaggleError("G008 benchmark lacks the frozen five-repeat CUDA evidence.")
+    if device["cuda_name"] != "Tesla T4":
+        raise KaggleError("G008 benchmark must run on the approved Tesla T4 device.")
     if (visible_cuda_devices[0] != device["cuda_name"]
             or evidence.get("visible_cuda_device_count", len(visible_cuda_devices)) != len(visible_cuda_devices)
             or evidence.get("training_device_index", 0) != 0
             or evidence.get("training_cuda_device_count", 1) != 1):
-        raise KaggleError("G008 visible training GPU does not match the benchmark report device.")
-    if device["cuda_name"] != "Tesla T4":
-        raise KaggleError("G008 benchmark must run on the approved Tesla T4 device.")
+        raise KaggleError("G008 visible training GPU does not match the approved Tesla T4 benchmark device.")
 
     def validate_update_evidence(
         metrics: dict, expected_updates: int, label: str, expected_cuda_name: str,
