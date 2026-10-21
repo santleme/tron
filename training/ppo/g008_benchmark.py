@@ -26,7 +26,7 @@ from training.eval.provenance import (ProvenanceError, benchmark_run_keys,
                                       validate_expanded_schedule)
 from training.ppo.protocol import file_sha256
 import training.ppo.g008_candidate.train as candidate_train_module
-from training.ppo.g008_candidate.train import TrainConfig
+from training.ppo.train import TrainConfig
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "configs" / "g008-principal-benchmark.json"
 CONFIG_FORMAT = "circuit-ai-principal-benchmark/1"

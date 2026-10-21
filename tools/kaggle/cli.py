@@ -495,6 +495,8 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
                 if (f"training/{relative_file}" in excluded_training_files
                         or relative_file == "ppo/g008_incumbent"):
                     ignored.add(name)
+                if relative_file == "ppo/g008_candidate" and v2_nonfinal_package:
+                    ignored.add(name)
                 if (relative_file == "eval/assets/g007-step-300.pt"
                         and not (settings.get("g008_evaluation", {}).get("mode") == "validation")):
                     ignored.add(name)
