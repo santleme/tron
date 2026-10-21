@@ -1,4 +1,4 @@
-"""Small, non-open-space heuristic opponents for G008 training only.
+"""Small, held-out-safe heuristic opponents for G008 training only.
 
 These policies use immediate legality, local mobility, or opponent distance;
 none performs the flood-fill reachable-area search reserved for final holdout.
@@ -35,7 +35,7 @@ def heuristic_action(state, seat: int, style: str) -> int | str:
             score = (int(action == me.heading), tie_rank)
         elif style == "local-mobility":
             # One-ply degree only: count currently free neighbors of the proposed
-            # destination. This is deliberately not a flood-fill/open-space score.
+            # destination. This is deliberately not a flood-fill territory score.
             mobility = sum(
                 0 <= x + nx < state.width and 0 <= y + ny < state.height
                 and (x + nx, y + ny) not in occupied and (x + nx, y + ny) != destination

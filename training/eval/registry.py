@@ -8,6 +8,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import math
 import os
 import stat
 import statistics
@@ -23,7 +24,9 @@ _REGISTRATION_KINDS = frozenset({"train", "imitation", "ablation", "validation",
 _RECOVERY_EVENT_TYPES = frozenset({
     "recovery_amendment", "workload_preflight", "workload_push_dispatched",
     "workload_push_accepted", "workload_attempt", "recovery_cycle_amendment_v2",
-    "recovery_cycle_retry_amendment_v1",
+    "recovery_cycle_retry_amendment_v1", "cycle3_retry_policy_amendment_v1",
+    "exploratory_kernel_observation_v1", "cycle3_retry_rebased_authorization_v1",
+    "benchmark_artifact_validation_rejected",
 })
 _LEGACY_HEAD_INDEX = 12
 _LEGACY_HEAD_HASH = "0208abba4954ffd08b01d5069c674e8bc3f5d1817c95ddb0b0bb4eedd41f3fd7"
@@ -36,6 +39,12 @@ _CYCLE3_EVENT_INDEX = 27
 _CYCLE3_PARENT_EVENT_HASH = "850b7fe3f0c2afbdf229cda83a3d2dba51bc607fa3a6efa337d7a6d70de309f7"
 # Frozen digest of the reviewed Cycle-3 retry proposal.
 _CYCLE3_RETRY_PROPOSAL_SHA256 = "40bb92c5901c040e9efe4ac7d62cf71a124c18451eb504b53d6c62f44e391f89"
+# Policy digest for append-only continuations of the already registered Cycle-3
+# benchmark. The original registration, resources, and cumulative caps remain fixed.
+_CYCLE3_RETRY_POLICY_SHA256 = hashlib.sha256(
+    b"g008-cycle3-retry-policy-v1:append-only;exact-head;same-registration;budget-bounded;"
+    b"terminal-error-or-complete-with-explicit-validation-rejection"
+).hexdigest()
 _CYCLE3_RETRY_PARENT_EVENT_INDEX = 33
 _CYCLE3_RETRY_PARENT_EVENT_HASH = "4f7c8d909349b3a95c91758a2fe6c7490f241ed5db9df9925ce4f600163db966"
 # Frozen Cycle-3 proposal digest; changing the proposal requires a reviewed registry update.
@@ -57,6 +66,7 @@ _CYCLE2_CAMPAIGN_OUTPUT_BEFORE = 30922
 _SUPERSEDED_PLAN_SHA256 = "0a9e1ebccae2a793fadf531fb99013a9d19ff832a5880de9ee15204b477ca81a"
 _SUPERSEDED_TEST_SPEC_SHA256 = "e3b8efef4b441d694883a856164ed3d25f2b278f2bd7ca9ee30dfb8097b3ba6c"
 _RECOVERY_SEED_PLAN_SHA256 = "c6b16733a045e94e7310183e8be8a62cf4327b5d2bdc3eed40bb9d552ce17593"
+_G008_VALIDATION_REFERENCE_SHA256 = "22f7e0fca065eba24ab57c5fae4ea78223fa6d01153a7a8d90e83ac8269228d7"
 _RECOVERY_SCHEDULE_SPEC_DIGEST = "ca13f87ee6b45f7b4d340f6c62715d4980f9966468e5511f7a06953f056c8ec5"
 _VALIDATION_SUITE_SHA256 = "ee9db0e48dc055ed3e744a92166f274003f0d435cb58014acbd3e8d250d151b0"
 _FINAL_SUITE_SHA256 = "1178831d3373f596affe032b88fc8a0768eec406d038e6c35bd9adfb84afefa3"
@@ -217,6 +227,106 @@ def _is_hash(value: Any) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(c in _HASH_CHARS for c in value)
 
 
+_G008_V2_TRAIN_CONFIG_FLOAT_FIELDS = frozenset({
+    "learning_rate", "gamma", "gae_lambda", "clip_ratio", "entropy_coef", "value_coef",
+    "snapshot_opponent_probability", "heuristic_opponent_probability",
+})
+_G008_V2_TRAIN_CONFIG_INT_FIELDS = frozenset({
+    "width", "height", "arena_count", "rollout_steps", "total_updates", "update_epochs",
+    "minibatch_size", "hidden_size", "seed", "checkpoint_every", "onnx_opset",
+})
+_G008_V2_TRAIN_CONFIG_FIELDS = (_G008_V2_TRAIN_CONFIG_FLOAT_FIELDS
+                                | _G008_V2_TRAIN_CONFIG_INT_FIELDS | {"device"})
+
+
+def _g008_v2_numeric_train_config(train_config: Any) -> dict[str, Any]:
+    """Decode the float-as-decimal-string v2 config wire format without changing registry JSON."""
+    if not isinstance(train_config, dict) or set(train_config) != _G008_V2_TRAIN_CONFIG_FIELDS:
+        raise RegistryError("campaign v2 train_config must contain the exact TrainConfig fields")
+    numeric = dict(train_config)
+    for key in _G008_V2_TRAIN_CONFIG_FLOAT_FIELDS:
+        value = train_config[key]
+        if not isinstance(value, str):
+            raise RegistryError(f"campaign v2 train_config {key} must use canonical decimal-string encoding")
+        try:
+            decimal = Decimal(value)
+            converted = float(decimal)
+        except (InvalidOperation, ValueError, OverflowError) as exc:
+            raise RegistryError(f"campaign v2 train_config {key} is not a finite canonical decimal") from exc
+        if not math.isfinite(converted) or repr(converted) != value:
+            raise RegistryError(f"campaign v2 train_config {key} must round-trip through repr(float)")
+        numeric[key] = converted
+    if (any(not isinstance(train_config[key], int) or isinstance(train_config[key], bool)
+            for key in _G008_V2_TRAIN_CONFIG_INT_FIELDS)
+            or train_config["device"] != "auto"):
+        raise RegistryError("campaign v2 train_config integer fields or device differ from frozen config wire format")
+    return numeric
+
+
+def _g008_v2_train_config_sha256(train_config: Any) -> str:
+    numeric = _g008_v2_numeric_train_config(train_config)
+    from training.ppo.protocol import canonical_json
+    return hashlib.sha256(canonical_json(numeric)).hexdigest()
+
+
+def _g008_v2_shared_config_sha256(train_config: Any) -> str:
+    numeric = _g008_v2_numeric_train_config(train_config)
+    shared = {key: value for key, value in numeric.items()
+              if key not in {"device", "seed", "snapshot_opponent_probability",
+                             "heuristic_opponent_probability"}}
+    from training.ppo.protocol import canonical_json
+    return hashlib.sha256(canonical_json(shared)).hexdigest()
+
+
+def competitive_final_statistics(wins: int, draws: int, losses: int) -> dict[str, Any]:
+    """Return the frozen 512-game win-rate/Wilson report fields for final evaluation."""
+    if (any(not isinstance(value, int) or isinstance(value, bool) or value < 0
+            for value in (wins, draws, losses)) or wins + draws + losses != 512):
+        raise RegistryError("final evaluation statistics require nonnegative W/D/L totaling 512")
+    rate = wins / 512
+    z = 1.959963984540054
+    denominator = 1 + z * z / 512
+    center = (rate + z * z / (2 * 512)) / denominator
+    margin = z * math.sqrt(rate * (1 - rate) / 512 + z * z / (4 * 512 * 512)) / denominator
+    return {"game_count": 512, "wins": wins, "draws": draws, "losses": losses,
+            "win_rate": f"{rate:.6f}", "wilson_95_lower": f"{center - margin:.6f}",
+            "wilson_95_upper": f"{center + margin:.6f}", "passed": rate >= 0.60}
+
+
+def competitive_noninferiority_statistics(wins: int, draws: int, losses: int) -> dict[str, Any]:
+    """Compare the frozen candidate's win rate with G008 v15 using Newcombe's 95% CI."""
+    if (any(not isinstance(value, int) or isinstance(value, bool) or value < 0
+            for value in (wins, draws, losses)) or wins + draws + losses != 512):
+        raise RegistryError("validation statistics require nonnegative W/D/L totaling 512")
+    reference_wins, sample_n = 217, 512
+    candidate_rate, reference_rate = wins / sample_n, reference_wins / sample_n
+    z = 1.959963984540054
+
+    def bounds(rate: float) -> tuple[float, float]:
+        denominator = 1 + z * z / sample_n
+        center = (rate + z * z / (2 * sample_n)) / denominator
+        margin = z * math.sqrt(rate * (1 - rate) / sample_n + z * z / (4 * sample_n * sample_n)) / denominator
+        return center - margin, center + margin
+
+    candidate_lower, candidate_upper = bounds(candidate_rate)
+    reference_lower, reference_upper = bounds(reference_rate)
+    difference = candidate_rate - reference_rate
+    difference_lower = difference - math.sqrt((candidate_rate - candidate_lower) ** 2
+                                               + (reference_upper - reference_rate) ** 2)
+    difference_upper = difference + math.sqrt((candidate_upper - candidate_rate) ** 2
+                                               + (reference_rate - reference_lower) ** 2)
+    return {"reference_report_sha256": _G008_VALIDATION_REFERENCE_SHA256,
+            "reference_game_count": 512, "reference_wins": 217, "reference_draws": 51,
+            "reference_losses": 244, "noninferiority_margin": "0.065000",
+            "game_count": 512, "wins": wins, "draws": draws, "losses": losses,
+            "win_rate": f"{candidate_rate:.6f}",
+            "wilson_95_lower": f"{candidate_lower:.6f}",
+            "wilson_95_upper": f"{candidate_upper:.6f}",
+            "win_rate_difference_95_lower": f"{difference_lower:.6f}",
+            "win_rate_difference_95_upper": f"{difference_upper:.6f}",
+            "passed": difference_lower >= -0.065}
+
+
 def _validate_attempt_identity(d: dict[str, Any]) -> None:
     if not isinstance(d.get("attempt_id"), str) or not d["attempt_id"]:
         raise RegistryError("attempt_id must be a non-empty string")
@@ -251,7 +361,1064 @@ def _keys(data: Any, expected: set[str], event_type: str) -> dict[str, Any]:
 
 
 def _validate_data(event_type: str, data: Any) -> None:
-    if event_type == "recovery_cycle_retry_amendment_v1":
+    if event_type == "g008_competitive_campaign_amendment_v1":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "prior_final_event_index", "rejection_event_index",
+                    "rejection_event_hash", "kernel_id", "current_version_number",
+                    "benchmark_gpu_seconds_cap", "training_gpu_seconds_cap", "total_gpu_seconds_cap",
+                    "evaluation_gpu_seconds_cap", "protected_final_reserve_gpu_seconds",
+                    "evaluation_rosters", "validation_reference", "records"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-competitive-campaign" or d["schema_version"] != 1
+                or d["campaign_id"] != "g008-competitive-20261020-v1"):
+            raise RegistryError("unsupported G008 competitive campaign amendment")
+        if (not _is_hash(d["prior_head_hash"]) or not isinstance(d["prior_final_event_index"], int)
+                or isinstance(d["prior_final_event_index"], bool) or d["prior_final_event_index"] < 0
+                or not isinstance(d["rejection_event_index"], int) or isinstance(d["rejection_event_index"], bool)
+                or d["rejection_event_index"] < 0 or not _is_hash(d["rejection_event_hash"])
+                or not isinstance(d["kernel_id"], str) or not d["kernel_id"]
+                or not isinstance(d["current_version_number"], int) or isinstance(d["current_version_number"], bool)
+                or d["current_version_number"] < 14
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")):
+            raise RegistryError("competitive campaign must bind exact head, rejection, and Kaggle version")
+        budget_keys = ("benchmark_gpu_seconds_cap", "training_gpu_seconds_cap", "total_gpu_seconds_cap",
+                       "evaluation_gpu_seconds_cap",
+                       "protected_final_reserve_gpu_seconds")
+        if any(not isinstance(d[k], int) or isinstance(d[k], bool) or d[k] <= 0 for k in budget_keys):
+            raise RegistryError("competitive campaign budgets must be positive integer seconds")
+        if (d["total_gpu_seconds_cap"] > 6 * _GPU_HOUR
+                or d["benchmark_gpu_seconds_cap"] + d["training_gpu_seconds_cap"] > d["total_gpu_seconds_cap"]
+                or d["benchmark_gpu_seconds_cap"] + d["training_gpu_seconds_cap"] + d["evaluation_gpu_seconds_cap"] > d["total_gpu_seconds_cap"]
+                or d["protected_final_reserve_gpu_seconds"] != 2 * _GPU_HOUR):
+            raise RegistryError("competitive campaign exceeds experiment allocation or protected reserve")
+        rosters = d["evaluation_rosters"]
+        if (not isinstance(rosters, dict) or set(rosters) != {"validation", "final"}
+                or any(not isinstance(rosters[name], dict) or set(rosters[name]) != {
+                    "roster_sha256", "opponent_code_sha256", "game_count", "seat_order"}
+                       or not _is_hash(rosters[name]["roster_sha256"])
+                       or not _is_hash(rosters[name]["opponent_code_sha256"])
+                       or rosters[name]["game_count"] != 512 or rosters[name]["seat_order"] != [0, 1]
+                       for name in ("validation", "final"))):
+            raise RegistryError("campaign must freeze hash-only 512-game validation and final rosters")
+        expected_rosters = {
+            "validation": (_VALIDATION_OPPONENT_ROSTER_SHA256, _VALIDATION_OPPONENT_SHA256),
+            "final": (_FINAL_OPPONENT_ROSTER_SHA256, _FINAL_OPPONENT_CODE_SHA256),
+        }
+        if any((rosters[name]["roster_sha256"], rosters[name]["opponent_code_sha256"]) != expected
+               for name, expected in expected_rosters.items()):
+            raise RegistryError("campaign evaluation roster hashes differ from frozen seed plan")
+        reference = d["validation_reference"]
+        if (not isinstance(reference, dict) or set(reference) != {
+                "report_sha256", "game_count", "wins", "draws", "losses", "noninferiority_margin"}
+                or reference.get("report_sha256") != _G008_VALIDATION_REFERENCE_SHA256
+                or (reference.get("game_count"), reference.get("wins"), reference.get("draws"),
+                    reference.get("losses"), reference.get("noninferiority_margin"))
+                != (512, 217, 51, 244, "0.065000")):
+            raise RegistryError("campaign must bind the exact historical validation reference and 6.5-point margin")
+        rows = d["records"]
+        if not isinstance(rows, list) or len(rows) != 9:
+            raise RegistryError("competitive campaign must freeze benchmark, six training, validation, and final records")
+        if any(not isinstance(row, dict) or set(row) != {"registration_id", "registration_kind", "record_sha256", "record"}
+               or not isinstance(row["registration_id"], str) or not row["registration_id"]
+               or not _is_hash(row["record_sha256"]) or not isinstance(row["record"], dict)
+               for row in rows):
+            raise RegistryError("competitive campaign record bindings are malformed")
+        if (rows[0]["registration_kind"] != "benchmark" or any(row["registration_kind"] != "train" for row in rows[1:7])
+                or rows[7]["registration_kind"] != "validation" or rows[8]["registration_kind"] != "final"):
+            raise RegistryError("campaign records must be benchmark, six training, validation, and final")
+        if len({row["registration_id"] for row in rows}) != 9 or len({row["record"].get("run_uuid") for row in rows}) != 9:
+            raise RegistryError("competitive campaign registration IDs and run UUIDs must be unique")
+        if any(hashlib.sha256(canonical_bytes(row["record"])).hexdigest() != row["record_sha256"] for row in rows):
+            raise RegistryError("competitive campaign record digest mismatch")
+        if sum(row["record"].get("session_timeout_seconds", 0) for row in rows[1:7]) > d["training_gpu_seconds_cap"]:
+            raise RegistryError("competitive campaign training reservations exceed frozen cap")
+        if sum(row["record"].get("session_timeout_seconds", 0) for row in rows[7:]) > d["evaluation_gpu_seconds_cap"]:
+            raise RegistryError("competitive campaign evaluation reservations exceed frozen cap")
+        if rows[0]["record"].get("session_timeout_seconds", 0) > d["benchmark_gpu_seconds_cap"]:
+            raise RegistryError("competitive campaign benchmark reservation exceeds frozen cap")
+        ids = set()
+        pairs = {}
+        for pos, row in enumerate(rows):
+            record, kind = row["record"], row["registration_kind"]
+            if (record.get("campaign_id") != d["campaign_id"] or record.get("kernel_id") != d["kernel_id"]
+                    or record.get("accelerator_count") != 1 or record.get("machine_shape") != "NvidiaTeslaT4"
+                    or record.get("registration_kind") != kind or record.get("open_space_allowed") is not False):
+                raise RegistryError("competitive campaign record changed kernel, hardware, role, or final-only boundary")
+            for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                        "backend_sha256", "trainer_sha256", "engine_sha256"):
+                if not _is_hash(record.get(key)):
+                    raise RegistryError("competitive campaign record has an invalid frozen artifact/config hash")
+            if record["seed_plan_sha256"] != _RECOVERY_SEED_PLAN_SHA256:
+                raise RegistryError("competitive campaign changed frozen seed-plan hash")
+            probs = record.get("opponent_probabilities")
+            if kind == "train":
+                role = record.get("strategy_role")
+                if (role not in {"baseline", "mixed"} or not isinstance(record.get("pair_id"), str)
+                        or not record["pair_id"] or not isinstance(record.get("ppo_seed"), int)
+                        or isinstance(record.get("ppo_seed"), bool) or not isinstance(record.get("root_seed"), int)
+                        or isinstance(record.get("root_seed"), bool) or record["root_seed"] < 2_000_000
+                        or record["root_seed"] > 2_999_999 or not isinstance(record.get("update_budget"), int)
+                        or isinstance(record.get("update_budget"), bool) or record["update_budget"] <= 0
+                        or not _is_hash(record.get("shared_config_sha256"))
+                        or not isinstance(record.get("ppo_config"), dict)
+                        or hashlib.sha256(canonical_bytes(record["ppo_config"])).hexdigest() != record["shared_config_sha256"]):
+                    raise RegistryError("competitive training job lacks frozen paired seed/config/update metadata")
+                if (not isinstance(probs, dict) or set(probs) != {"latest", "step0", "cruise", "local_mobility", "interceptor"}
+                        or any(not isinstance(v, int) or isinstance(v, bool) or v < 0 for v in probs.values())
+                        or sum(probs.values()) != 10_000):
+                    raise RegistryError("competitive opponent probabilities must be nonnegative fixed basis points summing to 10000")
+                if role == "baseline" and probs != {"latest": 10_000, "step0": 0, "cruise": 0, "local_mobility": 0, "interceptor": 0}:
+                    raise RegistryError("baseline must use latest-only opponent distribution")
+                if role == "mixed" and (probs["latest"] == 10_000 or any(probs[name] == 0 for name in ("step0", "cruise", "local_mobility", "interceptor"))):
+                    raise RegistryError("mixed strategy must use the frozen nonzero opponent pool")
+                pair = pairs.setdefault(record["pair_id"], {})
+                if role in pair:
+                    raise RegistryError("competitive campaign duplicates a paired arm")
+                pair[role] = record
+            elif kind == "benchmark":
+                if pos != 0 or probs is not None or record.get("strategy_role") != "benchmark":
+                    raise RegistryError("benchmark registration must be the unique benchmark workload")
+            else:
+                roster = rosters[kind]
+                if (record.get("roster_sha256") != roster["roster_sha256"]
+                        or record.get("opponent_code_sha256") != roster["opponent_code_sha256"]
+                        or record.get("game_count") != 512 or record.get("seat_order") != [0, 1]
+                        or "open-space" in canonical_bytes(record).decode("utf-8")
+                        or "root_seeds" in record or "roots" in record):
+                    raise RegistryError("evaluation registration must use hash-only frozen roster commitment")
+                if kind == "final" and record.get("pre_final_data_visible") is not False:
+                    raise RegistryError("final opponent identity and root roster must remain hidden pre-final")
+        seed_pairs = [(pair["baseline"]["ppo_seed"], pair["baseline"]["root_seed"]) for pair in pairs.values()]
+        all_root_seeds = [record["root_seed"] for pair in pairs.values() for record in pair.values()]
+        if (len(pairs) != 3 or len({root for _, root in seed_pairs}) != 3
+                or len(set(all_root_seeds)) != 6 or {seed for seed, _ in seed_pairs} != {1234}
+                or any(set(pair) != {"baseline", "mixed"} for pair in pairs.values())):
+            raise RegistryError("competitive campaign requires three complete blocks on frozen PPO seed 1234")
+        for pair in pairs.values():
+            base, mixed = pair["baseline"], pair["mixed"]
+            invariant = ("ppo_seed", "update_budget", "shared_config_sha256", "source_sha256",
+                         "backend_sha256", "trainer_sha256", "engine_sha256", "architecture", "ppo_config")
+            if any(base.get(k) != mixed.get(k) for k in invariant):
+                raise RegistryError("paired training jobs differ outside opponent probabilities/config digest")
+        mixed_distributions = [pair["mixed"]["opponent_probabilities"] for pair in pairs.values()]
+        if any(probs != mixed_distributions[0] for probs in mixed_distributions[1:]):
+            raise RegistryError("mixed opponent distribution must be fixed across all three seed pairs")
+    elif event_type == "g008_competitive_campaign_amendment_v2":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "prior_final_event_index",
+                    "benchmark_artifact_event_index", "benchmark_artifact_event_hash",
+                    "benchmark_lock_event_index", "benchmark_lock_event_hash",
+                    "benchmark_attestation_event_index", "benchmark_attestation_event_hash",
+                    "selected_training_registration_event_index", "selected_training_registration_event_hash",
+                    "selected_training_attempt_event_index", "selected_training_attempt_event_hash",
+                    "selected_training_run_uuid",
+                    "kernel_id", "current_version_number", "training_gpu_seconds_cap",
+                    "evaluation_gpu_seconds_cap", "total_gpu_seconds_cap",
+                    "protected_final_reserve_gpu_seconds", "output_caps_bytes",
+                    "quota_gpu_seconds_remaining_before", "validation_roster",
+                    "candidate_selection_rule_id", "records"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-competitive-campaign" or d["schema_version"] != 2
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or not isinstance(d["prior_head_hash"], str) or not _is_hash(d["prior_head_hash"])
+                or d["prior_final_event_index"] != 54
+                or not isinstance(d["kernel_id"], str) or not d["kernel_id"]
+                or d["current_version_number"] != 17):
+            raise RegistryError("invalid G008 competitive campaign v2 parent or cursor")
+        anchors = (("benchmark_artifact_event_index", "benchmark_artifact_event_hash", 48),
+                   ("benchmark_lock_event_index", "benchmark_lock_event_hash", 49),
+                   ("benchmark_attestation_event_index", "benchmark_attestation_event_hash", 50),
+                   ("selected_training_registration_event_index", "selected_training_registration_event_hash", 29),
+                   ("selected_training_attempt_event_index", "selected_training_attempt_event_hash", 54))
+        for index_key, hash_key, expected_index in anchors:
+            if (d[index_key] != expected_index or not isinstance(d[hash_key], str)
+                    or not _is_hash(d[hash_key])):
+                raise RegistryError("campaign v2 provenance anchor is malformed")
+        if (d["training_gpu_seconds_cap"] != 7_200 or d["evaluation_gpu_seconds_cap"] != 4_200
+                or d["total_gpu_seconds_cap"] != 11_400
+                or d["protected_final_reserve_gpu_seconds"] != 7_200
+                or not isinstance(d["quota_gpu_seconds_remaining_before"], int)
+                or isinstance(d["quota_gpu_seconds_remaining_before"], bool)
+                or d["quota_gpu_seconds_remaining_before"] < 18_600
+                or d["output_caps_bytes"] != {"aggregate": 5_000_000_000, "per_run": 100_000_000}
+                or not isinstance(d["selected_training_run_uuid"], str) or not d["selected_training_run_uuid"]):
+            raise RegistryError("campaign v2 exceeds frozen compute, quota, or output budget")
+        if (d["candidate_selection_rule_id"] !=
+                "paired-score-gain-t95-lower-positive-no-pair-regresses-over-5pp-then-median-arm-checkpoint-v1"):
+            raise RegistryError("campaign v2 candidate-selection rule is not the frozen preregistered rule")
+        validation_roster = d["validation_roster"]
+        if (not isinstance(validation_roster, dict) or set(validation_roster) != {
+                "roster_sha256", "opponent_code_sha256", "game_count", "seat_order", "paired_seeds_sha256"}
+                or validation_roster.get("roster_sha256") != _VALIDATION_OPPONENT_ROSTER_SHA256
+                or validation_roster.get("opponent_code_sha256") != _VALIDATION_OPPONENT_SHA256
+                or validation_roster.get("game_count") != 512
+                or validation_roster.get("seat_order") != [0, 1]
+                or not _is_hash(validation_roster.get("paired_seeds_sha256"))):
+            raise RegistryError("campaign v2 must freeze the exact hash-only paired non-open-space validation roster")
+        rows = d["records"]
+        if (not isinstance(rows, list) or len(rows) != 13
+                or any(not isinstance(row, dict) or set(row) != {
+                    "registration_id", "registration_kind", "record_sha256", "record"}
+                    or not isinstance(row["registration_id"], str) or not row["registration_id"]
+                    or not _is_hash(row["record_sha256"]) or not isinstance(row["record"], dict)
+                    for row in rows)):
+            raise RegistryError("campaign v2 must freeze six training, six validation, and final registrations")
+        if (any(row["registration_kind"] != "train" for row in rows[:6])
+                or any(row["registration_kind"] != "validation" for row in rows[6:12])
+                or rows[12]["registration_kind"] != "final"
+                or len({row["registration_id"] for row in rows}) != 13
+                or len({row["record"].get("run_uuid") for row in rows}) != 13
+                or any(hashlib.sha256(canonical_bytes(row["record"])).hexdigest() != row["record_sha256"]
+                       for row in rows)):
+            raise RegistryError("campaign v2 registration identities or digests are invalid")
+        if any(row["record"].get("session_timeout_seconds") != 1_200 for row in rows[:6]):
+            raise RegistryError("campaign v2 must reserve six 1200-second training workloads")
+        if sum(row["record"].get("session_timeout_seconds", 0) for row in rows[:6]) != 7_200:
+            raise RegistryError("campaign v2 training reservations must total exactly 7200 seconds")
+        if any(row["record"].get("session_timeout_seconds") != 600 for row in rows[6:]):
+            raise RegistryError("campaign v2 must reserve 600 seconds for each of six validations and final")
+        if sum(row["record"].get("session_timeout_seconds", 0) for row in rows[6:]) != 4_200:
+            raise RegistryError("campaign v2 evaluation reservations must total exactly 4200 seconds")
+        pair_rows: dict[str, dict[str, dict[str, Any]]] = {}
+        ppo_seeds: set[int] = set()
+        root_seeds: set[int] = set()
+        for i, row in enumerate(rows):
+            record, kind = row["record"], row["registration_kind"]
+            if (record.get("campaign_id") != d["campaign_id"]
+                    or record.get("registration_kind") != kind
+                    or record.get("kernel_id") != d["kernel_id"]
+                    or record.get("accelerator_count") != 1
+                    or record.get("machine_shape") != "NvidiaTeslaT4"
+                    or record.get("open_space_allowed") is not False):
+                raise RegistryError("campaign v2 record changed frozen kernel/hardware/final-only boundary")
+            for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                        "backend_sha256", "trainer_sha256", "engine_sha256"):
+                if not _is_hash(record.get(key)):
+                    raise RegistryError("campaign v2 record has an invalid frozen artifact/config hash")
+            if (not isinstance(record.get("workload_output_bytes_cap"), int)
+                    or isinstance(record.get("workload_output_bytes_cap"), bool)
+                    or record["workload_output_bytes_cap"] <= 0
+                    or record["workload_output_bytes_cap"] > d["output_caps_bytes"]["per_run"]
+                    or not isinstance(record.get("workload_gpu_seconds_cap"), int)
+                    or isinstance(record.get("workload_gpu_seconds_cap"), bool)
+                    or record["workload_gpu_seconds_cap"] > record["session_timeout_seconds"]):
+                raise RegistryError("campaign v2 record exceeds per-run output cap")
+            if record["workload_output_bytes_cap"] != 100_000_000:
+                raise RegistryError("campaign v2 must freeze the 100 MB output reservation for every run")
+            if kind == "train":
+                role, pair_id = record.get("strategy_role"), record.get("pair_id")
+                if (role not in {"baseline", "mixed"} or not isinstance(pair_id, str) or not pair_id
+                        or not isinstance(record.get("ppo_seed"), int) or isinstance(record.get("ppo_seed"), bool)
+                        or not isinstance(record.get("root_seed"), int) or isinstance(record.get("root_seed"), bool)
+                        or not isinstance(record.get("update_budget"), int)
+                        or isinstance(record.get("update_budget"), bool) or record["update_budget"] <= 0
+                        or not isinstance(record.get("architecture"), dict)
+                        or not isinstance(record.get("train_config"), dict)
+                        or not isinstance(record.get("opponent_probabilities"), dict)):
+                    raise RegistryError("campaign v2 paired training record lacks frozen seed/config metadata")
+                expected_pair_no = (int(pair_id.removeprefix("seed-pair-"))
+                                    if pair_id.startswith("seed-pair-") else 0)
+                numeric_train_config = _g008_v2_numeric_train_config(record["train_config"])
+                expected_architecture = {"width": numeric_train_config["width"],
+                                         "height": numeric_train_config["height"],
+                                         "hidden_size": numeric_train_config["hidden_size"]}
+                if (expected_pair_no not in {1, 2, 3}
+                        or record["ppo_seed"] != 3_300 + expected_pair_no
+                        or record["root_seed"] != 2_000_000 + expected_pair_no * 100_000 + 1
+                        or record["update_budget"] != 1_000
+                        or record["session_timeout_seconds"] != 1_200
+                        or record["workload_gpu_seconds_cap"] != 1_200
+                        or numeric_train_config["seed"] != record["ppo_seed"]
+                        or numeric_train_config["total_updates"] != record["update_budget"]
+                        or numeric_train_config["checkpoint_every"] != 50
+                        or "ppo_config" in record):
+                    raise RegistryError("campaign v2 training schedule/seeds differ from frozen 1000-update plan")
+                if record["architecture"] != expected_architecture:
+                    raise RegistryError("campaign v2 architecture differs from exact TrainConfig dimensions")
+                if record["config_sha256"] != _g008_v2_train_config_sha256(record["train_config"]):
+                    raise RegistryError("campaign v2 config_sha256 differs from full numeric TrainConfig")
+                if record["shared_config_sha256"] != _g008_v2_shared_config_sha256(record["train_config"]):
+                    raise RegistryError("campaign v2 shared config digest differs from invariant TrainConfig projection")
+                if not _is_hash(record.get("schedule_descriptor_sha256")):
+                    raise RegistryError("campaign v2 training record lacks its frozen schedule descriptor hash")
+                probs = record["opponent_probabilities"]
+                if (set(probs) != {"latest", "step0", "cruise", "local_mobility", "interceptor"}
+                        or any(not isinstance(value, int) or isinstance(value, bool) or value < 0
+                               for value in probs.values()) or sum(probs.values()) != 10_000):
+                    raise RegistryError("campaign v2 opponent probabilities must be fixed basis points")
+                ppo_seeds.add(record["ppo_seed"])
+                root_seeds.add(record["root_seed"])
+                pair = pair_rows.setdefault(pair_id, {})
+                if role in pair:
+                    raise RegistryError("campaign v2 duplicates a paired training arm")
+                pair[role] = record
+            elif kind == "validation":
+                if (record.get("pair_id") not in {f"seed-pair-{i}" for i in range(1, 4)}
+                        or record.get("strategy_role") not in {"baseline", "mixed"}
+                        or not isinstance(record.get("training_registration_id"), str)
+                        or not isinstance(record.get("training_run_uuid"), str)
+                        or not _is_hash(record.get("training_record_sha256"))
+                        or record.get("roster_sha256") != validation_roster["roster_sha256"]
+                        or record.get("opponent_code_sha256") != validation_roster["opponent_code_sha256"]
+                        or record.get("game_count") != 512 or record.get("seat_order") != [0, 1]
+                        or record.get("workload_gpu_seconds_cap") != 600
+                        or record.get("paired_seeds_sha256") != validation_roster["paired_seeds_sha256"]):
+                    raise RegistryError("campaign v2 validation row must link one arm to the frozen paired roster")
+                if "open-space" in canonical_bytes(record).decode("utf-8"):
+                    raise RegistryError("campaign v2 validation data must not contain the final opponent identity")
+            else:
+                if (record.get("game_count") != 512 or record.get("seat_order") != [0, 1]
+                        or record.get("workload_gpu_seconds_cap") != 600
+                        or not _is_hash(record.get("roster_sha256"))
+                        or not _is_hash(record.get("opponent_code_sha256"))
+                        or "open-space" in canonical_bytes(record).decode("utf-8")
+                        or "root_seeds" in record or "roots" in record):
+                    raise RegistryError("campaign v2 evaluations must use hash-only non-final roster commitments")
+                if kind == "final" and record.get("pre_final_data_visible") is not False:
+                    raise RegistryError("campaign v2 final roster must remain hidden before final evaluation")
+                if kind == "final" and (record.get("roster_sha256") != _FINAL_OPPONENT_ROSTER_SHA256
+                                         or record.get("opponent_code_sha256") != _FINAL_OPPONENT_CODE_SHA256):
+                    raise RegistryError("campaign v2 final registration differs from frozen open-space roster hashes")
+        if (len(pair_rows) != 3 or len(ppo_seeds) != 3 or len(root_seeds) != 3
+                or any(set(pair) != {"baseline", "mixed"} for pair in pair_rows.values())):
+            raise RegistryError("campaign v2 requires three complete paired seed blocks with unique seeds")
+        paired_seed_commitment = hashlib.sha256(canonical_bytes([
+            {"pair_id": f"seed-pair-{pair_no}",
+             "ppo_seed": pair_rows[f"seed-pair-{pair_no}"]["baseline"]["ppo_seed"],
+             "root_seed": pair_rows[f"seed-pair-{pair_no}"]["baseline"]["root_seed"],
+             "seat_order": [0, 1]}
+            for pair_no in range(1, 4)
+        ])).hexdigest()
+        if validation_roster["paired_seeds_sha256"] != paired_seed_commitment:
+            raise RegistryError("campaign v2 validation roster seed commitment differs from paired training seeds")
+        validations = {}
+        for row in rows[6:12]:
+            record = row["record"]
+            pair_role = (record["pair_id"], record["strategy_role"])
+            if pair_role in validations:
+                raise RegistryError("campaign v2 duplicates a paired validation arm")
+            validations[pair_role] = record
+            training = pair_rows.get(record["pair_id"], {}).get(record["strategy_role"])
+            train_row = next((item for item in rows[:6]
+                              if item["record"] is training), None)
+            if (training is None or train_row is None
+                    or record["training_registration_id"] != train_row["registration_id"]
+                    or record["training_run_uuid"] != training["run_uuid"]
+                    or record["training_record_sha256"] != train_row["record_sha256"]):
+                raise RegistryError("campaign v2 validation row must bind its exact frozen training arm")
+        if set(validations) != {(f"seed-pair-{i}", role)
+                                for i in range(1, 4) for role in ("baseline", "mixed")}:
+            raise RegistryError("campaign v2 requires one validation registration per exact training arm")
+        for pair in pair_rows.values():
+            baseline, mixed = pair["baseline"], pair["mixed"]
+            if baseline["ppo_seed"] != mixed["ppo_seed"]:
+                raise RegistryError("campaign v2 paired arms must share PPO seed")
+            base_probs, mixed_probs = baseline["opponent_probabilities"], mixed["opponent_probabilities"]
+            if (base_probs != {"latest": 10_000, "step0": 0, "cruise": 0,
+                               "local_mobility": 0, "interceptor": 0}
+                    or mixed_probs["latest"] == 10_000
+                    or any(mixed_probs[name] == 0 for name in ("step0", "cruise", "local_mobility", "interceptor"))):
+                raise RegistryError("campaign v2 must compare latest-only against the frozen diverse opponent pool")
+            # The package embeds the per-run run-config (UUID, schedule and arm), so
+            # its digest is unique even when source/component identities are shared.
+            allowed_differences = {"run_uuid", "strategy_role", "opponent_probabilities",
+                                   "schedule_descriptor_sha256", "config_sha256", "train_config",
+                                   "package_sha256"}
+            if any(baseline.get(key) != mixed.get(key)
+                   for key in set(baseline) | set(mixed) if key not in allowed_differences):
+                raise RegistryError("campaign v2 paired arms differ in a shared source/component/config identity")
+            base_config = _g008_v2_numeric_train_config(baseline["train_config"])
+            mixed_config = _g008_v2_numeric_train_config(mixed["train_config"])
+            if any(base_config[key] != mixed_config[key]
+                   for key in set(base_config) | set(mixed_config)
+                   if key not in {"snapshot_opponent_probability", "heuristic_opponent_probability"}):
+                raise RegistryError("campaign v2 paired full TrainConfig differs beyond opponent probabilities")
+            expected_strategy_probabilities = {
+                "baseline": (0.0, 0.0), "mixed": (0.1, 1 / 3),
+            }
+            if ((base_config["snapshot_opponent_probability"], base_config["heuristic_opponent_probability"])
+                    != expected_strategy_probabilities["baseline"]
+                    or (mixed_config["snapshot_opponent_probability"],
+                        mixed_config["heuristic_opponent_probability"])
+                    != expected_strategy_probabilities["mixed"]):
+                raise RegistryError("campaign v2 TrainConfig opponent probabilities differ from paired strategies")
+            if baseline.get("opponent_probabilities") == mixed.get("opponent_probabilities"):
+                raise RegistryError("campaign v2 paired arms must differ in opponent probabilities")
+    elif event_type == "g008_competitive_campaign_v2_package_revision_v1":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "amendment_event_index", "amendment_event_hash", "prior_head_hash",
+                    "failed_registration_event_index", "failed_registration_event_hash",
+                    "failed_attempt_event_index", "failed_attempt_event_hash", "package_bindings"}
+        d = _keys(data, expected, event_type)
+        binding_keys = {"registration_event_index", "registration_event_hash", "package_sha256",
+                        "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                        "trainer_sha256", "engine_sha256"}
+        if (d["schema_id"] != "g008-competitive-campaign-v2-package-revision"
+                or d["schema_version"] != 1
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "amendment_event_hash", "prior_head_hash", "failed_registration_event_hash",
+                    "failed_attempt_event_hash"))
+                or d["amendment_event_index"] != 55
+                or not isinstance(d["failed_registration_event_index"], int)
+                or isinstance(d["failed_registration_event_index"], bool)
+                or d["failed_registration_event_index"] not in range(56, 62)
+                or not isinstance(d["failed_attempt_event_index"], int)
+                or isinstance(d["failed_attempt_event_index"], bool)
+                or not isinstance(d["package_bindings"], list) or len(d["package_bindings"]) != 6
+                or any(not isinstance(binding, dict) or set(binding) != binding_keys
+                       or not isinstance(binding.get("registration_event_index"), int)
+                       or isinstance(binding.get("registration_event_index"), bool)
+                       or binding["registration_event_index"] not in range(56, 62)
+                       or any(not _is_hash(binding.get(key)) for key in binding_keys - {
+                           "registration_event_index", "registration_event_hash"})
+                       or not _is_hash(binding.get("registration_event_hash"))
+                       for binding in d["package_bindings"])
+                or [binding["registration_event_index"] for binding in d["package_bindings"]] != list(range(56, 62))):
+            raise RegistryError("campaign v2 package revision schema or six-train binding is malformed")
+    elif event_type == "g008_competitive_campaign_v2_retry_budget_v1":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "package_revision_event_index", "package_revision_event_hash",
+                    "failed_attempt_event_index", "failed_attempt_event_hash",
+                    "failed_registration_event_index", "failed_registration_event_hash",
+                    "retry_attempt_id", "retry_timeout_seconds", "additional_gpu_seconds",
+                    "effective_training_gpu_seconds_cap", "effective_evaluation_gpu_seconds_cap",
+                    "effective_total_gpu_seconds_cap", "project_experiment_gpu_seconds_cap",
+                    "project_total_gpu_seconds_cap", "protected_final_reserve_gpu_seconds"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-competitive-campaign-v2-retry-budget"
+                or d["schema_version"] != 1
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "package_revision_event_hash", "failed_attempt_event_hash",
+                    "failed_registration_event_hash"))
+                or d["package_revision_event_index"] != 73
+                or d["failed_attempt_event_index"] != 72
+                or d["failed_registration_event_index"] != 56
+                or d["retry_attempt_id"] != "g008-v2-pair1-baseline-a2"
+                or d["retry_timeout_seconds"] != 1_200
+                or d["additional_gpu_seconds"] != 516
+                or d["effective_training_gpu_seconds_cap"] != 7_716
+                or d["effective_evaluation_gpu_seconds_cap"] != 4_200
+                or d["effective_total_gpu_seconds_cap"] != 11_916
+                or any(not isinstance(d[key], int) or isinstance(d[key], bool) or d[key] <= 0
+                       for key in ("project_experiment_gpu_seconds_cap", "project_total_gpu_seconds_cap",
+                                   "protected_final_reserve_gpu_seconds"))):
+            raise RegistryError("campaign v2 retry budget authorization is malformed")
+    elif event_type == "g008_competitive_campaign_v2_package_revision_v2":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "prior_package_revision_event_index", "prior_package_revision_event_hash",
+                    "prior_retry_budget_event_index", "prior_retry_budget_event_hash",
+                    "failed_registration_event_index", "failed_registration_event_hash",
+                    "failed_attempt_event_index", "failed_attempt_event_hash", "package_binding"}
+        d = _keys(data, expected, event_type)
+        binding_keys = {"registration_event_index", "registration_event_hash", "package_sha256",
+                        "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                        "trainer_sha256", "engine_sha256"}
+        binding = d["package_binding"]
+        if (d["schema_id"] != "g008-competitive-campaign-v2-package-revision"
+                or d["schema_version"] != 2
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "prior_package_revision_event_hash", "prior_retry_budget_event_hash",
+                    "failed_registration_event_hash", "failed_attempt_event_hash"))
+                or d["prior_package_revision_event_index"] != 73
+                or d["prior_retry_budget_event_index"] != 74
+                or d["failed_registration_event_index"] != 56
+                or d["failed_attempt_event_index"] != 78
+                or not isinstance(binding, dict) or set(binding) != binding_keys
+                or binding.get("registration_event_index") != 56
+                or not _is_hash(binding.get("registration_event_hash"))
+                or any(not _is_hash(binding.get(key)) for key in binding_keys - {
+                    "registration_event_index", "registration_event_hash"})
+                or binding.get("package_sha256") != "31500d68f6fcbdb4eded6247e20b83d10b450f08915f1bf21e7534b865329906"
+                or binding.get("source_sha256") != "3ac7f5bcc24a62f9e5015d2e77bbb270f075802fffc8b2f50bdfe256830f8f52"
+                or binding.get("trainer_sha256") != "30f571f9f225b7ce88257e59cea772972488a88f9260b3ef24a3c6a21765f2a7"):
+            raise RegistryError("campaign v2 second package revision schema or row-56 binding is malformed")
+    elif event_type == "g008_competitive_campaign_v2_retry_budget_v2":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "package_revision_event_index", "package_revision_event_hash",
+                    "prior_retry_budget_event_index", "prior_retry_budget_event_hash",
+                    "failed_attempt_event_index", "failed_attempt_event_hash",
+                    "failed_registration_event_index", "failed_registration_event_hash",
+                    "retry_attempt_id", "retry_timeout_seconds", "additional_gpu_seconds",
+                    "effective_training_gpu_seconds_cap", "effective_evaluation_gpu_seconds_cap",
+                    "effective_total_gpu_seconds_cap", "project_experiment_gpu_seconds_cap",
+                    "project_total_gpu_seconds_cap", "protected_final_reserve_gpu_seconds"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-competitive-campaign-v2-retry-budget"
+                or d["schema_version"] != 2
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "package_revision_event_hash", "prior_retry_budget_event_hash",
+                    "failed_attempt_event_hash", "failed_registration_event_hash"))
+                or d["package_revision_event_index"] != 79
+                or d["prior_retry_budget_event_index"] != 74
+                or d["failed_attempt_event_index"] != 78
+                or d["failed_registration_event_index"] != 56
+                or d["retry_attempt_id"] != "g008-v2-pair1-baseline-a3"
+                or d["retry_timeout_seconds"] != 1_200
+                or d["additional_gpu_seconds"] != 36
+                or d["effective_training_gpu_seconds_cap"] != 7_752
+                or d["effective_evaluation_gpu_seconds_cap"] != 4_200
+                or d["effective_total_gpu_seconds_cap"] != 11_952
+                or any(not isinstance(d[key], int) or isinstance(d[key], bool) or d[key] <= 0
+                       for key in ("project_experiment_gpu_seconds_cap", "project_total_gpu_seconds_cap",
+                                   "protected_final_reserve_gpu_seconds"))):
+            raise RegistryError("campaign v2 second retry budget authorization is malformed")
+    elif event_type == "g008_competitive_campaign_v2_package_revision_v3":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "prior_package_revision_event_index", "prior_package_revision_event_hash",
+                    "prior_retry_budget_event_index", "prior_retry_budget_event_hash",
+                    "prior_package_revision_v2_event_index", "prior_package_revision_v2_event_hash",
+                    "prior_retry_budget_v2_event_index", "prior_retry_budget_v2_event_hash",
+                    "failed_registration_event_index", "failed_registration_event_hash",
+                    "failed_attempt_event_index", "failed_attempt_event_hash", "package_bindings"}
+        d = _keys(data, expected, event_type)
+        binding_keys = {"registration_event_index", "registration_event_hash", "package_sha256",
+                        "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                        "trainer_sha256", "engine_sha256"}
+        bindings = d["package_bindings"]
+        if (d["schema_id"] != "g008-competitive-campaign-v2-package-revision" or d["schema_version"] != 3
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "prior_package_revision_event_hash", "prior_retry_budget_event_hash",
+                    "prior_package_revision_v2_event_hash", "prior_retry_budget_v2_event_hash",
+                    "failed_registration_event_hash", "failed_attempt_event_hash"))
+                or any(type(d.get(key)) is not int or d[key] < 0 for key in (
+                    "prior_package_revision_event_index", "prior_retry_budget_event_index",
+                    "prior_package_revision_v2_event_index", "prior_retry_budget_v2_event_index",
+                    "failed_registration_event_index", "failed_attempt_event_index"))
+                or not isinstance(bindings, list) or len(bindings) != 5
+                or [item.get("registration_event_index") for item in bindings if isinstance(item, dict)]
+                   != list(range(57, 62))
+                or any(not isinstance(item, dict) or set(item) != binding_keys
+                       or type(item.get("registration_event_index")) is not int
+                       or not _is_hash(item.get(key)) for item in bindings
+                       for key in binding_keys - {"registration_event_index"})):
+            raise RegistryError("campaign v2 third package revision schema is malformed")
+    elif event_type == "g008_competitive_campaign_v2_package_revision_v4":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_event_index", "prior_head_hash", "rejected_attempt_event_indexes",
+                    "rejected_attempt_event_hashes", "package_bindings"}
+        d = _keys(data, expected, event_type)
+        binding_keys = {"registration_event_index", "registration_event_hash", "package_sha256",
+                        "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                        "trainer_sha256", "engine_sha256"}
+        bindings = d["package_bindings"]
+        if (d["schema_id"] != "g008-competitive-campaign-v2-package-revision" or d["schema_version"] != 4
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or d["prior_head_event_index"] != 123 or not _is_hash(d["prior_head_hash"])
+                or d["rejected_attempt_event_indexes"] != [119, 123]
+                or not isinstance(d["rejected_attempt_event_hashes"], list)
+                or len(d["rejected_attempt_event_hashes"]) != 2
+                or any(not _is_hash(value) for value in d["rejected_attempt_event_hashes"])
+                or not isinstance(bindings, list) or len(bindings) != 6
+                or [item.get("registration_event_index") for item in bindings if isinstance(item, dict)]
+                   != list(range(62, 68))
+                or any(not isinstance(item, dict) or set(item) != binding_keys
+                       or type(item.get("registration_event_index")) is not int
+                       or not _is_hash(item.get(key)) for item in bindings
+                       for key in binding_keys - {"registration_event_index"})):
+            raise RegistryError("campaign v2 validation package revision schema is malformed")
+    elif event_type == "g008_competitive_campaign_v2_package_revision_v5":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_event_index", "prior_head_hash", "rejected_attempt_event_indexes",
+                    "rejected_attempt_event_hashes", "package_bindings"}
+        d = _keys(data, expected, event_type)
+        binding_keys = {"registration_event_index", "registration_event_hash", "package_sha256",
+                        "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                        "trainer_sha256", "engine_sha256"}
+        bindings = d["package_bindings"]
+        if (d["schema_id"] != "g008-competitive-campaign-v2-package-revision" or d["schema_version"] != 5
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or d["prior_head_event_index"] != 136 or not _is_hash(d["prior_head_hash"])
+                or d["rejected_attempt_event_indexes"] != [119, 123, 128, 132, 136]
+                or not isinstance(d["rejected_attempt_event_hashes"], list)
+                or len(d["rejected_attempt_event_hashes"]) != 5
+                or any(not _is_hash(value) for value in d["rejected_attempt_event_hashes"])
+                or not isinstance(bindings, list) or len(bindings) != 6
+                or [item.get("registration_event_index") for item in bindings if isinstance(item, dict)]
+                   != list(range(62, 68))
+                or any(not isinstance(item, dict) or set(item) != binding_keys
+                       or type(item.get("registration_event_index")) is not int
+                       or not _is_hash(item.get(key)) for item in bindings
+                       for key in binding_keys - {"registration_event_index"})):
+            raise RegistryError("campaign v2 fifth validation package revision schema is malformed")
+    elif event_type == "g008_competitive_campaign_v2_final_package_revision_v1":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_event_index", "prior_head_event_hash",
+                    "candidate_freeze_event_index", "candidate_freeze_event_hash",
+                    "candidate_checkpoint_sha256", "registration_event_index",
+                    "registration_event_hash", "candidate_train_attempt_event_index",
+                    "candidate_train_attempt_event_hash", "candidate_trainer_sha256",
+                    "original_package_sha256",
+                    "original_source_sha256", "package_binding"}
+        d = _keys(data, expected, event_type)
+        binding_keys = {"registration_event_index", "registration_event_hash", "package_sha256",
+                        "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                        "trainer_sha256", "engine_sha256"}
+        binding = d["package_binding"]
+        if (d["schema_id"] != "g008-competitive-campaign-v2-final-package-revision"
+                or d["schema_version"] != 1
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or d["prior_head_event_index"] != 170
+                or d["candidate_freeze_event_index"] != 170
+                or d["registration_event_index"] != 68
+                or not all(_is_hash(d[key]) for key in (
+                    "prior_head_event_hash", "candidate_freeze_event_hash", "candidate_checkpoint_sha256",
+                    "registration_event_hash", "candidate_train_attempt_event_hash", "candidate_trainer_sha256",
+                    "original_package_sha256", "original_source_sha256"))
+                or d["candidate_train_attempt_event_index"] != 100
+                or not isinstance(binding, dict) or set(binding) != binding_keys
+                or binding.get("registration_event_index") != 68
+                or any(not _is_hash(binding.get(key)) for key in binding_keys - {"registration_event_index"})):
+            raise RegistryError("campaign v2 final package revision schema is malformed")
+    elif event_type == "g008_competitive_campaign_v2_retry_budget_v3":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "package_revision_event_index", "package_revision_event_hash",
+                    "prior_retry_budget_event_index", "prior_retry_budget_event_hash",
+                    "failed_attempt_event_index", "failed_attempt_event_hash",
+                    "failed_registration_event_index", "failed_registration_event_hash",
+                    "retry_attempt_id", "retry_timeout_seconds", "additional_gpu_seconds",
+                    "effective_training_gpu_seconds_cap", "effective_evaluation_gpu_seconds_cap",
+                    "effective_total_gpu_seconds_cap", "project_experiment_gpu_seconds_cap",
+                    "project_total_gpu_seconds_cap", "protected_final_reserve_gpu_seconds"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-competitive-campaign-v2-retry-budget" or d["schema_version"] != 3
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "package_revision_event_hash", "prior_retry_budget_event_hash",
+                    "failed_attempt_event_hash", "failed_registration_event_hash"))
+                or any(type(d.get(key)) is not int or d[key] < 0 for key in (
+                    "package_revision_event_index", "prior_retry_budget_event_index",
+                    "failed_attempt_event_index", "failed_registration_event_index"))
+                or d["failed_registration_event_index"] != 57
+                or d["retry_attempt_id"] != "g008-v2-pair1-mixed-a2"
+                or d["retry_timeout_seconds"] != 1_200 or d["additional_gpu_seconds"] != 37
+                or d["effective_training_gpu_seconds_cap"] != 7_752
+                or d["effective_evaluation_gpu_seconds_cap"] != 4_200
+                or d["effective_total_gpu_seconds_cap"] != 11_952
+                or any(not isinstance(d[key], int) or isinstance(d[key], bool) or d[key] <= 0
+                       for key in ("project_experiment_gpu_seconds_cap", "project_total_gpu_seconds_cap",
+                                   "protected_final_reserve_gpu_seconds"))):
+            raise RegistryError("campaign v2 third retry budget authorization is malformed")
+    elif event_type == "g008_competitive_campaign_v2_dispatch_retry_v1":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "rejected_attempt_event_index", "rejected_attempt_event_hash",
+                    "registration_event_index", "registration_event_hash", "retry_attempt_id",
+                    "expected_current_version", "no_outside_writer_confirmed"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-campaign-v2-no-assignment-retry" or d["schema_version"] != 1
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "rejected_attempt_event_hash", "registration_event_hash"))
+                or any(type(d.get(key)) is not int or d[key] < 0 for key in (
+                    "rejected_attempt_event_index", "registration_event_index", "expected_current_version"))
+                or d["registration_event_index"] != 62
+                or d["retry_attempt_id"] != "g008-v2-validation-seed-pair-1-baseline-a2"
+                or d["expected_current_version"] != 26
+                or d["no_outside_writer_confirmed"] is not True):
+            raise RegistryError("campaign v2 dispatch retry authorization is malformed")
+    elif event_type == "g008_competitive_campaign_v2_dispatch_retry_v2":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "package_revision_event_index", "package_revision_event_hash",
+                    "rejected_attempt_event_index", "rejected_attempt_event_hash",
+                    "registration_event_index", "registration_event_hash", "retry_attempt_id",
+                    "expected_current_version", "no_outside_writer_confirmed"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-campaign-v2-no-assignment-retry" or d["schema_version"] != 2
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "package_revision_event_hash", "rejected_attempt_event_hash",
+                    "registration_event_hash"))
+                or d["package_revision_event_index"] != 124 or d["rejected_attempt_event_index"] != 123
+                or d["registration_event_index"] != 62
+                or d["retry_attempt_id"] != "g008-v2-validation-seed-pair-1-baseline-a3"
+                or d["expected_current_version"] != 26 or d["no_outside_writer_confirmed"] is not True):
+            raise RegistryError("campaign v2 second dispatch retry authorization is malformed")
+    elif event_type == "g008_competitive_campaign_v2_dispatch_retry_v3":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "package_revision_event_index", "package_revision_event_hash",
+                    "rejected_attempt_event_index", "rejected_attempt_event_hash",
+                    "registration_event_index", "registration_event_hash", "retry_attempt_id",
+                    "expected_current_version", "no_outside_writer_confirmed"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-campaign-v2-no-assignment-retry" or d["schema_version"] != 3
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "package_revision_event_hash", "rejected_attempt_event_hash",
+                    "registration_event_hash"))
+                or d["package_revision_event_index"] != 124 or d["rejected_attempt_event_index"] != 128
+                or d["registration_event_index"] != 62
+                or d["retry_attempt_id"] != "g008-v2-validation-seed-pair-1-baseline-a4"
+                or d["expected_current_version"] != 26 or d["no_outside_writer_confirmed"] is not True):
+            raise RegistryError("campaign v2 third dispatch retry authorization is malformed")
+    elif event_type == "g008_competitive_campaign_v2_dispatch_retry_v4":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "package_revision_event_index", "package_revision_event_hash",
+                    "rejected_attempt_event_index", "rejected_attempt_event_hash",
+                    "registration_event_index", "registration_event_hash", "retry_attempt_id",
+                    "expected_current_version", "no_outside_writer_confirmed"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-campaign-v2-no-assignment-retry" or d["schema_version"] != 4
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "package_revision_event_hash", "rejected_attempt_event_hash",
+                    "registration_event_hash"))
+                or d["package_revision_event_index"] != 124 or d["rejected_attempt_event_index"] != 132
+                or d["registration_event_index"] != 62
+                or d["retry_attempt_id"] != "g008-v2-validation-seed-pair-1-baseline-a5"
+                or d["expected_current_version"] != 26 or d["no_outside_writer_confirmed"] is not True):
+            raise RegistryError("campaign v2 fourth dispatch retry authorization is malformed")
+    elif event_type == "g008_competitive_campaign_v2_dispatch_retry_v5":
+        expected = {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                    "prior_head_hash", "package_revision_event_index", "package_revision_event_hash",
+                    "rejected_attempt_event_index", "rejected_attempt_event_hash",
+                    "registration_event_index", "registration_event_hash", "retry_attempt_id",
+                    "expected_current_version", "no_outside_writer_confirmed"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-campaign-v2-no-assignment-retry" or d["schema_version"] != 5
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not _is_hash(d.get(key)) for key in (
+                    "prior_head_hash", "package_revision_event_hash", "rejected_attempt_event_hash",
+                    "registration_event_hash"))
+                or d["package_revision_event_index"] != 137 or d["rejected_attempt_event_index"] != 136
+                or d["registration_event_index"] != 62
+                or d["retry_attempt_id"] != "g008-v2-validation-seed-pair-1-baseline-a6"
+                or d["expected_current_version"] != 26 or d["no_outside_writer_confirmed"] is not True):
+            raise RegistryError("campaign v2 fifth dispatch retry authorization is malformed")
+    elif event_type == "competitive_training_artifact_v2":
+        d = _keys(data, {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                         "training_registration_event_index", "training_registration_event_hash",
+                         "training_attempt_event_index", "training_attempt_event_hash", "step",
+                         "checkpoint_sha256", "output_manifest_sha256", "metrics_sha256",
+                         "package_sha256", "source_sha256", "config_sha256",
+                         "schedule_descriptor_sha256"}, event_type)
+        if (d["schema_id"] != "g008-training-artifact-attestation" or d["schema_version"] != 2
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not isinstance(d[key], int) or isinstance(d[key], bool) or d[key] < 0 for key in (
+                    "training_registration_event_index", "training_attempt_event_index", "step"))
+                or d["step"] == 0
+                or any(not _is_hash(d[key]) for key in (
+                    "training_registration_event_hash", "training_attempt_event_hash", "checkpoint_sha256",
+                    "output_manifest_sha256", "metrics_sha256", "package_sha256", "source_sha256",
+                    "config_sha256", "schedule_descriptor_sha256"))):
+            raise RegistryError("invalid campaign v2 training artifact attestation")
+    elif event_type == "competitive_validation_result_v2":
+        d = _keys(data, {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                         "training_registration_event_index", "training_registration_event_hash",
+                         "training_attempt_event_index", "training_attempt_event_hash",
+                         "training_artifact_event_index", "training_artifact_event_hash",
+                         "validation_registration_event_index", "validation_registration_event_hash",
+                         "validation_attempt_event_index", "validation_attempt_event_hash",
+                         "checkpoint_sha256", "report_sha256", "output_manifest_sha256",
+                         "game_count", "wins", "draws", "losses", "win_rate",
+                         "wilson_95_lower", "wilson_95_upper", "opponent_id"}, event_type)
+        if (d["schema_id"] != "g008-competitive-validation-result" or d["schema_version"] != 2
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not isinstance(d[key], int) or isinstance(d[key], bool) or d[key] < 0 for key in (
+                    "training_registration_event_index", "training_attempt_event_index",
+                    "training_artifact_event_index", "validation_registration_event_index",
+                    "validation_attempt_event_index", "game_count", "wins", "draws", "losses"))
+                or any(not _is_hash(d[key]) for key in (
+                    "training_registration_event_hash", "training_attempt_event_hash",
+                    "training_artifact_event_hash", "validation_registration_event_hash",
+                    "validation_attempt_event_hash", "checkpoint_sha256", "report_sha256",
+                    "output_manifest_sha256"))
+                or d["game_count"] != 512 or d["wins"] + d["draws"] + d["losses"] != 512
+                or not isinstance(d["opponent_id"], str) or d["opponent_id"] == "open-space"):
+            raise RegistryError("invalid campaign v2 per-arm validation result")
+        stats = competitive_final_statistics(d["wins"], d["draws"], d["losses"])
+        if any(d[key] != stats[key] for key in ("win_rate", "wilson_95_lower", "wilson_95_upper")):
+            raise RegistryError("campaign v2 validation Wilson metrics differ from W/D/L")
+    elif event_type == "competitive_strategy_comparison_v2":
+        d = _keys(data, {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                         "validation_result_event_indices", "validation_result_event_hashes",
+                         "paired_score_deltas", "mean_paired_score_delta", "paired_score_ci95_lower",
+                         "paired_score_ci95_upper", "max_pair_regression", "selected_strategy",
+                         "selected_candidate", "mixed_strategy_passed"}, event_type)
+        if (d["schema_id"] != "g008-strategy-comparison" or d["schema_version"] != 2
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or not isinstance(d["validation_result_event_indices"], list)
+                or len(d["validation_result_event_indices"]) != 6
+                or not isinstance(d["validation_result_event_hashes"], list)
+                or len(d["validation_result_event_hashes"]) != 6
+                or any(not isinstance(index, int) or isinstance(index, bool) or index < 0
+                       for index in d["validation_result_event_indices"])
+                or any(not _is_hash(value) for value in d["validation_result_event_hashes"])
+                or not isinstance(d["paired_score_deltas"], list) or len(d["paired_score_deltas"]) != 3
+                or not isinstance(d["selected_candidate"], dict)
+                or d["selected_strategy"] not in {"baseline", "mixed"}
+                or not isinstance(d["mixed_strategy_passed"], bool)):
+            raise RegistryError("invalid campaign v2 aggregate strategy comparison")
+        for key in ("mean_paired_score_delta", "paired_score_ci95_lower",
+                    "paired_score_ci95_upper", "max_pair_regression"):
+            try:
+                value = float(d[key])
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise RegistryError("invalid campaign v2 paired comparison metric") from exc
+            if not math.isfinite(value) or not -1 <= value <= 1:
+                raise RegistryError("campaign v2 paired comparison metric is out of range")
+        if d["selected_strategy"] != ("mixed" if d["mixed_strategy_passed"] else "baseline"):
+            raise RegistryError("campaign v2 selected strategy differs from frozen paired decision")
+    elif event_type == "competitive_candidate_freeze_v2":
+        d = _keys(data, {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                         "strategy_comparison_event_index", "strategy_comparison_event_hash",
+                         "candidate_registration_event_index", "candidate_registration_event_hash",
+                         "train_attempt_event_index", "train_attempt_event_hash",
+                         "training_artifact_event_index", "training_artifact_event_hash",
+                         "validation_registration_event_index", "validation_registration_event_hash",
+                         "validation_attempt_event_index", "validation_attempt_event_hash",
+                         "validation_result_event_index", "validation_result_event_hash",
+                         "checkpoint_sha256", "checkpoint_artifact_sha256", "output_manifest_sha256"}, event_type)
+        if (d["schema_id"] != "g008-candidate-freeze" or d["schema_version"] != 2
+                or d["campaign_id"] != "g008-competitive-20261021-v2"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not isinstance(d[key], int) or isinstance(d[key], bool) or d[key] < 0 for key in (
+                    "strategy_comparison_event_index", "candidate_registration_event_index",
+                    "train_attempt_event_index", "training_artifact_event_index",
+                    "validation_registration_event_index", "validation_attempt_event_index",
+                    "validation_result_event_index"))
+                or any(not _is_hash(d[key]) for key in (
+                    "strategy_comparison_event_hash", "candidate_registration_event_hash",
+                    "train_attempt_event_hash", "training_artifact_event_hash",
+                    "validation_registration_event_hash", "validation_attempt_event_hash",
+                    "validation_result_event_hash", "checkpoint_sha256",
+                    "checkpoint_artifact_sha256", "output_manifest_sha256"))
+                or d["checkpoint_artifact_sha256"] != d["checkpoint_sha256"]):
+            raise RegistryError("invalid campaign v2 selected candidate freeze")
+    elif event_type == "competitive_final_result_v2":
+        v1_data = dict(data) if isinstance(data, dict) else data
+        if isinstance(v1_data, dict):
+            v1_data["schema_version"] = 1
+            v1_data["campaign_id"] = "g008-competitive-20261020-v1"
+        _validate_data("competitive_final_result", v1_data)
+        if data.get("schema_version") != 2 or data.get("campaign_id") != "g008-competitive-20261021-v2":
+            raise RegistryError("invalid campaign v2 final result identity")
+    elif event_type == "competitive_candidate_freeze":
+        d = _keys(data, {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                         "candidate_registration_event_index", "candidate_registration_event_hash",
+                         "train_attempt_event_index", "train_attempt_event_hash",
+                         "checkpoint_sha256", "checkpoint_artifact_sha256",
+                         "output_manifest_sha256"}, event_type)
+        if (d["schema_id"] != "g008-candidate-freeze" or d["schema_version"] != 1
+                or d["campaign_id"] != "g008-competitive-20261020-v1"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or not isinstance(d["candidate_registration_event_index"], int)
+                or isinstance(d["candidate_registration_event_index"], bool)
+                or d["candidate_registration_event_index"] < 0
+                or not isinstance(d["train_attempt_event_index"], int)
+                or isinstance(d["train_attempt_event_index"], bool) or d["train_attempt_event_index"] < 0
+                or not _is_hash(d["candidate_registration_event_hash"])
+                or not _is_hash(d["train_attempt_event_hash"])
+                or not _is_hash(d["checkpoint_sha256"])
+                or not _is_hash(d["checkpoint_artifact_sha256"])
+                or not _is_hash(d["output_manifest_sha256"])
+                or d["checkpoint_artifact_sha256"] != d["checkpoint_sha256"]):
+            raise RegistryError("invalid competitive candidate-freeze evidence")
+    elif event_type == "competitive_validation_result":
+        d = _keys(data, {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                         "candidate_freeze_event_index", "candidate_freeze_event_hash",
+                         "validation_registration_event_index", "validation_registration_event_hash",
+                         "validation_attempt_event_index", "validation_attempt_event_hash",
+                         "candidate_checkpoint_sha256", "report_sha256", "output_manifest_sha256",
+                         "reference_report_sha256", "reference_game_count", "reference_wins",
+                         "reference_draws", "reference_losses", "noninferiority_margin",
+                         "game_count", "wins", "draws", "losses", "win_rate", "wilson_95_lower",
+                         "wilson_95_upper", "win_rate_difference_95_lower",
+                         "win_rate_difference_95_upper", "passed", "opponent_id"}, event_type)
+        if (d["schema_id"] != "g008-candidate-validation-result" or d["schema_version"] != 1
+                or d["campaign_id"] != "g008-competitive-20261020-v1"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not isinstance(d[k], int) or isinstance(d[k], bool) or d[k] < 0
+                       for k in ("candidate_freeze_event_index", "validation_registration_event_index",
+                                 "validation_attempt_event_index", "game_count", "wins", "draws", "losses"))
+                or any(not isinstance(d[k], int) or isinstance(d[k], bool) or d[k] < 0
+                       for k in ("reference_game_count", "reference_wins", "reference_draws", "reference_losses"))
+                or not _is_hash(d["candidate_freeze_event_hash"])
+                or not _is_hash(d["validation_registration_event_hash"])
+                or not _is_hash(d["validation_attempt_event_hash"])
+                or not _is_hash(d["candidate_checkpoint_sha256"])
+                or not _is_hash(d["report_sha256"])
+                or not _is_hash(d["output_manifest_sha256"])
+                or not _is_hash(d["reference_report_sha256"])
+                or not isinstance(d["passed"], bool) or not isinstance(d["opponent_id"], str)
+                or not d["opponent_id"]):
+            raise RegistryError("invalid competitive validation result")
+        if (d["reference_report_sha256"] != _G008_VALIDATION_REFERENCE_SHA256
+                or (d["reference_game_count"], d["reference_wins"], d["reference_draws"],
+                    d["reference_losses"], d["noninferiority_margin"])
+                != (512, 217, 51, 244, "0.065000")):
+            raise RegistryError("validation result changed the frozen G008 v15 reference or margin")
+        try:
+            stats = competitive_noninferiority_statistics(d["wins"], d["draws"], d["losses"])
+        except (RegistryError, TypeError, ValueError, OverflowError) as exc:
+            raise RegistryError("validation statistics cannot be computed") from exc
+        if (d["game_count"] != 512 or
+                any(d[key] != stats[key] for key in (
+                    "reference_report_sha256", "reference_game_count", "reference_wins", "reference_draws",
+                    "reference_losses", "noninferiority_margin", "win_rate", "wilson_95_lower",
+                    "wilson_95_upper", "win_rate_difference_95_lower", "win_rate_difference_95_upper", "passed"))):
+            raise RegistryError("validation result metrics or non-inferiority decision do not match W/D/L")
+    elif event_type == "competitive_final_result":
+        d = _keys(data, {"schema_id", "schema_version", "campaign_id", "created_at_utc",
+                         "candidate_freeze_event_index", "candidate_freeze_event_hash",
+                         "final_registration_event_index", "final_registration_event_hash",
+                         "final_attempt_event_index", "final_attempt_event_hash",
+                         "candidate_checkpoint_sha256", "report_sha256", "output_manifest_sha256", "roster_sha256",
+                         "opponent_code_sha256", "game_count", "wins", "draws", "losses",
+                         "win_rate", "wilson_95_lower", "wilson_95_upper", "opponent_id", "passed"}, event_type)
+        if (d["schema_id"] != "g008-final-evaluation-result" or d["schema_version"] != 1
+                or d["campaign_id"] != "g008-competitive-20261020-v1"
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not isinstance(d[k], int) or isinstance(d[k], bool) or d[k] < 0
+                       for k in ("candidate_freeze_event_index", "final_registration_event_index",
+                                 "final_attempt_event_index", "game_count", "wins", "draws", "losses"))
+                or any(not _is_hash(d[k]) for k in ("candidate_freeze_event_hash", "final_registration_event_hash",
+                                                     "final_attempt_event_hash", "candidate_checkpoint_sha256",
+                                                     "report_sha256", "output_manifest_sha256",
+                                                     "roster_sha256", "opponent_code_sha256"))
+                or d["game_count"] != 512 or d["wins"] + d["draws"] + d["losses"] != 512
+                or d["opponent_id"] != "open-space" or not isinstance(d["passed"], bool)):
+            raise RegistryError("invalid final 512-game open-space evaluation result")
+        try:
+            stats = competitive_final_statistics(d["wins"], d["draws"], d["losses"])
+        except (RegistryError, TypeError, ValueError, OverflowError) as exc:
+            raise RegistryError("final result Wilson interval cannot be computed") from exc
+        if (d["win_rate"], d["wilson_95_lower"], d["wilson_95_upper"]) != (
+                stats["win_rate"], stats["wilson_95_lower"], stats["wilson_95_upper"]):
+            raise RegistryError("final win rate or Wilson 95% interval does not match W/D/L")
+        if d["passed"] is not stats["passed"]:
+            raise RegistryError("final pass flag must equal the frozen 60% observed-win criterion")
+    elif event_type == "benchmark_artifact_validation_rejected":
+        expected = {"schema_id", "schema_version", "cycle_id", "created_at_utc",
+                    "attempt_event_index", "attempt_event_hash", "registration_event_index",
+                    "registration_event_hash", "artifact_sha256", "output_sha256", "validator_id",
+                    "validation_codes"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-benchmark-artifact-validation-rejection" or d["schema_version"] != 1
+                or d["cycle_id"] not in {"g008-recovery-cycle-3", "g008-competitive-campaign-v1"}):
+            raise RegistryError("unsupported benchmark artifact rejection schema")
+        if (not isinstance(d["attempt_event_index"], int) or isinstance(d["attempt_event_index"], bool)
+                or d["attempt_event_index"] < 0
+                or not isinstance(d["registration_event_index"], int)
+                or isinstance(d["registration_event_index"], bool) or d["registration_event_index"] < 0
+                or not _is_hash(d["attempt_event_hash"]) or not _is_hash(d["registration_event_hash"])
+                or any(value is not None and not _is_hash(value)
+                       for value in (d["artifact_sha256"], d["output_sha256"]))
+                or not isinstance(d["validator_id"], str) or not d["validator_id"]
+                or not isinstance(d["validation_codes"], list) or not d["validation_codes"]
+                or any(not isinstance(code, str) or not code for code in d["validation_codes"])
+                or len(set(d["validation_codes"])) != len(d["validation_codes"])
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")):
+            raise RegistryError("benchmark artifact rejection must bind exact validation evidence")
+    elif event_type == "cycle3_retry_policy_amendment_v1":
+        expected = {"schema_id", "schema_version", "cycle_id", "created_at_utc", "policy_sha256",
+                    "prior_head_hash", "prior_final_event_index", "registration_event_index",
+                    "registration_event_hash", "registration_id", "prior_attempt_id",
+                    "prior_attempt_event_index", "prior_attempt_event_hash", "prior_terminal_status",
+                    "validation_rejection_event_index", "validation_rejection_event_hash"}
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-cycle3-retry-policy-amendment" or d["schema_version"] != 1
+                or d["cycle_id"] != "g008-recovery-cycle-3-retry"
+                or d["policy_sha256"] != _CYCLE3_RETRY_POLICY_SHA256):
+            raise RegistryError("unsupported Cycle-3 retry policy amendment")
+        if (not _is_hash(d["prior_head_hash"]) or not isinstance(d["prior_final_event_index"], int)
+                or isinstance(d["prior_final_event_index"], bool) or d["prior_final_event_index"] < 0
+                or not isinstance(d["registration_event_index"], int)
+                or isinstance(d["registration_event_index"], bool) or d["registration_event_index"] < 0
+                or not _is_hash(d["registration_event_hash"])
+                or not isinstance(d["registration_id"], str) or not d["registration_id"]
+                or not isinstance(d["prior_attempt_id"], str) or not d["prior_attempt_id"]
+                or not isinstance(d["prior_attempt_event_index"], int)
+                or isinstance(d["prior_attempt_event_index"], bool) or d["prior_attempt_event_index"] < 0
+                or not _is_hash(d["prior_attempt_event_hash"])
+                or d["prior_terminal_status"] not in {"ERROR", "CANCELLED", "TIMEOUT", "COMPLETE"}
+                or not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")):
+            raise RegistryError("Cycle-3 retry amendment has invalid exact-head or registration binding")
+        rejection_index, rejection_hash = d["validation_rejection_event_index"], d["validation_rejection_event_hash"]
+        if d["prior_terminal_status"] == "COMPLETE":
+            if (not isinstance(rejection_index, int) or isinstance(rejection_index, bool) or rejection_index < 0
+                    or not _is_hash(rejection_hash)):
+                raise RegistryError("COMPLETE retry requires explicit artifact-validation rejection evidence")
+        elif rejection_index is not None or rejection_hash is not None:
+            raise RegistryError("failed benchmark retry cannot bind artifact-validation rejection")
+    elif event_type == "exploratory_kernel_observation_v1":
+        expected = {
+            "schema_id", "schema_version", "cycle_id", "created_at_utc", "kernel_id",
+            "version_number", "run_uuid", "terminal_status", "exploratory", "promotable",
+            "continuation_event_index", "continuation_event_hash", "artifact_sha256",
+            "actual_gpu_seconds", "output_bytes",
+        }
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-exploratory-kernel-observation" or d["schema_version"] != 1
+                or d["cycle_id"] != "g008-recovery-cycle-3-retry"
+                or d["exploratory"] is not True or d["promotable"] is not False):
+            raise RegistryError("unsupported or promotable exploratory kernel observation")
+        artifacts = d["artifact_sha256"]
+        if (not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or not isinstance(d["kernel_id"], str) or not d["kernel_id"]
+                or not isinstance(d["version_number"], int) or isinstance(d["version_number"], bool)
+                or d["version_number"] < 1
+                or not isinstance(d["run_uuid"], str) or not d["run_uuid"]
+                or d["terminal_status"] not in {"COMPLETE", "ERROR", "CANCELLED", "TIMEOUT"}
+                or not isinstance(d["continuation_event_index"], int)
+                or isinstance(d["continuation_event_index"], bool) or d["continuation_event_index"] < 0
+                or not _is_hash(d["continuation_event_hash"])
+                or any(not isinstance(d[key], int) or isinstance(d[key], bool) or d[key] < 0
+                       for key in ("actual_gpu_seconds", "output_bytes"))
+                or not isinstance(artifacts, dict) or not artifacts
+                or any(not isinstance(name, str) or not name or not _is_hash(digest)
+                       for name, digest in artifacts.items())):
+            raise RegistryError("exploratory kernel observation must bind terminal identity and artifact hashes")
+    elif event_type == "cycle3_retry_rebased_authorization_v1":
+        expected = {
+            "schema_id", "schema_version", "cycle_id", "created_at_utc",
+            "prior_head_hash", "prior_final_event_index", "observation_event_index",
+            "observation_event_hash", "registration_event_index", "registration_event_hash",
+            "registration_id", "kernel_id", "expected_current_version", "observed_run_uuid",
+            "observed_terminal_status", "attempt_id", "session_timeout_seconds",
+            "reserved_gpu_seconds", "package_sha256", "source_sha256", "config_sha256",
+            "seed_plan_sha256", "backend_sha256", "trainer_sha256", "engine_sha256",
+        }
+        d = _keys(data, expected, event_type)
+        if (d["schema_id"] != "g008-cycle3-retry-rebased-authorization" or d["schema_version"] != 1
+                or d["cycle_id"] != "g008-recovery-cycle-3-retry"):
+            raise RegistryError("unsupported Cycle-3 retry rebase authorization")
+        if (not isinstance(d["created_at_utc"], str) or not d["created_at_utc"].endswith("Z")
+                or any(not isinstance(d[key], int) or isinstance(d[key], bool) or d[key] < 0
+                       for key in ("prior_final_event_index", "observation_event_index", "registration_event_index",
+                                   "expected_current_version", "session_timeout_seconds", "reserved_gpu_seconds"))
+                or any(not _is_hash(d[key]) for key in ("prior_head_hash", "observation_event_hash",
+                                                        "registration_event_hash", "package_sha256", "source_sha256",
+                                                        "config_sha256", "seed_plan_sha256", "backend_sha256",
+                                                        "trainer_sha256", "engine_sha256"))
+                or any(not isinstance(d[key], str) or not d[key]
+                       for key in ("registration_id", "kernel_id", "observed_run_uuid", "attempt_id"))
+                or d["observed_terminal_status"] not in {"COMPLETE", "ERROR", "CANCELLED", "TIMEOUT"}
+                or d["session_timeout_seconds"] <= 0
+                or d["reserved_gpu_seconds"] != d["session_timeout_seconds"]):
+            raise RegistryError("Cycle-3 retry rebase authorization has invalid head, workload, or cap bindings")
+    elif event_type == "recovery_cycle_retry_amendment_v1":
         expected = {
             "schema_id", "schema_version", "cycle_id", "created_at_utc", "prior_head_hash",
             "prior_final_event_index", "cycle3_amendment_event_index", "cycle3_amendment_event_hash",
@@ -651,7 +1818,7 @@ def _validate_data(event_type: str, data: Any) -> None:
         required = {"registration_id", "registration_kind", "record"}
         cycle2 = required | {"cycle_id"}
         d = _keys(data, cycle2 if isinstance(data, dict) and set(data) == cycle2 else required, event_type)
-        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
+        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3", "g008-competitive-campaign-v1", "g008-competitive-campaign-v2"}:
             raise RegistryError("unsupported registration cycle_id")
         if not isinstance(d["registration_id"], str) or not d["registration_id"]:
             raise RegistryError("registration_id must be a non-empty string")
@@ -705,7 +1872,7 @@ def _validate_data(event_type: str, data: Any) -> None:
                          "expected_current_version", "quota_evidence", "policy_evidence", "prior_attempts",
                          "implementation_variant_id", "no_outside_writer_confirmed", "exclusive_lock_id", "reconciliation_slack_seconds",
                          "lock_head_hash"}
-        cycle_ids = {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}
+        cycle_ids = {"g008-recovery-cycle-2", "g008-recovery-cycle-3", "g008-competitive-campaign-v1", "g008-competitive-campaign-v2"}
         cycle_schema = required | {"cycle_id"}
         d = _keys(data, cycle_schema if isinstance(data, dict) and set(data) == cycle_schema else required, event_type)
         if "cycle_id" in d and d["cycle_id"] not in cycle_ids:
@@ -742,7 +1909,7 @@ def _validate_data(event_type: str, data: Any) -> None:
                          "reserved_gpu_seconds", "implementation_variant_id", "dispatch_timestamp_utc", "request_identity", "lock_head_hash"}
         cycle_schema = required | {"cycle_id"}
         d = _keys(data, cycle_schema if isinstance(data, dict) and set(data) == cycle_schema else required, event_type)
-        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
+        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3", "g008-competitive-campaign-v1", "g008-competitive-campaign-v2"}:
             raise RegistryError("unsupported workload cycle_id")
         _validate_attempt_identity(d)
         _validate_attempt_hashes(d)
@@ -760,7 +1927,7 @@ def _validate_data(event_type: str, data: Any) -> None:
                          "implementation_variant_id", "push_response", "confirming_metadata", "lock_head_hash"}
         cycle_schema = required | {"cycle_id"}
         d = _keys(data, cycle_schema if isinstance(data, dict) and set(data) == cycle_schema else required, event_type)
-        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
+        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3", "g008-competitive-campaign-v1", "g008-competitive-campaign-v2"}:
             raise RegistryError("unsupported workload cycle_id")
         _validate_attempt_identity(d)
         if not isinstance(d["implementation_variant_id"], str) or not d["implementation_variant_id"]:
@@ -788,7 +1955,7 @@ def _validate_data(event_type: str, data: Any) -> None:
                          "trainer_sha256", "engine_sha256", "lock_head_hash"}
         cycle_schema = required | {"cycle_id"}
         d = _keys(data, cycle_schema if isinstance(data, dict) and set(data) == cycle_schema else required, event_type)
-        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3"}:
+        if "cycle_id" in d and d["cycle_id"] not in {"g008-recovery-cycle-2", "g008-recovery-cycle-3", "g008-competitive-campaign-v1", "g008-competitive-campaign-v2"}:
             raise RegistryError("unsupported workload cycle_id")
         _validate_attempt_identity(d)
         if not isinstance(d["implementation_variant_id"], str) or not d["implementation_variant_id"]:
@@ -961,7 +2128,11 @@ def _read(path: Path) -> list[dict[str, Any]]:
         event = _decode_line(line, i, prev)
         typ, data = event["event_type"], event["event_data"]
         if typ == "registration":
-            if lock_hash is not None:
+            v2_campaign_registration = (data.get("cycle_id") == "g008-competitive-campaign-v2"
+                                       and any(previous["event_type"] ==
+                                               "g008_competitive_campaign_amendment_v2"
+                                               for previous in events))
+            if lock_hash is not None and not v2_campaign_registration:
                 raise RegistryError("registration after registration_closed")
             rid = data["registration_id"]
             if rid in registrations:
@@ -1007,8 +2178,19 @@ def _read(path: Path) -> list[dict[str, Any]]:
     cycle3_indices = [i for i, event in enumerate(events)
                       if event["event_type"] == "recovery_cycle_amendment_v2"]
     cycle2_indices = [i for i, event in enumerate(events) if event["event_type"] == "recovery_cycle_amendment"]
+    campaign_v2_indices = [i for i, event in enumerate(events)
+                           if event["event_type"] == "g008_competitive_campaign_amendment_v2"]
     if cycle3_indices:
-        _validate_recovery_cycle3_suffix(events)
+        campaign_indices = [i for i, event in enumerate(events)
+                            if event["event_type"] == "g008_competitive_campaign_amendment_v1"]
+        if campaign_indices and campaign_v2_indices:
+            raise RegistryError("campaign v1 and v2 are separate immutable lifecycle branches")
+        if campaign_v2_indices:
+            _validate_g008_competitive_campaign_v2(events)
+        elif campaign_indices:
+            _validate_g008_competitive_campaign(events)
+        else:
+            _validate_recovery_cycle3_suffix(events)
     elif cycle2_indices:
         _validate_recovery_suffix(events[:_CYCLE2_EVENT_INDEX])
         _validate_recovery_cycle2_suffix(events)
@@ -2031,11 +3213,113 @@ def _validate_recovery_cycle3_retry_suffix(events: list[dict[str, Any]]) -> None
         raise RegistryError("cycle-3 retry must include incumbent and candidate variants")
 
     retry_attempts: dict[str, dict[str, Any]] = {}
+    retry_rejections: dict[int, dict[str, Any]] = {}
+    continuation: dict[str, Any] | None = None
+    rebase_authorization: dict[str, Any] | None = None
     artifact = lock = attestation = None
     train_state = None
     current_version = amendment["current_version_number"]
     for i, event in enumerate(events[36:], 36):
         typ, ed = event["event_type"], event["event_data"]
+        if typ == "cycle3_retry_policy_amendment_v1":
+            if continuation is not None or artifact is not None or lock is not None or train_state is not None:
+                raise RegistryError("Cycle-3 retry amendment is unexpected after pending amendment, artifact, or training")
+            prior = retry_attempts.get(ed.get("prior_attempt_id"))
+            if (prior is None or prior["phase"] != "terminal"
+                    or prior["terminal"] != ed.get("prior_attempt_event_index")
+                    or events[prior["terminal"]]["event_hash"] != ed.get("prior_attempt_event_hash")
+                    or events[i - 1]["event_hash"] != ed.get("prior_head_hash")
+                    or ed.get("prior_final_event_index") != i - 1
+                    or ed.get("registration_event_index") != 35
+                    or ed.get("registration_event_hash") != registration_event["event_hash"]
+                    or ed.get("registration_id") != amendment["retry_registration_id"]):
+                raise RegistryError("Cycle-3 retry amendment must bind current head, attempt, and registration")
+            status = prior["terminal_data"].get("terminal_status")
+            if status != ed.get("prior_terminal_status"):
+                raise RegistryError("Cycle-3 retry amendment changed prior terminal status")
+            if status == "COMPLETE":
+                rejection = retry_rejections.get(prior["terminal"])
+                if (rejection is None or rejection["event_index"] != ed.get("validation_rejection_event_index")
+                        or rejection["event_hash"] != ed.get("validation_rejection_event_hash")
+                        or rejection["event_index"] != i - 1
+                        or prior["last"] != rejection["event_index"] - 1):
+                    raise RegistryError("COMPLETE retry requires immediately preceding explicit artifact rejection")
+            elif (prior["last"] != i - 1 or ed.get("validation_rejection_event_index") is not None):
+                raise RegistryError("failed retry amendment cannot bind artifact rejection")
+            continuation = {"event_index": i, "event_hash": event["event_hash"],
+                            "prior_attempt_id": ed["prior_attempt_id"]}
+            continue
+        if typ == "exploratory_kernel_observation_v1":
+            prior = retry_attempts.get(continuation["prior_attempt_id"]) if continuation else None
+            rejection = (retry_rejections.get(prior["terminal"])
+                         if prior is not None and prior.get("phase") == "terminal" else None)
+            prior_registration_uuids = {
+                item["event_data"]["record"].get("run_uuid")
+                for item in events[:i] if item["event_type"] == "registration"
+            }
+            observed_uuids = {
+                item["event_data"]["run_uuid"]
+                for item in events[:i] if item["event_type"] == "exploratory_kernel_observation_v1"
+            }
+            if (continuation is None or continuation["event_index"] != i - 1
+                    or continuation["event_hash"] != ed.get("continuation_event_hash")
+                    or ed.get("continuation_event_index") != i - 1
+                    or prior is None or prior["terminal_data"].get("terminal_status") != "COMPLETE"
+                    or rejection is None or rejection["event_index"] != i - 2
+                    or ed.get("kernel_id") != record["kernel_id"]
+                    or ed.get("version_number", 0) <= current_version
+                    or ed.get("run_uuid") in prior_registration_uuids | observed_uuids
+                    or artifact is not None or lock is not None or train_state is not None):
+                raise RegistryError("exploratory observation must supersede the exact pending continuation and advance its kernel cursor")
+            # This records what already exists remotely. It consumes the one-shot continuation
+            # without treating that unregistered run as a benchmark result or push receipt.
+            current_version = ed["version_number"]
+            continuation = None
+            continue
+        if typ == "cycle3_retry_rebased_authorization_v1":
+            observation = events[i - 1] if i > 0 else None
+            obs = observation["event_data"] if observation else {}
+            if (rebase_authorization is not None or observation is None
+                    or observation["event_type"] != "exploratory_kernel_observation_v1"
+                    or ed.get("prior_final_event_index") != i - 1
+                    or ed.get("prior_head_hash") != observation["event_hash"]
+                    or ed.get("observation_event_index") != i - 1
+                    or ed.get("observation_event_hash") != observation["event_hash"]
+                    or ed.get("registration_event_index") != 35
+                    or ed.get("registration_event_hash") != registration_event["event_hash"]
+                    or ed.get("registration_id") != amendment["retry_registration_id"]
+                    or ed.get("kernel_id") != record["kernel_id"]
+                    or ed.get("expected_current_version") != current_version
+                    or ed.get("expected_current_version") != obs.get("version_number")
+                    or ed.get("observed_run_uuid") != obs.get("run_uuid")
+                    or ed.get("observed_terminal_status") != obs.get("terminal_status")
+                    or ed.get("observed_terminal_status") != "COMPLETE"
+                    or ed.get("attempt_id") in retry_attempts
+                    or ed.get("session_timeout_seconds") != record["session_timeout_seconds"]
+                    or ed.get("reserved_gpu_seconds") != record["session_timeout_seconds"]):
+                raise RegistryError("Cycle-3 rebase authorization must bind exact exploratory observation, registration, and fresh retry")
+            for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                        "backend_sha256", "trainer_sha256", "engine_sha256"):
+                if ed.get(key) != record.get(key):
+                    raise RegistryError("Cycle-3 retry rebase authorization changed registered workload hashes")
+            rebase_authorization = {"event_index": i, "event_hash": event["event_hash"],
+                                    "attempt_id": ed["attempt_id"], "data": ed}
+            continue
+        if typ == "benchmark_artifact_validation_rejected":
+            aid = next((aid for aid, state in retry_attempts.items()
+                        if state.get("terminal") == ed.get("attempt_event_index")), None)
+            state = retry_attempts.get(aid) if aid is not None else None
+            if (state is None or state["phase"] != "terminal"
+                    or state["terminal_data"].get("terminal_status") != "COMPLETE"
+                    or state["last"] != i - 1
+                    or events[state["terminal"]]["event_hash"] != ed.get("attempt_event_hash")
+                    or ed.get("registration_event_index") != 35
+                    or ed.get("registration_event_hash") != registration_event["event_hash"]
+                    or state["terminal"] in retry_rejections):
+                raise RegistryError("artifact rejection must bind a fresh COMPLETE attempt and its registration")
+            retry_rejections[state["terminal"]] = {"event_index": i, "event_hash": event["event_hash"],
+                                                     "event_data": ed}
+            continue
         if typ == "workload_preflight" and ed.get("registration_event_index") == 29:
             if attestation is None:
                 raise RegistryError("cycle-3 training requires retry benchmark attestation")
@@ -2065,10 +3349,17 @@ def _validate_recovery_cycle3_retry_suffix(events: list[dict[str, Any]]) -> None
                 raise RegistryError("cycle-3 retry attempt must precede benchmark artifact and lock")
             aid = ed["attempt_id"]
             if aid in retry_attempts or ed.get("cycle_id") != "g008-recovery-cycle-3":
-                raise RegistryError("cycle-3 retry permits one fresh benchmark attempt")
+                raise RegistryError("cycle-3 retry attempts require fresh attempt IDs")
+            if retry_attempts:
+                direct_continuation = continuation is not None and continuation["event_index"] == i - 1
+                rebased = (rebase_authorization is not None
+                           and rebase_authorization["event_index"] == i - 1
+                           and rebase_authorization["attempt_id"] == aid)
+                if not (direct_continuation or rebased):
+                    raise RegistryError("a retry after terminal completion requires an exact-head continuation or rebase authorization")
             if (ed.get("registration_event_hash") != registration_event["event_hash"]
                     or ed.get("registration_id") != amendment["retry_registration_id"]
-                    or ed.get("expected_current_version") != amendment["current_version_number"]
+                    or ed.get("expected_current_version") != current_version
                     or ed.get("kernel_id") != record["kernel_id"]
                     or ed.get("implementation_variant_id") != "paired"
                     or ed.get("session_timeout_seconds") != record["session_timeout_seconds"]
@@ -2080,6 +3371,8 @@ def _validate_recovery_cycle3_retry_suffix(events: list[dict[str, Any]]) -> None
                     raise RegistryError("cycle-3 retry preflight changed registered package hash")
             retry_attempts[aid] = {"phase": "preflight", "last": i, "reg": 35, "data": ed,
                                    "preflight": i, "preflight_hash": event["event_hash"]}
+            continuation = None
+            rebase_authorization = None
             continue
         if typ in {"workload_push_dispatched", "workload_push_accepted", "workload_attempt"}:
             aid = ed["attempt_id"]
@@ -2195,13 +3488,16 @@ def _validate_recovery_cycle3_retry_suffix(events: list[dict[str, Any]]) -> None
                     current_version = ed["assigned_version"]
             continue
         if typ == "benchmark_artifact":
-            if artifact is not None or lock is not None or not any(
-                    state.get("phase") == "terminal" and state["terminal_data"]["terminal_status"] == "COMPLETE"
-                    and state["terminal"] == ed.get("attempt_event_index")
-                    and event["event_data"].get("registration_event_index") == 35
-                    and event["event_data"].get("registration_event_hash") == registration_event["event_hash"]
-                    and events[state["terminal"]]["event_hash"] == ed.get("attempt_event_hash")
-                    for state in retry_attempts.values()):
+            terminal_states = [state for state in retry_attempts.values() if state.get("phase") == "terminal"]
+            latest = max(terminal_states, key=lambda state: state["terminal"], default=None)
+            if (artifact is not None or lock is not None or latest is None
+                    or latest.get("phase") != "terminal"
+                    or latest["terminal_data"].get("terminal_status") != "COMPLETE"
+                    or latest["terminal"] in retry_rejections
+                    or latest["terminal"] != ed.get("attempt_event_index")
+                    or event["event_data"].get("registration_event_index") != 35
+                    or event["event_data"].get("registration_event_hash") != registration_event["event_hash"]
+                    or events[latest["terminal"]]["event_hash"] != ed.get("attempt_event_hash")):
                 raise RegistryError("cycle-3 retry artifact requires its COMPLETE benchmark attempt")
             artifact = i
             continue
@@ -2219,33 +3515,49 @@ def _validate_recovery_cycle3_retry_suffix(events: list[dict[str, Any]]) -> None
             continue
         raise RegistryError("event type is not allowed in cycle-3 retry suffix")
 
-    if len(retry_attempts) > 1:
-        raise RegistryError("cycle-3 retry allows exactly one continuation attempt")
-    state = next(iter(retry_attempts.values()), None)
-    if state and state["phase"] not in {"terminal"}:
-        if state["last"] != len(events) - 1:
-            raise RegistryError("pending cycle-3 retry attempt blocks later events")
+    state = max(retry_attempts.values(), key=lambda item: item["last"], default=None)
+    if state and state["phase"] != "terminal" and state["last"] != len(events) - 1:
+        raise RegistryError("pending cycle-3 retry attempt blocks later events")
+    if continuation is not None and continuation["event_index"] != len(events) - 1:
+        raise RegistryError("pending Cycle-3 retry policy amendment blocks later events")
+    if rebase_authorization is not None and rebase_authorization["event_index"] != len(events) - 1:
+        raise RegistryError("pending Cycle-3 retry rebase authorization blocks later events")
     if state and state["phase"] == "terminal" and state["terminal_data"]["terminal_status"] != "COMPLETE":
         if artifact is not None or lock is not None or attestation is not None or train_state is not None:
             raise RegistryError("failed cycle-3 retry cannot produce artifact, lock, attestation, or training")
-        if state["last"] != len(events) - 1:
-            raise RegistryError("failed cycle-3 retry is terminal and blocks further workload events")
-    retry_actual = (state["terminal_data"]["actual_gpu_seconds"] if state and state["phase"] == "terminal" else 0)
-    retry_reserved = (record["session_timeout_seconds"] if state and state["phase"] != "terminal" else 0)
+        if state["last"] != len(events) - 1 and continuation is None:
+            raise RegistryError("failed cycle-3 retry requires an exact-head policy amendment before continuing")
+    if state and state["phase"] == "terminal" and state["terminal_data"]["terminal_status"] == "COMPLETE":
+        if state["terminal"] not in retry_rejections and state["terminal"] != (events[artifact]["event_data"].get("attempt_event_index") if artifact is not None else None):
+            if state["last"] != len(events) - 1:
+                raise RegistryError("COMPLETE retry requires artifact validation before any further event")
+    retry_actual = sum(item["terminal_data"]["actual_gpu_seconds"] for item in retry_attempts.values()
+                       if item["phase"] == "terminal")
+    retry_reserved = sum(record["session_timeout_seconds"] for item in retry_attempts.values()
+                         if item["phase"] != "terminal")
+    rebase_reserved = (rebase_authorization["data"]["reserved_gpu_seconds"]
+                       if rebase_authorization is not None else 0)
+    exploratory_observations = [event["event_data"] for event in events
+                                if event["event_type"] == "exploratory_kernel_observation_v1"]
+    exploratory_actual = sum(item["actual_gpu_seconds"] for item in exploratory_observations)
     first_attempt = parent["event_data"]
-    if first_attempt["actual_gpu_seconds"] + retry_actual + retry_reserved > original["compute_caps_gpu_seconds"]["benchmark"]:
-        raise RegistryError("cycle-3 first attempt plus retry exceeds cumulative benchmark GPU cap")
-    if first_attempt["output_bytes"] + (state["terminal_data"]["output_bytes"] if state and state["phase"] == "terminal" else 0) > original["output_category_reservations_bytes"]["benchmark"]:
-        raise RegistryError("cycle-3 first attempt plus retry exceeds cumulative benchmark output cap")
+    if (first_attempt["actual_gpu_seconds"] + exploratory_actual + retry_actual + retry_reserved + rebase_reserved
+            > original["compute_caps_gpu_seconds"]["benchmark"]):
+        raise RegistryError("cycle-3 first attempt plus retries exceeds cumulative benchmark GPU cap")
     train_actual = (train_state["terminal_data"]["actual_gpu_seconds"]
                     if train_state and train_state["phase"] == "terminal" else 0)
     train_reserved = (train_state["record"]["session_timeout_seconds"]
                       if train_state and train_state["phase"] != "terminal" else 0)
     if train_actual + train_reserved > original["compute_caps_gpu_seconds"]["train"]:
         raise RegistryError("cycle-3 training use/reservation exceeds registered training cap")
-    retry_output = (state["terminal_data"]["output_bytes"] if state and state["phase"] == "terminal"
-                    else record["workload_output_bytes_cap"] if state else 0)
-    benchmark_output = first_attempt["output_bytes"] + retry_output
+    retry_output = (sum(item["terminal_data"]["output_bytes"] for item in retry_attempts.values()
+                        if item["phase"] == "terminal")
+                    + sum(record["workload_output_bytes_cap"] for item in retry_attempts.values()
+                          if item["phase"] != "terminal"))
+    rebase_output_reserved = (record["workload_output_bytes_cap"]
+                              if rebase_authorization is not None else 0)
+    exploratory_output = sum(item["output_bytes"] for item in exploratory_observations)
+    benchmark_output = first_attempt["output_bytes"] + exploratory_output + retry_output + rebase_output_reserved
     train_output = (train_state["terminal_data"]["output_bytes"]
                     if train_state and train_state["phase"] == "terminal"
                     else train_state["record"]["workload_output_bytes_cap"] if train_state else 0)
@@ -2261,11 +3573,1348 @@ def _validate_recovery_cycle3_retry_suffix(events: list[dict[str, Any]]) -> None
     if train_state and train_state["phase"] == "terminal" and train_state["last"] != len(events) - 1:
         raise RegistryError("terminal cycle-3 training attempt blocks additional workloads")
     project_gpu = (original["project_gpu_seconds_before"] + first_attempt["actual_gpu_seconds"]
-                   + retry_actual + retry_reserved + train_actual + train_reserved)
+                   + exploratory_actual + retry_actual + retry_reserved + train_actual + train_reserved)
+    project_gpu += rebase_reserved
     if (project_gpu > original["compute_caps_gpu_seconds"]["project_experiment"]
             or project_gpu + original["protected_final_reserve_gpu_seconds"]
             > original["compute_caps_gpu_seconds"]["project_total"]):
         raise RegistryError("cycle-3 retry and training use/reservations exceed project budget")
+
+
+def _validate_g008_competitive_campaign(events: list[dict[str, Any]]) -> None:
+    """Replay the immutable paired-seed campaign suffix, including benchmark lock ordering."""
+    campaign_indices = [i for i, e in enumerate(events)
+                        if e["event_type"] == "g008_competitive_campaign_amendment_v1"]
+    if not campaign_indices:
+        return
+    if campaign_indices != [len(events[:campaign_indices[0]])]:  # retain an explicit single-amendment invariant
+        raise RegistryError("competitive campaign amendment is duplicated")
+    ci = campaign_indices[0]
+    _validate_recovery_cycle3_retry_suffix(events[:ci])
+    amendment_event = events[ci]
+    amendment = amendment_event["event_data"]
+    _validate_data("g008_competitive_campaign_amendment_v1", amendment)
+    if (ci < 1 or amendment["prior_final_event_index"] != ci - 1
+            or amendment["prior_head_hash"] != events[ci - 1]["event_hash"]
+            or amendment["rejection_event_index"] != ci - 1
+            or events[ci - 1]["event_type"] != "benchmark_artifact_validation_rejected"
+            or amendment["rejection_event_hash"] != events[ci - 1]["event_hash"]):
+        raise RegistryError("competitive campaign must extend the exact rejected-artifact head")
+    retry = events[35]["event_data"]["record"]
+    rejected_attempt = events[amendment["rejection_event_index"]]["event_data"]["attempt_event_index"]
+    if (amendment["kernel_id"] != retry["kernel_id"]
+            or amendment["current_version_number"] != events[rejected_attempt]["event_data"]["assigned_version"]):
+        raise RegistryError("competitive campaign changed the exact retry kernel/version")
+    cycle3 = events[27]["event_data"]
+    prior_gpu = sum(e["event_data"]["actual_gpu_seconds"] for e in events[33:ci]
+                    if e["event_type"] == "workload_attempt" and e["event_data"].get("outcome") == "terminal")
+    projected = cycle3["project_gpu_seconds_before"] + prior_gpu + amendment["total_gpu_seconds_cap"]
+    if (projected > cycle3["compute_caps_gpu_seconds"]["project_experiment"]
+            or projected + amendment["protected_final_reserve_gpu_seconds"]
+            > cycle3["compute_caps_gpu_seconds"]["project_total"]):
+        raise RegistryError("campaign budget plus prior use exceeds project cap/protected reserve")
+
+    registrations: dict[int, dict[str, Any]] = {}
+    amendment_rows = amendment["records"]
+    old_ids = {e["event_data"]["registration_id"] for e in events[:ci]
+               if e["event_type"] == "registration"}
+    old_uuids = {e["event_data"]["record"].get("run_uuid") for e in events[:ci]
+                 if e["event_type"] == "registration"}
+    for offset, row in enumerate(amendment_rows, 1):
+        record = dict(row["record"])
+        if row["registration_id"] in old_ids or record["run_uuid"] in old_uuids:
+            raise RegistryError("competitive campaign reuses a prior registration ID or UUID")
+        record.update({"competitive_campaign_event_index": ci,
+                       "competitive_campaign_event_hash": amendment_event["event_hash"]})
+        idx = ci + offset
+        if idx >= len(events) or events[idx]["event_type"] != "registration":
+            if idx < len(events):
+                raise RegistryError("all seven campaign registrations must be consecutive after amendment")
+            break
+        ev, data = events[idx], events[idx]["event_data"]
+        if (data.get("registration_id") != row["registration_id"]
+                or data.get("registration_kind") != row["registration_kind"]
+                or data.get("cycle_id") != "g008-competitive-campaign-v1"
+                or data.get("record") != record
+                or hashlib.sha256(canonical_bytes(row["record"])).hexdigest() != row["record_sha256"]):
+            raise RegistryError("campaign registration differs from immutable amendment record/hash")
+        registrations[idx] = {"event": ev, "record": data["record"], "kind": data["registration_kind"]}
+
+    if len(registrations) < 9:
+        if len(events) != ci + 1 + len(registrations):
+            raise RegistryError("campaign registration prefix is incomplete and cannot contain later events")
+        return
+
+    attempts: dict[str, dict[str, Any]] = {}
+    latest_version = amendment["current_version_number"]
+    artifact = lock = attestation = None
+    candidate_freeze = validation_result = None
+    candidate_checkpoint_sha256 = None
+    validation_passed = False
+    for i in range(ci + 10, len(events)):
+        event = events[i]
+        typ, data = event["event_type"], event["event_data"]
+        if typ == "competitive_candidate_freeze":
+            if (candidate_freeze is not None or attestation is None
+                    or len([s for s in attempts.values() if s["phase"] == "terminal"
+                            and s["record"]["registration_kind"] == "train"
+                            and s["terminal"].get("terminal_status") == "COMPLETE"]) != 6):
+                raise RegistryError("candidate freeze requires attested benchmark and six terminal training jobs")
+            candidate_idx = data.get("candidate_registration_event_index")
+            train_attempt_idx = data.get("train_attempt_event_index")
+            train_state = next((s for s in attempts.values()
+                                if s.get("terminal_index") == train_attempt_idx), None)
+            if (candidate_idx not in registrations or registrations[candidate_idx]["kind"] != "train"
+                    or data.get("candidate_registration_event_hash") != events[candidate_idx]["event_hash"]
+                    or registrations[candidate_idx]["record"].get("strategy_role") != "mixed"
+                    or registrations[candidate_idx]["record"].get("pair_id") != "seed-pair-3"
+                    or registrations[candidate_idx]["record"].get("update_budget") != 236
+                    or train_state is None or train_state["registration_index"] != candidate_idx
+                    or train_state["record"]["registration_kind"] != "train"
+                    or train_state["terminal"].get("terminal_status") != "COMPLETE"
+                    or data.get("train_attempt_event_hash") != events[train_attempt_idx]["event_hash"]
+                    or data.get("checkpoint_artifact_sha256") != data.get("checkpoint_sha256")
+                    or not all(_is_hash(data.get(key)) for key in (
+                        "checkpoint_sha256", "checkpoint_artifact_sha256", "output_manifest_sha256"))):
+                raise RegistryError("candidate freeze must bind the exact COMPLETE third mixed-arm attempt and its artifacts")
+            candidate_freeze = i
+            candidate_checkpoint_sha256 = data["checkpoint_sha256"]
+            continue
+        if typ == "competitive_validation_result":
+            validation_idx = data.get("validation_registration_event_index")
+            validation_attempt_idx = data.get("validation_attempt_event_index")
+            validation_state = next((s for s in attempts.values()
+                                     if s.get("terminal_index") == validation_attempt_idx), None)
+            if (candidate_freeze is None or validation_result is not None
+                    or data.get("candidate_freeze_event_index") != candidate_freeze
+                    or data.get("candidate_freeze_event_hash") != events[candidate_freeze]["event_hash"]
+                    or validation_idx not in registrations or registrations[validation_idx]["kind"] != "validation"
+                    or data.get("validation_registration_event_hash") != events[validation_idx]["event_hash"]
+                    or validation_state is None or validation_state["registration_index"] != validation_idx
+                    or validation_state["record"]["registration_kind"] != "validation"
+                    or validation_state["terminal"].get("terminal_status") != "COMPLETE"
+                    or data.get("validation_attempt_event_hash") != events[validation_attempt_idx]["event_hash"]
+                    or validation_state["last"] != i - 1
+                    or data.get("candidate_checkpoint_sha256") != candidate_checkpoint_sha256
+                    or not all(_is_hash(data.get(key)) for key in (
+                        "candidate_checkpoint_sha256", "report_sha256", "output_manifest_sha256"))
+                    or data.get("game_count") != 512 or data.get("opponent_id") == "open-space"):
+                raise RegistryError("validation must bind frozen checkpoint, exact COMPLETE attempt, report, manifest, and non-final roster")
+            wins, draws, losses = data.get("wins"), data.get("draws"), data.get("losses")
+            if (not all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in (wins, draws, losses))
+                    or wins + draws + losses != 512 or type(data.get("passed")) is not bool):
+                raise RegistryError("campaign validation must reconcile exactly 512 games")
+            validation_passed = data["passed"]
+            validation_result = i
+            continue
+        if typ == "competitive_final_result":
+            final_idx = data.get("final_registration_event_index")
+            attempt_idx = data.get("final_attempt_event_index")
+            final_state = next((s for s in attempts.values() if s.get("terminal_index") == attempt_idx), None)
+            if (candidate_freeze is None or validation_result is None or i != len(events) - 1
+                    or final_idx not in registrations or registrations[final_idx]["kind"] != "final"
+                    or data.get("candidate_freeze_event_index") != candidate_freeze
+                    or data.get("candidate_freeze_event_hash") != events[candidate_freeze]["event_hash"]
+                    or data.get("final_registration_event_hash") != events[final_idx]["event_hash"]
+                    or final_state is None or final_state["record"]["registration_kind"] != "final"
+                    or final_state["terminal"].get("terminal_status") != "COMPLETE"
+                    or final_state["registration_index"] != final_idx
+                    or data.get("final_attempt_event_hash") != events[attempt_idx]["event_hash"]
+                    or final_state["last"] != i - 1
+                    or data.get("candidate_checkpoint_sha256") != candidate_checkpoint_sha256
+                    or not all(_is_hash(data.get(key)) for key in (
+                        "candidate_checkpoint_sha256", "report_sha256", "output_manifest_sha256"))
+                    or data.get("roster_sha256") != registrations[final_idx]["record"].get("roster_sha256")
+                    or data.get("opponent_code_sha256") != registrations[final_idx]["record"].get("opponent_code_sha256")
+                    or data.get("opponent_id") != "open-space"):
+                raise RegistryError("final result must reconcile the frozen checkpoint and exact COMPLETE final attempt/report/manifest")
+            final_result = i
+            continue
+        if typ == "workload_preflight":
+            ri = data["registration_event_index"]
+            reg = registrations.get(ri)
+            if (reg is None or reg["event"]["event_hash"] != data["registration_event_hash"]
+                    or reg["event"]["event_data"]["registration_id"] != data["registration_id"]
+                    or data.get("cycle_id") != "g008-competitive-campaign-v1"
+                    or data["kernel_id"] != reg["record"]["kernel_id"]
+                    or data["expected_current_version"] != latest_version
+                    or data["session_timeout_seconds"] != reg["record"]["session_timeout_seconds"]
+                    or data["lock_head_hash"] != (events[lock]["event_hash"] if lock is not None else None)):
+                raise RegistryError("campaign preflight changed exact registered record/version/lock")
+            if reg["kind"] == "train" and data["implementation_variant_id"] != reg["record"]["strategy_role"]:
+                raise RegistryError("campaign preflight changed paired training strategy arm")
+            if reg["kind"] in {"validation", "final"} and data["implementation_variant_id"] != "frozen-candidate":
+                raise RegistryError("campaign evaluation must run the exact frozen candidate")
+            if reg["kind"] == "validation" and candidate_freeze is None:
+                raise RegistryError("validation cannot run before candidate freeze")
+            if reg["kind"] == "benchmark":
+                if artifact is not None or lock is not None or data["implementation_variant_id"] != "paired":
+                    raise RegistryError("campaign benchmark attempts must precede the lock and use paired mode")
+            elif reg["kind"] == "train" and attestation is None:
+                raise RegistryError("campaign training requires benchmark attestation")
+            elif reg["kind"] == "final" and (validation_result is None or not validation_passed):
+                raise RegistryError("final-only evaluation requires a candidate that passes frozen non-inferiority validation")
+            elif reg["kind"] == "final" and data.get("opponent_id") == "open-space":
+                raise RegistryError("open-space identity must remain absent from pre-final events")
+            aid = data["attempt_id"]
+            if aid in attempts or any(s["registration_index"] == ri for s in attempts.values()
+                                      if s["record"]["registration_kind"] == "train"):
+                raise RegistryError("campaign attempt ID or training workload is duplicated")
+            for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                        "backend_sha256", "trainer_sha256", "engine_sha256"):
+                if data[key] != reg["record"][key]:
+                    raise RegistryError("campaign preflight changed frozen package/config/seed hashes")
+            attempts[aid] = {"phase": "preflight", "last": i, "registration_index": ri,
+                             "record": {**reg["record"], "registration_kind": reg["kind"]},
+                             "data": data, "preflight_hash": event["event_hash"]}
+            continue
+        if typ in {"workload_push_dispatched", "workload_push_accepted", "workload_attempt"}:
+            aid = data["attempt_id"]
+            state = attempts.get(aid)
+            if state is None or state["phase"] == "terminal" or i != state["last"] + 1:
+                raise RegistryError("campaign push lifecycle must immediately follow its prior phase")
+            if data.get("cycle_id") != "g008-competitive-campaign-v1":
+                raise RegistryError("campaign push lifecycle has wrong campaign identity")
+            pf = state["data"]
+            if (data["registration_event_index"] != state["registration_index"]
+                    or data["registration_event_hash"] != events[state["registration_index"]]["event_hash"]):
+                raise RegistryError("campaign push lifecycle changed registration binding")
+            if typ == "workload_push_dispatched":
+                if (state["phase"] != "preflight" or data["preflight_event_index"] != state["last"]
+                        or data["preflight_event_hash"] != state["preflight_hash"]):
+                    raise RegistryError("campaign dispatch must immediately bind exact preflight")
+                for key in ("kernel_id", "package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256", "session_timeout_seconds",
+                            "accelerator_count", "reserved_gpu_seconds", "implementation_variant_id", "lock_head_hash"):
+                    if data[key] != pf[key]:
+                        raise RegistryError("campaign dispatch changed preflight fields")
+                state.update(phase="dispatched", last=i, dispatch_hash=event["event_hash"])
+            elif typ == "workload_push_accepted":
+                if (state["phase"] != "dispatched" or data["preflight_event_index"] != state["last"] - 1
+                        or data["dispatch_event_index"] != state["last"]
+                        or data["dispatch_event_hash"] != state["dispatch_hash"]
+                        or data["assigned_version"] <= latest_version
+                        or data["implementation_variant_id"] != pf["implementation_variant_id"]
+                        or data["lock_head_hash"] != pf["lock_head_hash"]):
+                    raise RegistryError("campaign acceptance changed dispatch, version, or lock")
+                state.update(phase="accepted", last=i, version=data["assigned_version"])
+            else:
+                rejected_before_assignment = data["outcome"] == "pre_assignment_rejected"
+                if rejected_before_assignment:
+                    if (state["phase"] != "dispatched" or data["dispatch_event_index"] != state["last"]
+                            or data["dispatch_event_hash"] != state["dispatch_hash"]
+                            or data["assigned_version"] is not None or data["accepted_event_index"] is not None
+                            or data["actual_gpu_seconds"] != 0
+                            or data["no_assignment_metadata"].get("no_version_assigned") is not True
+                            or data["no_assignment_metadata"].get("pre_push_current_version") != pf["expected_current_version"]
+                            or data["no_assignment_metadata"].get("post_push_current_version") != pf["expected_current_version"]):
+                        raise RegistryError("campaign pre-assignment rejection lacks exact no-assignment proof")
+                elif (state["phase"] != "accepted" or data["accepted_event_index"] != state["last"]
+                      or data["assigned_version"] != state["version"]):
+                    raise RegistryError("campaign terminal attempt changed acceptance or version")
+                if data["lock_head_hash"] != pf["lock_head_hash"]:
+                    raise RegistryError("campaign terminal attempt changed exact lock")
+                for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256"):
+                    if data[key] != pf[key]:
+                        raise RegistryError("campaign terminal attempt changed frozen hashes")
+                cap_key = "benchmark_gpu_seconds_cap" if state["record"]["registration_kind"] == "benchmark" else "training_gpu_seconds_cap"
+                if data["actual_gpu_seconds"] > state["record"]["workload_gpu_seconds_cap"] or data["output_bytes"] > state["record"]["workload_output_bytes_cap"]:
+                    raise RegistryError("campaign attempt exceeds per-workload resource caps")
+                state.update(phase="terminal", last=i, terminal_index=i, terminal=data)
+                if not rejected_before_assignment:
+                    latest_version = data["assigned_version"]
+            continue
+        if typ == "benchmark_artifact_validation_rejected":
+            state = next((s for s in attempts.values() if s.get("terminal_index") == data["attempt_event_index"]), None)
+            if (state is None or state["record"]["registration_kind"] != "benchmark"
+                    or state["phase"] != "terminal" or state["terminal"].get("terminal_status") != "COMPLETE"
+                    or state["last"] != i - 1 or data["attempt_event_hash"] != events[i - 1]["event_hash"]
+                    or data["registration_event_index"] != state["registration_index"]
+                    or data["registration_event_hash"] != events[state["registration_index"]]["event_hash"]):
+                raise RegistryError("campaign artifact rejection must immediately bind a COMPLETE benchmark")
+            state["rejected"] = True
+            continue
+        if typ == "benchmark_artifact":
+            state = next((s for s in attempts.values() if s.get("terminal_index") == data.get("attempt_event_index")), None)
+            if (artifact is not None or state is None or state["record"]["registration_kind"] != "benchmark"
+                    or state["terminal"].get("terminal_status") != "COMPLETE"
+                    or state.get("rejected", False)):
+                raise RegistryError("campaign artifact must bind a non-rejected COMPLETE benchmark")
+            if (i != state["last"] + 1 or data["registration_event_index"] != state["registration_index"]
+                    or data["registration_event_hash"] != events[state["registration_index"]]["event_hash"]
+                    or data["attempt_event_hash"] != events[state["terminal_index"]]["event_hash"]):
+                raise RegistryError("campaign artifact must immediately bind latest successful benchmark")
+            artifact = i
+            continue
+        if typ == "registration_closed":
+            if artifact is None or i != artifact + 1 or data != {
+                    "pre_lock_head_hash": events[artifact]["event_hash"], "pre_lock_final_event_index": artifact}:
+                raise RegistryError("campaign registration lock must immediately follow exact benchmark artifact")
+            lock = i
+            continue
+        if typ == "benchmark_attestation":
+            if lock is None or i != lock + 1 or data != {
+                    **events[artifact]["event_data"], "lock_head_hash": events[lock]["event_hash"]}:
+                raise RegistryError("campaign benchmark attestation must immediately follow exact lock")
+            attestation = i
+            continue
+        raise RegistryError("event type is not permitted in competitive campaign suffix")
+
+    for aid, state in attempts.items():
+        if state["phase"] != "terminal" and state["last"] != len(events) - 1:
+            raise RegistryError("pending campaign attempt blocks later events")
+        if state["phase"] == "terminal" and state["terminal"].get("terminal_status") == "COMPLETE":
+            is_benchmark = state["record"]["registration_kind"] == "benchmark"
+            if is_benchmark and not state.get("rejected") and state.get("terminal_index") != (events[artifact]["event_data"].get("attempt_event_index") if artifact is not None else None):
+                if state["last"] != len(events) - 1:
+                    raise RegistryError("unresolved COMPLETE benchmark requires artifact or explicit rejection")
+    actual_benchmark = sum(s["terminal"]["actual_gpu_seconds"] for s in attempts.values()
+                           if s["phase"] == "terminal" and s["record"]["registration_kind"] == "benchmark")
+    reserved_benchmark = sum(s["record"]["session_timeout_seconds"] for s in attempts.values()
+                             if s["phase"] != "terminal" and s["record"]["registration_kind"] == "benchmark")
+    actual_train = sum(s["terminal"]["actual_gpu_seconds"] for s in attempts.values()
+                       if s["phase"] == "terminal" and s["record"]["registration_kind"] == "train")
+    reserved_train = sum(s["record"]["session_timeout_seconds"] for s in attempts.values()
+                         if s["phase"] != "terminal" and s["record"]["registration_kind"] == "train")
+    actual_eval = sum(s["terminal"]["actual_gpu_seconds"] for s in attempts.values()
+                      if s["phase"] == "terminal" and s["record"]["registration_kind"] in {"validation", "final"})
+    reserved_eval = sum(s["record"]["session_timeout_seconds"] for s in attempts.values()
+                        if s["phase"] != "terminal" and s["record"]["registration_kind"] in {"validation", "final"})
+    if (actual_benchmark + reserved_benchmark > amendment["benchmark_gpu_seconds_cap"]
+            or actual_train + reserved_train > amendment["training_gpu_seconds_cap"]
+            or actual_eval + reserved_eval > amendment["evaluation_gpu_seconds_cap"]
+            or actual_benchmark + reserved_benchmark + actual_train + reserved_train + actual_eval + reserved_eval > amendment["total_gpu_seconds_cap"]):
+        raise RegistryError("competitive campaign actual use/reservations exceed frozen cumulative budget")
+    if any(s["phase"] == "terminal" and s["record"]["registration_kind"] == "train"
+           for s in attempts.values()) and attestation is None:
+        raise RegistryError("campaign training cannot start before benchmark attestation")
+
+
+def _competitive_v2_comparison_payload(events: list[dict[str, Any]], *, created_at_utc: str) -> dict[str, Any]:
+    registrations = {event["event_data"]["registration_id"]: event
+                    for event in events if event["event_type"] == "registration"
+                    and event["event_data"].get("cycle_id") == "g008-competitive-campaign-v2"}
+    validation_results = {event["event_data"]["validation_registration_event_index"]: event
+                          for event in events if event["event_type"] == "competitive_validation_result_v2"}
+    ordered_registration_indices = [index for index, event in enumerate(events)
+                                    if event["event_type"] == "registration"
+                                    and event["event_data"].get("cycle_id") == "g008-competitive-campaign-v2"
+                                    and event["event_data"]["registration_kind"] == "validation"]
+    if len(ordered_registration_indices) != 6 or any(index not in validation_results
+                                                     for index in ordered_registration_indices):
+        raise RegistryError("strategy comparison requires all six registered validation results")
+    scores: dict[tuple[str, str], float] = {}
+    result_indices = []
+    result_hashes = []
+    result_by_arm: dict[tuple[str, str], dict[str, Any]] = {}
+    for registration_index in ordered_registration_indices:
+        event = validation_results[registration_index]
+        data = event["event_data"]
+        registration = events[registration_index]["event_data"]
+        record = registration["record"]
+        score = (data["wins"] + 0.5 * data["draws"]) / 512
+        key = (record["pair_id"], record["strategy_role"])
+        if key in scores:
+            raise RegistryError("duplicate validation result for paired campaign arm")
+        scores[key] = score
+        result_by_arm[key] = event
+        result_indices.append(event["event_index"])
+        result_hashes.append(event["event_hash"])
+    deltas = []
+    numeric_deltas = []
+    for pair_no in range(1, 4):
+        pair_id = f"seed-pair-{pair_no}"
+        baseline, mixed = scores.get((pair_id, "baseline")), scores.get((pair_id, "mixed"))
+        if baseline is None or mixed is None:
+            raise RegistryError("strategy comparison requires baseline and mixed result in every seed block")
+        delta = mixed - baseline
+        numeric_deltas.append(delta)
+        deltas.append({"pair_id": pair_id, "baseline_score": f"{baseline:.6f}",
+                       "mixed_score": f"{mixed:.6f}", "score_delta": f"{delta:.6f}"})
+    mean_delta = statistics.mean(numeric_deltas)
+    stddev = statistics.stdev(numeric_deltas) if len(numeric_deltas) > 1 else 0.0
+    margin = 4.302652729911275 * stddev / math.sqrt(3)
+    lower, upper = mean_delta - margin, mean_delta + margin
+    lower_text, upper_text = f"{lower:.6f}", f"{upper:.6f}"
+    max_pair_regression = max(0.0, -min(numeric_deltas))
+    mixed_passed = float(lower_text) > 0 and min(numeric_deltas) >= -0.05
+    selected_strategy = "mixed" if mixed_passed else "baseline"
+    selected_arm_rows = [(scores[(f"seed-pair-{pair_no}", selected_strategy)], pair_no)
+                         for pair_no in range(1, 4)]
+    selected_arm_rows.sort(key=lambda item: (item[0], item[1]))
+    selected_pair_id = f"seed-pair-{selected_arm_rows[1][1]}"
+    selected_validation_result = result_by_arm[(selected_pair_id, selected_strategy)]
+    selected_validation = selected_validation_result["event_data"]
+    selected_training_index = selected_validation["training_registration_event_index"]
+    selected_training_attempt_index = selected_validation["training_attempt_event_index"]
+    selected_artifact_event = next((event for event in events
+                                    if event["event_type"] == "competitive_training_artifact_v2"
+                                    and event["event_data"]["training_registration_event_index"]
+                                    == selected_training_index), None)
+    selected_validation_registration_index = selected_validation["validation_registration_event_index"]
+    selected_validation_attempt_index = selected_validation["validation_attempt_event_index"]
+    selected_training = events[selected_training_index]["event_data"]
+    selected_validation_registration = events[selected_validation_registration_index]["event_data"]
+    if selected_artifact_event is None:
+        raise RegistryError("selected strategy comparison lacks the selected checkpoint artifact attestation")
+    selected_candidate = {
+        "strategy_role": selected_strategy, "pair_id": selected_pair_id,
+        "training_registration_event_index": selected_training_index,
+        "training_registration_event_hash": events[selected_training_index]["event_hash"],
+        "training_attempt_event_index": selected_training_attempt_index,
+        "training_attempt_event_hash": events[selected_training_attempt_index]["event_hash"],
+        "training_artifact_event_index": selected_artifact_event["event_index"],
+        "training_artifact_event_hash": selected_artifact_event["event_hash"],
+        "validation_registration_event_index": selected_validation_registration_index,
+        "validation_registration_event_hash": events[selected_validation_registration_index]["event_hash"],
+        "validation_attempt_event_index": selected_validation_attempt_index,
+        "validation_attempt_event_hash": events[selected_validation_attempt_index]["event_hash"],
+        "validation_result_event_index": selected_validation_result["event_index"],
+        "validation_result_event_hash": selected_validation_result["event_hash"],
+        "checkpoint_sha256": selected_artifact_event["event_data"]["checkpoint_sha256"],
+        "output_manifest_sha256": selected_artifact_event["event_data"]["output_manifest_sha256"],
+        "training_run_uuid": selected_training["record"]["run_uuid"],
+        "validation_run_uuid": selected_validation_registration["record"]["run_uuid"],
+    }
+    return {"schema_id": "g008-strategy-comparison", "schema_version": 2,
+            "campaign_id": "g008-competitive-20261021-v2", "created_at_utc": created_at_utc,
+            "validation_result_event_indices": result_indices,
+            "validation_result_event_hashes": result_hashes,
+            "paired_score_deltas": deltas,
+            "mean_paired_score_delta": f"{mean_delta:.6f}",
+            "paired_score_ci95_lower": lower_text,
+            "paired_score_ci95_upper": upper_text,
+            "max_pair_regression": f"{max_pair_regression:.6f}",
+            "selected_strategy": selected_strategy, "selected_candidate": selected_candidate,
+            "mixed_strategy_passed": mixed_passed}
+
+
+def _validate_g008_v2_final_result_roster(final_record: dict[str, Any],
+                                          final_result: dict[str, Any]) -> None:
+    if (final_result.get("roster_sha256") != final_record.get("roster_sha256")
+            or final_result.get("opponent_code_sha256") != final_record.get("opponent_code_sha256")):
+        raise RegistryError("campaign v2 final result roster hashes differ from exact registered final roster")
+
+
+def _validate_g008_competitive_campaign_v2(events: list[dict[str, Any]]) -> None:
+    """Replay the v2 paired training, comparative validation, selection, and final lifecycle."""
+    indices = [i for i, event in enumerate(events)
+               if event["event_type"] == "g008_competitive_campaign_amendment_v2"]
+    if indices != [55] or len(events) < 56:
+        raise RegistryError("campaign v2 amendment must be unique and append to event 54")
+    _validate_recovery_cycle3_retry_suffix(events[:55])
+    amendment_event = events[55]
+    amendment = amendment_event["event_data"]
+    _validate_data("g008_competitive_campaign_amendment_v2", amendment)
+    exact_anchors = {
+        "prior_head_hash": events[54]["event_hash"],
+        "benchmark_artifact_event_hash": events[48]["event_hash"],
+        "benchmark_lock_event_hash": events[49]["event_hash"],
+        "benchmark_attestation_event_hash": events[50]["event_hash"],
+        "selected_training_registration_event_hash": events[29]["event_hash"],
+        "selected_training_attempt_event_hash": events[54]["event_hash"],
+    }
+    if (amendment_event["prev_event_hash"] != events[54]["event_hash"]
+            or any(amendment.get(key) != value for key, value in exact_anchors.items())):
+        raise RegistryError("campaign v2 provenance anchors do not match exact Cycle-3 events")
+    if (events[48]["event_type"] != "benchmark_artifact"
+            or events[49]["event_type"] != "registration_closed"
+            or events[50]["event_type"] != "benchmark_attestation"
+            or events[29]["event_type"] != "registration"
+            or events[54]["event_type"] != "workload_attempt"):
+        raise RegistryError("campaign v2 provenance references the wrong event types")
+    selected_reg, selected_attempt = events[29]["event_data"], events[54]["event_data"]
+    if (selected_reg["registration_kind"] != "train"
+            or amendment["selected_training_run_uuid"] != selected_reg["record"].get("run_uuid")
+            or selected_attempt.get("registration_event_index") != 29
+            or selected_attempt.get("registration_event_hash") != events[29]["event_hash"]
+            or selected_attempt.get("outcome") != "terminal"
+            or selected_attempt.get("terminal_status") != "COMPLETE"
+            or selected_attempt.get("assigned_version") != 17
+            or selected_attempt.get("implementation_variant_id") != "incumbent"
+            or events[50]["event_data"].get("selection_evidence", {}).get("selected_variant_id") != "incumbent"):
+        raise RegistryError("campaign v2 may use event54 only as historical selected-incumbent provenance")
+
+    cycle3 = events[27]["event_data"]
+    exploratory = events[42]["event_data"]
+    if events[42]["event_type"] != "exploratory_kernel_observation_v1":
+        raise RegistryError("campaign v2 requires the v15 exploratory usage observation")
+    prior_attempt_gpu = sum(event["event_data"].get("actual_gpu_seconds", 0)
+                            for event in events[33:55]
+                            if event["event_type"] == "workload_attempt"
+                            and event["event_data"].get("outcome") == "terminal")
+    prior_gpu = cycle3["project_gpu_seconds_before"] + prior_attempt_gpu + exploratory["actual_gpu_seconds"]
+    if prior_gpu != 9_242:
+        raise RegistryError("campaign v2 prior GPU use must count Cycle-3 attempts and v15 observation once")
+    if (prior_gpu + amendment["total_gpu_seconds_cap"]
+            > cycle3["compute_caps_gpu_seconds"]["project_experiment"]
+            or prior_gpu + amendment["total_gpu_seconds_cap"]
+            + amendment["protected_final_reserve_gpu_seconds"]
+            > cycle3["compute_caps_gpu_seconds"]["project_total"]):
+        raise RegistryError("campaign v2 compute reservations exceed project cap or protected reserve")
+    prior_output = cycle3["project_output_bytes_before"] + exploratory["output_bytes"]
+    prior_output += sum(event["event_data"].get("output_bytes", 0)
+                        for event in events[33:55]
+                        if event["event_type"] == "workload_attempt"
+                        and event["event_data"].get("outcome") == "terminal")
+    if prior_output != 27_225_325:
+        raise RegistryError("campaign v2 prior output use must count Cycle-3 attempts and v15 observation once")
+    campaign_output_reserve = sum(row["record"]["workload_output_bytes_cap"]
+                                  for row in amendment["records"])
+    if (campaign_output_reserve > amendment["output_caps_bytes"]["aggregate"]
+            or prior_output + campaign_output_reserve > cycle3["output_caps_bytes"]["aggregate"]):
+        raise RegistryError("campaign v2 output reservations exceed aggregate output cap")
+
+    prior_ids = {event["event_data"]["registration_id"] for event in events[:55]
+                 if event["event_type"] == "registration"}
+    prior_uuids = {event["event_data"]["record"].get("run_uuid") for event in events[:55]
+                   if event["event_type"] == "registration"}
+    registrations: dict[int, dict[str, Any]] = {}
+    for offset, row in enumerate(amendment["records"], 1):
+        record = dict(row["record"])
+        if row["registration_id"] in prior_ids or record["run_uuid"] in prior_uuids:
+            raise RegistryError("campaign v2 reuses a prior registration ID or UUID")
+        record.update({"competitive_campaign_v2_event_index": 55,
+                       "competitive_campaign_v2_event_hash": amendment_event["event_hash"]})
+        index = 55 + offset
+        if index >= len(events):
+            break
+        event, data = events[index], events[index]["event_data"]
+        if (event["event_type"] != "registration"
+                or data.get("registration_id") != row["registration_id"]
+                or data.get("registration_kind") != row["registration_kind"]
+                or data.get("cycle_id") != "g008-competitive-campaign-v2"
+                or data.get("record") != record
+                or hashlib.sha256(canonical_bytes(row["record"])).hexdigest() != row["record_sha256"]):
+            raise RegistryError("campaign v2 registration differs from frozen amendment binding")
+        registrations[index] = {"event": event, "record": record, "kind": row["registration_kind"]}
+    if len(registrations) != 13:
+        raise RegistryError("campaign v2 atomic batch must include all six train, six validation, and final registrations")
+
+    train_registration_indices = list(range(56, 62))
+    validation_registration_indices = list(range(62, 68))
+    final_registration_index = 68
+    training_by_identity: dict[tuple[str, str], int] = {}
+    validation_by_identity: dict[tuple[str, str], int] = {}
+    for ri in train_registration_indices:
+        record = registrations[ri]["record"]
+        training_by_identity[(record["pair_id"], record["strategy_role"])] = ri
+    for ri in validation_registration_indices:
+        record = registrations[ri]["record"]
+        validation_by_identity[(record["pair_id"], record["strategy_role"])] = ri
+    attempts: dict[str, dict[str, Any]] = {}
+    attempts_by_registration: dict[int, dict[str, Any]] = {}
+    attempt_history_by_registration: dict[int, list[dict[str, Any]]] = {}
+    effective_records = {ri: dict(registration["record"])
+                         for ri, registration in registrations.items()}
+    package_revision_event: dict[str, Any] | None = None
+    retry_budget_event: dict[str, Any] | None = None
+    package_revision_v2_event: dict[str, Any] | None = None
+    retry_budget_v2_event: dict[str, Any] | None = None
+    package_revision_v3_event: dict[str, Any] | None = None
+    retry_budget_v3_event: dict[str, Any] | None = None
+    package_revision_v4_event: dict[str, Any] | None = None
+    package_revision_v5_event: dict[str, Any] | None = None
+    dispatch_retry_v1_event: dict[str, Any] | None = None
+    dispatch_retry_v1_used = False
+    dispatch_retry_v2_event: dict[str, Any] | None = None
+    dispatch_retry_v2_used = False
+    dispatch_retry_v3_event: dict[str, Any] | None = None
+    dispatch_retry_v3_used = False
+    dispatch_retry_v4_event: dict[str, Any] | None = None
+    dispatch_retry_v4_used = False
+    dispatch_retry_v5_event: dict[str, Any] | None = None
+    dispatch_retry_v5_used = False
+    artifact_events: dict[int, int] = {}
+    validation_results: dict[int, int] = {}
+    latest_version = amendment["current_version_number"]
+    comparison_index: int | None = None
+    candidate_freeze_index: int | None = None
+    final_result_index: int | None = None
+
+    for index in range(69, len(events)):
+        event, typ, data = events[index], events[index]["event_type"], events[index]["event_data"]
+        if typ == "g008_competitive_campaign_v2_package_revision_v1":
+            _validate_data(typ, data)
+            if (package_revision_event is not None or artifact_events or validation_results
+                    or comparison_index is not None or candidate_freeze_index is not None
+                    or index == 0
+                    or events[index - 1]["event_type"] != "workload_attempt"
+                    or data["prior_head_hash"] != events[index - 1]["event_hash"]
+                    or data["failed_attempt_event_index"] != index - 1
+                    or data["failed_attempt_event_hash"] != events[index - 1]["event_hash"]
+                    or data["amendment_event_index"] != 55
+                    or data["amendment_event_hash"] != events[55]["event_hash"]):
+                raise RegistryError("campaign v2 package revision must append once at the exact failed-attempt head")
+            failed_i = data["failed_registration_event_index"]
+            failed_state = attempts_by_registration.get(failed_i)
+            failed = events[index - 1]["event_data"]
+            if (failed_state is None or failed_state["phase"] != "terminal"
+                    or failed_state["terminal_index"] != index - 1
+                    or failed["attempt_id"] not in attempts
+                    or failed.get("terminal_status") != "ERROR" or failed.get("outcome") != "terminal"
+                    or failed.get("registration_event_index") != failed_i
+                    or failed.get("registration_event_hash") != events[failed_i]["event_hash"]
+                    or data["failed_registration_event_hash"] != events[failed_i]["event_hash"]
+                    or failed.get("package_sha256") != effective_records[failed_i]["package_sha256"]
+                    or any(failed.get(key) != effective_records[failed_i][key] for key in (
+                        "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                        "trainer_sha256", "engine_sha256"))
+                    or failed_i not in train_registration_indices):
+                raise RegistryError("campaign v2 package revision must bind the exact registered terminal ERROR")
+            for binding in data["package_bindings"]:
+                ri = binding["registration_event_index"]
+                original = registrations[ri]["record"]
+                if (binding["registration_event_hash"] != events[ri]["event_hash"]
+                        or binding["package_sha256"] == effective_records[ri]["package_sha256"]
+                        or any(binding[key] != original[key] for key in (
+                            "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                            "trainer_sha256", "engine_sha256"))):
+                    raise RegistryError("campaign v2 package revision changed a component hash or kept the old package")
+            package_revision_event = event
+            for binding in data["package_bindings"]:
+                effective_records[binding["registration_event_index"]]["package_sha256"] = binding["package_sha256"]
+            continue
+
+        if typ == "g008_competitive_campaign_v2_retry_budget_v1":
+            _validate_data(typ, data)
+            if (retry_budget_event is not None or package_revision_event is None
+                    or index != package_revision_event["event_index"] + 1
+                    or event["prev_event_hash"] != package_revision_event["event_hash"]
+                    or data["prior_head_hash"] != package_revision_event["event_hash"]
+                    or data["package_revision_event_index"] != package_revision_event["event_index"]
+                    or data["package_revision_event_hash"] != package_revision_event["event_hash"]
+                    or data["failed_attempt_event_index"] != package_revision_event["event_data"]["failed_attempt_event_index"]
+                    or data["failed_attempt_event_hash"] != package_revision_event["event_data"]["failed_attempt_event_hash"]
+                    or data["failed_registration_event_index"] != package_revision_event["event_data"]["failed_registration_event_index"]
+                    or data["failed_registration_event_hash"] != package_revision_event["event_data"]["failed_registration_event_hash"]
+                    or data["project_experiment_gpu_seconds_cap"] != cycle3["compute_caps_gpu_seconds"]["project_experiment"]
+                    or data["project_total_gpu_seconds_cap"] != cycle3["compute_caps_gpu_seconds"]["project_total"]
+                    or data["protected_final_reserve_gpu_seconds"] != amendment["protected_final_reserve_gpu_seconds"]
+                    or prior_gpu + data["effective_total_gpu_seconds_cap"]
+                    > data["project_experiment_gpu_seconds_cap"]
+                    or prior_gpu + data["effective_total_gpu_seconds_cap"]
+                    + data["protected_final_reserve_gpu_seconds"] > data["project_total_gpu_seconds_cap"]):
+                raise RegistryError("campaign v2 retry budget must bind the sole failed attempt and preserve project caps/reserve")
+            retry_budget_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_package_revision_v2":
+            _validate_data(typ, data)
+            prior_retry = retry_budget_event["event_data"] if retry_budget_event is not None else None
+            failed = events[78]["event_data"] if len(events) > 78 else {}
+            binding = data["package_binding"]
+            original = registrations[56]["record"]
+            if (package_revision_v2_event is not None or retry_budget_v2_event is not None
+                    or package_revision_event is None or retry_budget_event is None
+                    or artifact_events or validation_results or comparison_index is not None
+                    or candidate_freeze_index is not None or index != 79
+                    or events[78]["event_type"] != "workload_attempt"
+                    or data["prior_head_hash"] != events[78]["event_hash"]
+                    or event["prev_event_hash"] != events[78]["event_hash"]
+                    or data["prior_package_revision_event_index"] != package_revision_event["event_index"]
+                    or data["prior_package_revision_event_hash"] != package_revision_event["event_hash"]
+                    or data["prior_retry_budget_event_index"] != retry_budget_event["event_index"]
+                    or data["prior_retry_budget_event_hash"] != retry_budget_event["event_hash"]
+                    or data["failed_registration_event_index"] != 56
+                    or data["failed_registration_event_hash"] != registrations[56]["event"]["event_hash"]
+                    or data["failed_attempt_event_index"] != 78
+                    or data["failed_attempt_event_hash"] != events[78]["event_hash"]
+                    or prior_retry is None or prior_retry["retry_attempt_id"] != "g008-v2-pair1-baseline-a2"
+                    or failed.get("attempt_id") != "g008-v2-pair1-baseline-a2"
+                    or failed.get("registration_event_index") != 56
+                    or failed.get("terminal_status") != "ERROR"
+                    or failed.get("actual_gpu_seconds") != 36
+                    or failed.get("assigned_version") != 19
+                    or binding["registration_event_index"] != 56
+                    or binding["registration_event_hash"] != registrations[56]["event"]["event_hash"]
+                    or binding["package_sha256"] == effective_records[56]["package_sha256"]
+                    or any(binding[key] != original[key] for key in (
+                        "config_sha256", "seed_plan_sha256", "backend_sha256", "engine_sha256"))):
+                raise RegistryError("campaign v2 second package revision must bind only the exact a2 ERROR and row 56")
+            package_revision_v2_event = event
+            effective_records[56].update({key: binding[key] for key in (
+                "package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                "backend_sha256", "trainer_sha256", "engine_sha256")})
+            continue
+
+        if typ == "g008_competitive_campaign_v2_retry_budget_v2":
+            _validate_data(typ, data)
+            prior_retry = retry_budget_event["event_data"] if retry_budget_event is not None else None
+            failed = events[78]["event_data"] if len(events) > 78 else {}
+            if (retry_budget_v2_event is not None or package_revision_v2_event is None
+                    or retry_budget_event is None
+                    or index != package_revision_v2_event["event_index"] + 1
+                    or event["prev_event_hash"] != package_revision_v2_event["event_hash"]
+                    or data["prior_head_hash"] != package_revision_v2_event["event_hash"]
+                    or data["package_revision_event_index"] != package_revision_v2_event["event_index"]
+                    or data["package_revision_event_hash"] != package_revision_v2_event["event_hash"]
+                    or data["prior_retry_budget_event_index"] != retry_budget_event["event_index"]
+                    or data["prior_retry_budget_event_hash"] != retry_budget_event["event_hash"]
+                    or data["failed_attempt_event_index"] != 78
+                    or data["failed_attempt_event_hash"] != events[78]["event_hash"]
+                    or data["failed_registration_event_index"] != 56
+                    or data["failed_registration_event_hash"] != registrations[56]["event"]["event_hash"]
+                    or prior_retry is None or prior_retry["retry_attempt_id"] != "g008-v2-pair1-baseline-a2"
+                    or failed.get("attempt_id") != "g008-v2-pair1-baseline-a2"
+                    or failed.get("terminal_status") != "ERROR"
+                    or data["additional_gpu_seconds"] != failed.get("actual_gpu_seconds")
+                    or data["project_experiment_gpu_seconds_cap"] != cycle3["compute_caps_gpu_seconds"]["project_experiment"]
+                    or data["project_total_gpu_seconds_cap"] != cycle3["compute_caps_gpu_seconds"]["project_total"]
+                    or data["protected_final_reserve_gpu_seconds"] != amendment["protected_final_reserve_gpu_seconds"]
+                    or prior_gpu + data["effective_total_gpu_seconds_cap"]
+                    > data["project_experiment_gpu_seconds_cap"]
+                    or prior_gpu + data["effective_total_gpu_seconds_cap"]
+                    + data["protected_final_reserve_gpu_seconds"] > data["project_total_gpu_seconds_cap"]):
+                raise RegistryError("campaign v2 second retry budget must bind the exact a2 ERROR and preserve caps")
+            retry_budget_v2_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_package_revision_v3":
+            _validate_data(typ, data)
+            failed_event = events[89] if len(events) > 89 else {}
+            failed = failed_event.get("event_data", {})
+            if (package_revision_v3_event is not None or retry_budget_v3_event is not None
+                    or any(ri in artifact_events for ri in range(57, 62))
+                    or validation_results or comparison_index is not None
+                    or candidate_freeze_index is not None or index != 90
+                    or event["prev_event_hash"] != events[89]["event_hash"]
+                    or data["prior_head_hash"] != events[89]["event_hash"]
+                    or data["prior_package_revision_event_index"] != 73
+                    or data["prior_package_revision_event_hash"] != events[73]["event_hash"]
+                    or data["prior_retry_budget_event_index"] != 74
+                    or data["prior_retry_budget_event_hash"] != events[74]["event_hash"]
+                    or data["prior_package_revision_v2_event_index"] != 79
+                    or data["prior_package_revision_v2_event_hash"] != events[79]["event_hash"]
+                    or data["prior_retry_budget_v2_event_index"] != 80
+                    or data["prior_retry_budget_v2_event_hash"] != events[80]["event_hash"]
+                    or data["failed_registration_event_index"] != 57
+                    or data["failed_registration_event_hash"] != registrations[57]["event"]["event_hash"]
+                    or data["failed_attempt_event_index"] != 89
+                    or data["failed_attempt_event_hash"] != events[89]["event_hash"]
+                    or failed.get("registration_event_index") != 57
+                    or failed.get("terminal_status") != "ERROR"
+                    or failed.get("actual_gpu_seconds") != 37
+                    or failed.get("assigned_version") != 21
+                    or failed.get("package_sha256") != effective_records[57]["package_sha256"]
+                    or any(failed.get(key) != effective_records[57][key] for key in (
+                        "source_sha256", "config_sha256", "seed_plan_sha256", "backend_sha256",
+                        "trainer_sha256", "engine_sha256"))):
+                raise RegistryError("campaign v2 third package revision must bind exact row-57 ERROR at head 89")
+            row56_fixed = effective_records[56]
+            for binding in data["package_bindings"]:
+                ri = binding["registration_event_index"]
+                original = registrations[ri]["record"]
+                if (binding["registration_event_hash"] != registrations[ri]["event"]["event_hash"]
+                        or binding["package_sha256"] == effective_records[ri]["package_sha256"]
+                        or any(binding[key] != original[key] for key in (
+                            "config_sha256", "seed_plan_sha256", "backend_sha256", "engine_sha256"))
+                        or binding["source_sha256"] != row56_fixed["source_sha256"]
+                        or binding["trainer_sha256"] != row56_fixed["trainer_sha256"]):
+                    raise RegistryError("campaign v2 third package revision changed a frozen row or trainer fix")
+                effective_records[ri].update({key: binding[key] for key in (
+                    "package_sha256", "source_sha256", "trainer_sha256")})
+            package_revision_v3_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_package_revision_v4":
+            _validate_data(typ, data)
+            rejected_attempts = [events[i] for i in data["rejected_attempt_event_indexes"]]
+            if (package_revision_v4_event is not None or index != 124
+                    or event["prev_event_hash"] != events[123]["event_hash"]
+                    or data["prior_head_hash"] != events[123]["event_hash"]
+                    or data["rejected_attempt_event_hashes"] != [item["event_hash"] for item in rejected_attempts]
+                    or any(item.get("event_type") != "workload_attempt"
+                           or item["event_data"].get("registration_event_index") != 62
+                           or item["event_data"].get("outcome") != "pre_assignment_rejected"
+                           or item["event_data"].get("actual_gpu_seconds") != 0
+                           or item["event_data"].get("assigned_version") is not None
+                           for item in rejected_attempts)
+                    or len(artifact_events) != 6 or validation_results or comparison_index is not None
+                    or candidate_freeze_index is not None):
+                raise RegistryError("campaign v2 validation package revision must follow both exact zero-cost row-62 rejections")
+            for binding in data["package_bindings"]:
+                ri = binding["registration_event_index"]
+                original = registrations[ri]["record"]
+                if (binding["registration_event_hash"] != registrations[ri]["event"]["event_hash"]
+                        or binding["package_sha256"] == original["package_sha256"]
+                        or any(binding[key] != original[key] for key in (
+                            "config_sha256", "seed_plan_sha256", "backend_sha256", "engine_sha256"))
+                        or binding["source_sha256"] != events[95]["event_data"]["source_sha256"]
+                        or binding["trainer_sha256"] != events[95]["event_data"]["trainer_sha256"]):
+                    raise RegistryError("campaign v2 validation package revision changed a frozen config or training source")
+                effective_records[ri].update({key: binding[key] for key in (
+                    "package_sha256", "source_sha256", "trainer_sha256")})
+            package_revision_v4_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_package_revision_v5":
+            _validate_data(typ, data)
+            rejected_attempts = [events[i] for i in data["rejected_attempt_event_indexes"]]
+            if (package_revision_v5_event is not None or index != 137
+                    or package_revision_v4_event is None
+                    or event["prev_event_hash"] != events[136]["event_hash"]
+                    or data["prior_head_hash"] != events[136]["event_hash"]
+                    or data["rejected_attempt_event_hashes"] != [item["event_hash"] for item in rejected_attempts]
+                    or any(item.get("event_type") != "workload_attempt"
+                           or item["event_data"].get("registration_event_index") != 62
+                           or item["event_data"].get("outcome") != "pre_assignment_rejected"
+                           or item["event_data"].get("actual_gpu_seconds") != 0
+                           or item["event_data"].get("assigned_version") is not None
+                           or item["event_data"].get("no_assignment_metadata", {}).get("post_push_recheck_current_version") != 26
+                           for item in rejected_attempts)
+                    or len(artifact_events) != 6 or validation_results or comparison_index is not None
+                    or candidate_freeze_index is not None):
+                raise RegistryError("campaign v2 fifth validation package revision must follow all exact zero-cost row-62 rejections")
+            for binding in data["package_bindings"]:
+                ri = binding["registration_event_index"]
+                original = registrations[ri]["record"]
+                if (binding["registration_event_hash"] != registrations[ri]["event"]["event_hash"]
+                        or binding["package_sha256"] == effective_records[ri]["package_sha256"]
+                        or any(binding[key] != original[key] for key in (
+                            "config_sha256", "seed_plan_sha256", "backend_sha256", "engine_sha256"))
+                        or binding["source_sha256"] != events[95]["event_data"]["source_sha256"]
+                        or binding["trainer_sha256"] != events[95]["event_data"]["trainer_sha256"]):
+                    raise RegistryError("campaign v2 fifth validation package revision changed frozen config or training source")
+                effective_records[ri].update({key: binding[key] for key in (
+                    "package_sha256", "source_sha256", "trainer_sha256")})
+            package_revision_v5_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_final_package_revision_v1":
+            _validate_data(typ, data)
+            registration = registrations[final_registration_index]
+            original = registration["record"]
+            freeze = events[candidate_freeze_index] if candidate_freeze_index is not None else {}
+            binding = data["package_binding"]
+            candidate_train_i = freeze.get("event_data", {}).get("train_attempt_event_index")
+            candidate_train = events[candidate_train_i] if isinstance(candidate_train_i, int) and candidate_train_i < len(events) else {}
+            if (data["prior_head_event_index"] != 170 or index != 171
+                    or event["prev_event_hash"] != events[170]["event_hash"]
+                    or data["prior_head_event_hash"] != events[170]["event_hash"]
+                    or data["candidate_freeze_event_index"] != 170
+                    or candidate_freeze_index != 170 or freeze.get("event_type") != "competitive_candidate_freeze_v2"
+                    or data["candidate_freeze_event_hash"] != freeze.get("event_hash")
+                    or data["candidate_checkpoint_sha256"] != freeze.get("event_data", {}).get("checkpoint_sha256")
+                    or data["candidate_train_attempt_event_index"] != candidate_train_i
+                    or data["candidate_train_attempt_event_hash"] != freeze.get("event_data", {}).get("train_attempt_event_hash")
+                    or candidate_train.get("event_type") != "workload_attempt"
+                    or candidate_train.get("event_hash") != data["candidate_train_attempt_event_hash"]
+                    or data["candidate_trainer_sha256"] != candidate_train.get("event_data", {}).get("trainer_sha256")
+                    or binding["trainer_sha256"] != data["candidate_trainer_sha256"]
+                    or data["registration_event_index"] != final_registration_index
+                    or data["registration_event_hash"] != registration["event"]["event_hash"]
+                    or binding["registration_event_index"] != final_registration_index
+                    or binding["registration_event_hash"] != registration["event"]["event_hash"]
+                    or data["original_package_sha256"] != original["package_sha256"]
+                    or data["original_source_sha256"] != original["source_sha256"]
+                    or binding["package_sha256"] == original["package_sha256"]
+                    or binding["source_sha256"] == original["source_sha256"]
+                    or any(binding[key] != original[key] for key in (
+                        "config_sha256", "seed_plan_sha256", "backend_sha256", "engine_sha256"))
+                    or final_registration_index in attempts_by_registration
+                    or any(item["event_type"] in {"workload_preflight", "workload_push_dispatched",
+                                                   "workload_push_accepted", "workload_attempt"}
+                           and item.get("event_data", {}).get("registration_event_index") == final_registration_index
+                           for item in events[:index])
+                    or final_result_index is not None):
+                raise RegistryError("campaign v2 final package revision must bind only the frozen, undispatched row-68 workload")
+            effective_records[final_registration_index].update({
+                "package_sha256": binding["package_sha256"],
+                "source_sha256": binding["source_sha256"],
+                "trainer_sha256": binding["trainer_sha256"],
+            })
+            continue
+
+        if typ == "g008_competitive_campaign_v2_retry_budget_v3":
+            _validate_data(typ, data)
+            prior_retry = retry_budget_v2_event["event_data"] if retry_budget_v2_event is not None else None
+            revision = package_revision_v3_event
+            if (retry_budget_v3_event is not None or revision is None or prior_retry is None
+                    or index != revision["event_index"] + 1
+                    or event["prev_event_hash"] != revision["event_hash"]
+                    or data["prior_head_hash"] != revision["event_hash"]
+                    or data["package_revision_event_index"] != revision["event_index"]
+                    or data["package_revision_event_hash"] != revision["event_hash"]
+                    or data["prior_retry_budget_event_index"] != retry_budget_v2_event["event_index"]
+                    or data["prior_retry_budget_event_hash"] != retry_budget_v2_event["event_hash"]
+                    or data["failed_attempt_event_index"] != 89
+                    or data["failed_attempt_event_hash"] != events[89]["event_hash"]
+                    or data["failed_registration_event_index"] != 57
+                    or data["failed_registration_event_hash"] != registrations[57]["event"]["event_hash"]
+                    or data["effective_training_gpu_seconds_cap"] != prior_retry["effective_training_gpu_seconds_cap"]
+                    or data["effective_evaluation_gpu_seconds_cap"] != prior_retry["effective_evaluation_gpu_seconds_cap"]
+                    or data["effective_total_gpu_seconds_cap"] != prior_retry["effective_total_gpu_seconds_cap"]
+                    or data["project_experiment_gpu_seconds_cap"] != prior_retry["project_experiment_gpu_seconds_cap"]
+                    or data["project_total_gpu_seconds_cap"] != prior_retry["project_total_gpu_seconds_cap"]
+                    or data["protected_final_reserve_gpu_seconds"] != prior_retry["protected_final_reserve_gpu_seconds"]
+                    or data["additional_gpu_seconds"] != events[89]["event_data"]["actual_gpu_seconds"]
+                    or prior_gpu + data["effective_total_gpu_seconds_cap"]
+                       > data["project_experiment_gpu_seconds_cap"]
+                    or prior_gpu + data["effective_total_gpu_seconds_cap"]
+                       + data["protected_final_reserve_gpu_seconds"] > data["project_total_gpu_seconds_cap"]):
+                raise RegistryError("campaign v2 third retry budget must preserve caps and bind exact row-57 ERROR")
+            retry_budget_v3_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_dispatch_retry_v1":
+            _validate_data(typ, data)
+            rejected = events[data["rejected_attempt_event_index"]]
+            terminal = rejected.get("event_data", {})
+            preflight = events[117].get("event_data", {}) if len(events) > 117 else {}
+            no_assignment = terminal.get("no_assignment_metadata", {})
+            if (dispatch_retry_v1_event is not None or dispatch_retry_v1_used
+                    or index != 120 or event["prev_event_hash"] != events[119]["event_hash"]
+                    or data["prior_head_hash"] != events[119]["event_hash"]
+                    or data["rejected_attempt_event_index"] != 119
+                    or data["rejected_attempt_event_hash"] != events[119]["event_hash"]
+                    or rejected.get("event_type") != "workload_attempt"
+                    or terminal.get("attempt_id") != "g008-v2-validation-seed-pair-1-baseline-a1"
+                    or terminal.get("registration_event_index") != 62
+                    or terminal.get("outcome") != "pre_assignment_rejected"
+                    or terminal.get("actual_gpu_seconds") != 0 or terminal.get("output_bytes") != 0
+                    or terminal.get("assigned_version") is not None
+                    or no_assignment.get("no_version_assigned") is not True
+                    or no_assignment.get("pre_push_current_version") != 26
+                    or no_assignment.get("post_push_current_version") != 26
+                    or no_assignment.get("post_push_recheck_current_version") != 26
+                    or no_assignment.get("verification_source") != "pinned Kaggle SDK get_kernel"
+                    or no_assignment.get("metadata_check_count") != 2
+                    or preflight.get("no_outside_writer_confirmed") is not True
+                    or data["registration_event_hash"] != registrations[62]["event"]["event_hash"]
+                    or data["expected_current_version"] != latest_version):
+                raise RegistryError("campaign v2 dispatch retry must bind exact no-assignment evidence and row-62 preflight")
+            dispatch_retry_v1_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_dispatch_retry_v2":
+            _validate_data(typ, data)
+            rejected = events[123]
+            terminal = rejected.get("event_data", {})
+            if (dispatch_retry_v2_event is not None or dispatch_retry_v2_used or index != 125
+                    or package_revision_v4_event is None or package_revision_v4_event["event_index"] != 124
+                    or event["prev_event_hash"] != events[124]["event_hash"]
+                    or data["prior_head_hash"] != events[124]["event_hash"]
+                    or data["package_revision_event_hash"] != events[124]["event_hash"]
+                    or data["rejected_attempt_event_hash"] != rejected["event_hash"]
+                    or terminal.get("attempt_id") != "g008-v2-validation-seed-pair-1-baseline-a2"
+                    or terminal.get("registration_event_index") != 62
+                    or terminal.get("outcome") != "pre_assignment_rejected"
+                    or terminal.get("actual_gpu_seconds") != 0 or terminal.get("assigned_version") is not None
+                    or terminal.get("no_assignment_metadata", {}).get("post_push_recheck_current_version") != 26
+                    or data["registration_event_hash"] != registrations[62]["event"]["event_hash"]
+                    or data["expected_current_version"] != latest_version):
+                raise RegistryError("campaign v2 second dispatch retry must bind exact row-62 no-assignment and revised packages")
+            dispatch_retry_v2_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_dispatch_retry_v3":
+            _validate_data(typ, data)
+            rejected = events[128]
+            terminal = rejected.get("event_data", {})
+            if (dispatch_retry_v3_event is not None or dispatch_retry_v3_used or index != 129
+                    or package_revision_v4_event is None
+                    or event["prev_event_hash"] != events[128]["event_hash"]
+                    or data["prior_head_hash"] != events[128]["event_hash"]
+                    or data["package_revision_event_hash"] != package_revision_v4_event["event_hash"]
+                    or data["rejected_attempt_event_hash"] != rejected["event_hash"]
+                    or terminal.get("attempt_id") != "g008-v2-validation-seed-pair-1-baseline-a3"
+                    or terminal.get("registration_event_index") != 62
+                    or terminal.get("outcome") != "pre_assignment_rejected"
+                    or terminal.get("rejection_evidence", {}).get("http_status") != 400
+                    or terminal.get("actual_gpu_seconds") != 0 or terminal.get("assigned_version") is not None
+                    or terminal.get("no_assignment_metadata", {}).get("post_push_recheck_current_version") != 26
+                    or data["registration_event_hash"] != registrations[62]["event"]["event_hash"]
+                    or data["expected_current_version"] != latest_version):
+                raise RegistryError("campaign v2 third dispatch retry must bind exact row-62 HTTP-400 rejection")
+            dispatch_retry_v3_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_dispatch_retry_v4":
+            _validate_data(typ, data)
+            rejected = events[132]
+            terminal = rejected.get("event_data", {})
+            if (dispatch_retry_v4_event is not None or dispatch_retry_v4_used or index != 133
+                    or package_revision_v4_event is None
+                    or event["prev_event_hash"] != events[132]["event_hash"]
+                    or data["prior_head_hash"] != events[132]["event_hash"]
+                    or data["package_revision_event_hash"] != package_revision_v4_event["event_hash"]
+                    or data["rejected_attempt_event_hash"] != rejected["event_hash"]
+                    or terminal.get("attempt_id") != "g008-v2-validation-seed-pair-1-baseline-a4"
+                    or terminal.get("registration_event_index") != 62
+                    or terminal.get("outcome") != "pre_assignment_rejected"
+                    or terminal.get("rejection_evidence", {}).get("http_status") != 400
+                    or terminal.get("actual_gpu_seconds") != 0 or terminal.get("assigned_version") is not None
+                    or terminal.get("no_assignment_metadata", {}).get("post_push_recheck_current_version") != 26
+                    or data["registration_event_hash"] != registrations[62]["event"]["event_hash"]
+                    or data["expected_current_version"] != latest_version):
+                raise RegistryError("campaign v2 fourth dispatch retry must bind exact row-62 HTTP-400 rejection")
+            dispatch_retry_v4_event = event
+            continue
+
+        if typ == "g008_competitive_campaign_v2_dispatch_retry_v5":
+            _validate_data(typ, data)
+            rejected = events[136]
+            terminal = rejected.get("event_data", {})
+            if (dispatch_retry_v5_event is not None or dispatch_retry_v5_used or index != 138
+                    or package_revision_v5_event is None or package_revision_v5_event["event_index"] != 137
+                    or event["prev_event_hash"] != events[137]["event_hash"]
+                    or data["prior_head_hash"] != events[137]["event_hash"]
+                    or data["package_revision_event_hash"] != events[137]["event_hash"]
+                    or data["rejected_attempt_event_hash"] != rejected["event_hash"]
+                    or terminal.get("attempt_id") != "g008-v2-validation-seed-pair-1-baseline-a5"
+                    or terminal.get("registration_event_index") != 62
+                    or terminal.get("outcome") != "pre_assignment_rejected"
+                    or terminal.get("rejection_evidence", {}).get("http_status") != 400
+                    or terminal.get("actual_gpu_seconds") != 0 or terminal.get("assigned_version") is not None
+                    or terminal.get("no_assignment_metadata", {}).get("post_push_recheck_current_version") != 26
+                    or data["registration_event_hash"] != registrations[62]["event"]["event_hash"]
+                    or data["expected_current_version"] != latest_version):
+                raise RegistryError("campaign v2 fifth dispatch retry must bind exact row-62 HTTP-400 rejection")
+            dispatch_retry_v5_event = event
+            continue
+
+        if typ == "workload_preflight":
+            ri, aid = data["registration_event_index"], data["attempt_id"]
+            registration = registrations.get(ri)
+            prior_state = attempts_by_registration.get(ri)
+            retry_allowed = (prior_state is not None and prior_state["phase"] == "terminal"
+                             and prior_state["terminal"].get("terminal_status") == "ERROR"
+                             and package_revision_event is not None
+                             and retry_budget_event is not None
+                             and index == retry_budget_event["event_index"] + 1
+                             and aid == retry_budget_event["event_data"]["retry_attempt_id"]
+                             and ri == retry_budget_event["event_data"]["failed_registration_event_index"]
+                             and len(attempt_history_by_registration.get(ri, [])) == 1)
+            retry_v2_allowed = (prior_state is not None and prior_state["phase"] == "terminal"
+                                and prior_state["terminal"].get("terminal_status") == "ERROR"
+                                and package_revision_v2_event is not None
+                                and retry_budget_v2_event is not None
+                                and index == retry_budget_v2_event["event_index"] + 1
+                                and aid == retry_budget_v2_event["event_data"]["retry_attempt_id"]
+                                and ri == 56
+                                and len(attempt_history_by_registration.get(ri, [])) == 2
+                                and prior_state["terminal_index"] == 78)
+            retry_v3_allowed = (prior_state is not None and prior_state["phase"] == "terminal"
+                                and prior_state["terminal"].get("terminal_status") == "ERROR"
+                                and retry_budget_v3_event is not None
+                                and index == retry_budget_v3_event["event_index"] + 1
+                                and aid == retry_budget_v3_event["event_data"]["retry_attempt_id"]
+                                and ri == 57
+                                and len(attempt_history_by_registration.get(ri, [])) == 1
+                                and prior_state["terminal_index"] == 89)
+            dispatch_retry_allowed = (prior_state is not None and prior_state["phase"] == "terminal"
+                                      and prior_state["terminal"].get("outcome") == "pre_assignment_rejected"
+                                      and dispatch_retry_v1_event is not None and not dispatch_retry_v1_used
+                                      and index == dispatch_retry_v1_event["event_index"] + 1
+                                      and aid == dispatch_retry_v1_event["event_data"]["retry_attempt_id"]
+                                      and ri == dispatch_retry_v1_event["event_data"]["registration_event_index"]
+                                      and len(attempt_history_by_registration.get(ri, [])) == 1
+                                      and prior_state["terminal_index"] == 119)
+            dispatch_retry_v2_allowed = (prior_state is not None and prior_state["phase"] == "terminal"
+                                         and prior_state["terminal"].get("outcome") == "pre_assignment_rejected"
+                                         and dispatch_retry_v2_event is not None and not dispatch_retry_v2_used
+                                         and index == dispatch_retry_v2_event["event_index"] + 1
+                                         and aid == dispatch_retry_v2_event["event_data"]["retry_attempt_id"]
+                                         and ri == 62
+                                         and len(attempt_history_by_registration.get(ri, [])) == 2
+                                         and prior_state["terminal_index"] == 123)
+            dispatch_retry_v3_allowed = (prior_state is not None and prior_state["phase"] == "terminal"
+                                         and prior_state["terminal"].get("outcome") == "pre_assignment_rejected"
+                                         and dispatch_retry_v3_event is not None and not dispatch_retry_v3_used
+                                         and index == dispatch_retry_v3_event["event_index"] + 1
+                                         and aid == dispatch_retry_v3_event["event_data"]["retry_attempt_id"]
+                                         and ri == 62
+                                         and len(attempt_history_by_registration.get(ri, [])) == 3
+                                         and prior_state["terminal_index"] == 128)
+            dispatch_retry_v4_allowed = (prior_state is not None and prior_state["phase"] == "terminal"
+                                         and prior_state["terminal"].get("outcome") == "pre_assignment_rejected"
+                                         and dispatch_retry_v4_event is not None and not dispatch_retry_v4_used
+                                         and index == dispatch_retry_v4_event["event_index"] + 1
+                                         and aid == dispatch_retry_v4_event["event_data"]["retry_attempt_id"]
+                                         and ri == 62
+                                         and len(attempt_history_by_registration.get(ri, [])) == 4
+                                         and prior_state["terminal_index"] == 132)
+            dispatch_retry_v5_allowed = (prior_state is not None and prior_state["phase"] == "terminal"
+                                         and prior_state["terminal"].get("outcome") == "pre_assignment_rejected"
+                                         and dispatch_retry_v5_event is not None and not dispatch_retry_v5_used
+                                         and index == dispatch_retry_v5_event["event_index"] + 1
+                                         and aid == dispatch_retry_v5_event["event_data"]["retry_attempt_id"]
+                                         and ri == 62
+                                         and len(attempt_history_by_registration.get(ri, [])) == 5
+                                         and prior_state["terminal_index"] == 136)
+            if (registration is None or aid in attempts
+                    or (prior_state is not None and not (retry_allowed or retry_v2_allowed or retry_v3_allowed
+                                                         or dispatch_retry_allowed or dispatch_retry_v2_allowed
+                                                         or dispatch_retry_v3_allowed or dispatch_retry_v4_allowed
+                                                         or dispatch_retry_v5_allowed))
+                    or (retry_budget_event is not None and index == retry_budget_event["event_index"] + 1
+                        and not retry_allowed)
+                    or (retry_budget_v2_event is not None
+                        and index == retry_budget_v2_event["event_index"] + 1 and not retry_v2_allowed)
+                    or (retry_budget_v3_event is not None
+                        and index == retry_budget_v3_event["event_index"] + 1 and not retry_v3_allowed)
+                    or data.get("cycle_id") != "g008-competitive-campaign-v2"
+                    or data["registration_event_hash"] != events[ri]["event_hash"]
+                    or data["registration_id"] != events[ri]["event_data"]["registration_id"]
+                    or data["kernel_id"] != amendment["kernel_id"]
+                    or data["expected_current_version"] != latest_version
+                    or data["session_timeout_seconds"] != registration["record"]["session_timeout_seconds"]
+                    or data["lock_head_hash"] != events[49]["event_hash"]):
+                raise RegistryError("campaign v2 preflight changed registration, version, kernel, or benchmark lock")
+            record, kind = registration["record"], registration["kind"]
+            if kind in {"train", "validation", "final"}:
+                record = effective_records[ri]
+                if retry_v2_allowed and data["expected_current_version"] != 19:
+                    raise RegistryError("campaign v2 a3 retry must use exact version-19 cursor")
+            if kind == "train":
+                if data["implementation_variant_id"] != record["strategy_role"]:
+                    raise RegistryError("campaign v2 training changed the paired strategy arm")
+            elif kind == "validation":
+                if (len(artifact_events) != 6 or len([state for state in attempts_by_registration.values()
+                                                     if state["record"]["registration_kind"] == "train"
+                                                     and state["phase"] == "terminal"
+                                                     and state["terminal"]["terminal_status"] == "COMPLETE"]) != 6
+                        or data["implementation_variant_id"] != "frozen-candidate"):
+                    raise RegistryError("campaign v2 per-arm validation requires six attested COMPLETE checkpoints")
+                train_ri = training_by_identity[(record["pair_id"], record["strategy_role"])]
+                train_record = registrations[train_ri]["record"]
+                train_row = amendment["records"][train_ri - 56]
+                if (record["training_registration_id"] != events[train_ri]["event_data"]["registration_id"]
+                        or record["training_run_uuid"] != train_record["run_uuid"]
+                        or record["training_record_sha256"] != train_row["record_sha256"]):
+                    raise RegistryError("campaign v2 validation registration changed exact training mapping")
+                artifact_i = artifact_events.get(train_ri)
+                if artifact_i is None:
+                    raise RegistryError("campaign v2 validation lacks exact training artifact attestation")
+            elif kind == "final":
+                if (comparison_index is None or candidate_freeze_index is None
+                        or data["implementation_variant_id"] != "frozen-candidate"):
+                    raise RegistryError("campaign v2 final preflight requires completed comparison and candidate freeze")
+            for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                        "backend_sha256", "trainer_sha256", "engine_sha256"):
+                if data[key] != record[key]:
+                    raise RegistryError("campaign v2 preflight changed frozen package/component hash")
+            state = {"phase": "preflight", "last_index": index, "registration_index": ri,
+                     "record": {**record, "registration_kind": kind}, "preflight": data,
+                     "preflight_hash": event["event_hash"]}
+            attempts[aid] = state
+            attempts_by_registration[ri] = state
+            if dispatch_retry_allowed:
+                dispatch_retry_v1_used = True
+            if dispatch_retry_v2_allowed:
+                dispatch_retry_v2_used = True
+            if dispatch_retry_v3_allowed:
+                dispatch_retry_v3_used = True
+            if dispatch_retry_v4_allowed:
+                dispatch_retry_v4_used = True
+            if dispatch_retry_v5_allowed:
+                dispatch_retry_v5_used = True
+            continue
+
+        if typ in {"workload_push_dispatched", "workload_push_accepted", "workload_attempt"}:
+            aid = data["attempt_id"]
+            state = attempts.get(aid)
+            if (state is None or state["phase"] == "terminal" or index != state["last_index"] + 1
+                    or data.get("cycle_id") != "g008-competitive-campaign-v2"
+                    or data["registration_event_index"] != state["registration_index"]
+                    or data["registration_event_hash"] != events[state["registration_index"]]["event_hash"]):
+                raise RegistryError("campaign v2 attempt lifecycle is not contiguous or changed registration")
+            if typ == "workload_push_dispatched":
+                if (state["phase"] != "preflight" or data["preflight_event_index"] != state["last_index"]
+                        or data["preflight_event_hash"] != state["preflight_hash"]
+                        or any(data[key] != state["preflight"][key] for key in (
+                            "package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256"))):
+                    raise RegistryError("campaign v2 dispatch must immediately bind exact preflight")
+                state.update(phase="dispatched", last_index=index, dispatch_hash=event["event_hash"])
+            elif typ == "workload_push_accepted":
+                if (state["phase"] != "dispatched" or data["dispatch_event_hash"] != state["dispatch_hash"]
+                        or data["preflight_event_index"] != index - 2
+                        or data["implementation_variant_id"] != state["preflight"]["implementation_variant_id"]
+                        or data["lock_head_hash"] != state["preflight"]["lock_head_hash"]
+                        or data["assigned_version"] <= latest_version):
+                    raise RegistryError("campaign v2 acceptance changed exact dispatch or version cursor")
+                state.update(phase="accepted", last_index=index, version=data["assigned_version"])
+            else:
+                rejected = data["outcome"] == "pre_assignment_rejected"
+                if rejected:
+                    proof = data["no_assignment_metadata"]
+                    if (state["phase"] != "dispatched" or data["assigned_version"] is not None
+                            or data["actual_gpu_seconds"] != 0 or data["output_bytes"] != 0
+                            or proof.get("no_version_assigned") is not True
+                            or proof.get("pre_push_current_version") != state["preflight"]["expected_current_version"]
+                            or proof.get("post_push_current_version") != state["preflight"]["expected_current_version"]
+                            or proof.get("post_push_recheck_current_version") != state["preflight"]["expected_current_version"]
+                            or proof.get("metadata_check_count") != 2
+                            or proof.get("verification_source") != "pinned Kaggle SDK get_kernel"):
+                        raise RegistryError("campaign v2 ambiguous dispatch lacks exact two-observation no-assignment proof")
+                elif (state["phase"] != "accepted" or data["outcome"] != "terminal"
+                        or data["accepted_event_index"] != state["last_index"]
+                        or data["assigned_version"] != state["version"]
+                        or any(data[key] != state["preflight"][key] for key in (
+                            "package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                            "backend_sha256", "trainer_sha256", "engine_sha256"))
+                        or data["actual_gpu_seconds"] > state["record"]["workload_gpu_seconds_cap"]
+                        or data["output_bytes"] > state["record"]["workload_output_bytes_cap"]):
+                    raise RegistryError("campaign v2 terminal attempt exceeds reservation or accepted push")
+                state.update(phase="terminal", last_index=index, terminal_index=index, terminal=data)
+                if not rejected:
+                    latest_version = data["assigned_version"]
+                attempt_history_by_registration.setdefault(state["registration_index"], []).append(state)
+            continue
+
+        if typ == "competitive_training_artifact_v2":
+            ri, attempt_i = data["training_registration_event_index"], data["training_attempt_event_index"]
+            state = attempts_by_registration.get(ri)
+            if (ri not in train_registration_indices or state is None or state["phase"] != "terminal"
+                    or state["terminal"].get("terminal_status") != "COMPLETE"
+                    or state["terminal_index"] != index - 1 or attempt_i != state["terminal_index"]
+                    or data["training_registration_event_hash"] != events[ri]["event_hash"]
+                    or data["training_attempt_event_hash"] != events[attempt_i]["event_hash"]
+                    or data["step"] != state["record"]["update_budget"]
+                    or data["package_sha256"] != state["record"]["package_sha256"]
+                    or data["source_sha256"] != state["record"]["source_sha256"]
+                    or data["config_sha256"] != state["record"]["config_sha256"]
+                    or data["schedule_descriptor_sha256"] != state["record"]["schedule_descriptor_sha256"]
+                    or ri in artifact_events):
+                raise RegistryError("campaign v2 training artifact must immediately attest exact COMPLETE training output")
+            artifact_events[ri] = index
+            continue
+
+        if typ == "competitive_validation_result_v2":
+            vri, trai = data["validation_registration_event_index"], data["training_registration_event_index"]
+            validation_state = attempts_by_registration.get(vri)
+            training_state = attempts_by_registration.get(trai)
+            identity = (registrations[vri]["record"]["pair_id"], registrations[vri]["record"]["strategy_role"])
+            artifact_i = artifact_events.get(trai)
+            if (vri not in validation_registration_indices or trai != training_by_identity.get(identity)
+                    or validation_state is None or validation_state["phase"] != "terminal"
+                    or validation_state["terminal"].get("terminal_status") != "COMPLETE"
+                    or validation_state["terminal_index"] != index - 1
+                    or training_state is None or training_state["phase"] != "terminal"
+                    or training_state["terminal"].get("terminal_status") != "COMPLETE"
+                    or artifact_i is None or vri in validation_results
+                    or data["validation_registration_event_hash"] != events[vri]["event_hash"]
+                    or data["validation_attempt_event_index"] != validation_state["terminal_index"]
+                    or data["validation_attempt_event_hash"] != events[validation_state["terminal_index"]]["event_hash"]
+                    or data["training_registration_event_hash"] != events[trai]["event_hash"]
+                    or data["training_attempt_event_index"] != training_state["terminal_index"]
+                    or data["training_attempt_event_hash"] != events[training_state["terminal_index"]]["event_hash"]
+                    or data["training_artifact_event_index"] != artifact_i
+                    or data["training_artifact_event_hash"] != events[artifact_i]["event_hash"]
+                    or data["checkpoint_sha256"] != events[artifact_i]["event_data"]["checkpoint_sha256"]
+                    or data["opponent_id"] != "g007-step-300"):
+                raise RegistryError("campaign v2 validation result changed exact checkpoint/roster/run provenance")
+            validation_results[vri] = index
+            continue
+
+        if typ == "competitive_strategy_comparison_v2":
+            expected = _competitive_v2_comparison_payload(events[:index], created_at_utc=data["created_at_utc"])
+            if comparison_index is not None or index == 0 or events[index - 1]["event_type"] != "competitive_validation_result_v2" or data != expected:
+                raise RegistryError("campaign v2 strategy comparison must recompute all six paired validation results")
+            comparison_index = index
+            continue
+
+        if typ == "competitive_candidate_freeze_v2":
+            comparison = events[comparison_index]["event_data"] if comparison_index is not None else None
+            selected = comparison.get("selected_candidate") if comparison else None
+            if (candidate_freeze_index is not None or comparison_index != index - 1 or selected is None
+                    or data["strategy_comparison_event_index"] != comparison_index
+                    or data["strategy_comparison_event_hash"] != events[comparison_index]["event_hash"]):
+                raise RegistryError("campaign v2 candidate freeze must immediately follow frozen paired comparison")
+            selected_bindings = {
+                "candidate_registration_event_index": selected["training_registration_event_index"],
+                "candidate_registration_event_hash": selected["training_registration_event_hash"],
+                "train_attempt_event_index": selected["training_attempt_event_index"],
+                "train_attempt_event_hash": selected["training_attempt_event_hash"],
+                "training_artifact_event_index": selected["training_artifact_event_index"],
+                "training_artifact_event_hash": selected["training_artifact_event_hash"],
+                "validation_registration_event_index": selected["validation_registration_event_index"],
+                "validation_registration_event_hash": selected["validation_registration_event_hash"],
+                "validation_attempt_event_index": selected["validation_attempt_event_index"],
+                "validation_attempt_event_hash": selected["validation_attempt_event_hash"],
+                "validation_result_event_index": selected["validation_result_event_index"],
+                "validation_result_event_hash": selected["validation_result_event_hash"],
+                "checkpoint_sha256": selected["checkpoint_sha256"],
+                "checkpoint_artifact_sha256": selected["checkpoint_sha256"],
+                "output_manifest_sha256": selected["output_manifest_sha256"],
+            }
+            if any(data.get(key) != value for key, value in selected_bindings.items()):
+                raise RegistryError("campaign v2 candidate freeze changed deterministic median checkpoint selection")
+            candidate_freeze_index = index
+            continue
+
+        if typ == "competitive_final_result_v2":
+            _validate_g008_v2_final_result_roster(
+                registrations[final_registration_index]["record"], data)
+            if (candidate_freeze_index is None or final_result_index is not None or index != len(events) - 1
+                    or data["candidate_freeze_event_index"] != candidate_freeze_index
+                    or data["candidate_freeze_event_hash"] != events[candidate_freeze_index]["event_hash"]
+                    or data["final_registration_event_index"] != final_registration_index
+                    or data["final_registration_event_hash"] != events[final_registration_index]["event_hash"]):
+                raise RegistryError("campaign v2 final result must bind the pre-registered holdout after candidate freeze")
+            final_state = attempts_by_registration.get(final_registration_index)
+            if (final_state is None or final_state["phase"] != "terminal"
+                    or final_state["terminal"].get("terminal_status") != "COMPLETE"
+                    or data["final_attempt_event_index"] != final_state["terminal_index"]
+                    or data["final_attempt_event_hash"] != events[final_state["terminal_index"]]["event_hash"]
+                    or data["candidate_checkpoint_sha256"] != events[candidate_freeze_index]["event_data"]["checkpoint_sha256"]
+                    or data["opponent_id"] != "open-space"):
+                raise RegistryError("campaign v2 final result changed exact COMPLETE holdout or selected checkpoint")
+            final_result_index = index
+            continue
+
+        if typ in {"competitive_validation_result", "competitive_candidate_freeze", "competitive_final_result"}:
+            raise RegistryError("campaign v2 cannot use v1 lifecycle result events")
+        raise RegistryError("event type is not permitted in campaign v2 lifecycle")
+
+    if final_result_index is not None and final_result_index != len(events) - 1:
+        raise RegistryError("campaign v2 final result is the terminal event")
+    for state in attempts.values():
+        if state["phase"] != "terminal" and state["last_index"] != len(events) - 1:
+            raise RegistryError("pending campaign v2 workload blocks later events")
+    if len(artifact_events) > 0 and len(artifact_events) < 6 and any(
+            ri in attempts_by_registration and attempts_by_registration[ri]["phase"] == "terminal"
+            and attempts_by_registration[ri]["record"]["registration_kind"] != "train"
+            for ri in attempts_by_registration):
+        raise RegistryError("campaign v2 validation cannot start before all six training artifacts")
+    actual = {"train": 0, "validation": 0, "final": 0}
+    reserved = {"train": 0, "validation": 0, "final": 0}
+    for ri, registration in registrations.items():
+        kind = registration["kind"]
+        state = attempts_by_registration.get(ri)
+        history = attempt_history_by_registration.get(ri, [])
+        spent = sum(item["terminal"]["actual_gpu_seconds"] for item in history)
+        actual[kind] += spent
+        if state is not None and state["phase"] == "terminal":
+            continue
+        if state is not None:
+            if (kind == "train" and retry_budget_v3_event is not None
+                    and ri == retry_budget_v3_event["event_data"]["failed_registration_event_index"]
+                    and len(history) == 1):
+                reserved[kind] += retry_budget_v3_event["event_data"]["retry_timeout_seconds"]
+            elif kind == "train" and retry_budget_v2_event is not None and len(history) == 2:
+                reserved[kind] += retry_budget_v2_event["event_data"]["retry_timeout_seconds"]
+            elif kind == "train" and retry_budget_event is not None and len(history) == 1:
+                reserved[kind] += retry_budget_event["event_data"]["retry_timeout_seconds"]
+            else:
+                reserved[kind] += max(0, registration["record"]["workload_gpu_seconds_cap"] - spent)
+        else:
+            reserved[kind] += registration["record"]["session_timeout_seconds"]
+    effective_budget = retry_budget_v3_event or retry_budget_v2_event or retry_budget_event
+    training_cap = (effective_budget["event_data"]["effective_training_gpu_seconds_cap"]
+                    if effective_budget is not None else amendment["training_gpu_seconds_cap"])
+    evaluation_cap = (effective_budget["event_data"]["effective_evaluation_gpu_seconds_cap"]
+                      if effective_budget is not None else amendment["evaluation_gpu_seconds_cap"])
+    total_cap = (effective_budget["event_data"]["effective_total_gpu_seconds_cap"]
+                 if effective_budget is not None else amendment["total_gpu_seconds_cap"])
+    if (actual["train"] + reserved["train"] > training_cap
+            or actual["validation"] + actual["final"] + reserved["validation"] + reserved["final"]
+            > evaluation_cap
+            or sum(actual.values()) + sum(reserved.values()) > total_cap):
+        raise RegistryError("campaign v2 actual use/reservations exceed frozen cumulative budget")
 
 
 class Registry:
@@ -2298,9 +4947,12 @@ class Registry:
         with lock_path.open("a+b") as lock:
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
             events = _read(self.path)
-            if (event_type == "recovery_cycle_amendment_v2"
-                    or (event_type == "registration" and event_data.get("cycle_id") == "g008-recovery-cycle-3")):
-                raise RegistryError("Cycle-3 amendment and registrations must use the atomic batch API")
+            if (event_type in {"recovery_cycle_amendment_v2", "g008_competitive_campaign_amendment_v1",
+                               "g008_competitive_campaign_amendment_v2"}
+                    or (event_type == "registration" and event_data.get("cycle_id") in {
+                        "g008-recovery-cycle-3", "g008-competitive-campaign-v1",
+                        "g008-competitive-campaign-v2"})):
+                raise RegistryError("amendments and campaign registrations must use their atomic batch API")
             _validate_data(event_type, event_data)
             locked = any(e["event_type"] == "registration_closed" for e in events)
             if event_type == "registration" and locked:
@@ -2343,7 +4995,11 @@ class Registry:
             payload = _payload(len(events), event_type, event_data, prev)
             event = {**payload, "event_hash": _event_hash(payload)}
             candidate_events = events + [event]
-            if any(e["event_type"] == "recovery_cycle_amendment_v2" for e in candidate_events):
+            if any(e["event_type"] == "g008_competitive_campaign_amendment_v2" for e in candidate_events):
+                _validate_g008_competitive_campaign_v2(candidate_events)
+            elif any(e["event_type"] == "g008_competitive_campaign_amendment_v1" for e in candidate_events):
+                _validate_g008_competitive_campaign(candidate_events)
+            elif any(e["event_type"] == "recovery_cycle_amendment_v2" for e in candidate_events):
                 _validate_recovery_cycle3_suffix(candidate_events)
             elif any(e["event_type"] == "recovery_cycle_amendment" for e in candidate_events):
                 _validate_recovery_suffix(candidate_events[:_CYCLE2_EVENT_INDEX])
@@ -2586,6 +5242,245 @@ class Registry:
             _read(self.path)
             return [amendment_event, registration_event]
 
+    def register_g008_competitive_campaign_batch(self, amendment: dict[str, Any]) -> list[dict[str, Any]]:
+        """Atomically append a frozen campaign amendment followed by all seven registrations."""
+        _validate_data("g008_competitive_campaign_amendment_v1", amendment)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = self.path.with_name(self.path.name + ".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open("a+b") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            events = _read(self.path)
+            if (not events or events[-1]["event_type"] != "benchmark_artifact_validation_rejected"
+                    or amendment["prior_final_event_index"] != len(events) - 1
+                    or amendment["prior_head_hash"] != events[-1]["event_hash"]):
+                raise RegistryError("competitive campaign requires exact current rejected-artifact head")
+            if any(e["event_type"] == "g008_competitive_campaign_amendment_v1" for e in events):
+                raise RegistryError("competitive campaign amendment already exists")
+            candidate = list(events)
+            payloads = []
+            amendment_payload = _payload(len(candidate), "g008_competitive_campaign_amendment_v1", amendment,
+                                         events[-1]["event_hash"])
+            amendment_payload["event_hash"] = _event_hash(amendment_payload)
+            candidate.append(amendment_payload)
+            payloads.append(amendment_payload)
+            for row in amendment["records"]:
+                record = dict(row["record"])
+                record.update({"competitive_campaign_event_index": amendment_payload["event_index"],
+                               "competitive_campaign_event_hash": amendment_payload["event_hash"]})
+                data = {"registration_id": row["registration_id"], "registration_kind": row["registration_kind"],
+                        "record": record, "cycle_id": "g008-competitive-campaign-v1"}
+                _validate_data("registration", data)
+                payload = _payload(len(candidate), "registration", data, candidate[-1]["event_hash"])
+                payload["event_hash"] = _event_hash(payload)
+                candidate.append(payload)
+                payloads.append(payload)
+            _validate_g008_competitive_campaign(candidate)
+            encoded = self.path.read_bytes() + b"".join(canonical_bytes(event) + b"\n" for event in payloads)
+            original_stat = self.path.stat()
+            temp_fd = -1
+            temp_path: str | None = None
+            try:
+                temp_fd, temp_path = tempfile.mkstemp(prefix=f".{self.path.name}.", suffix=".tmp",
+                                                     dir=self.path.parent)
+                os.fchown(temp_fd, original_stat.st_uid, original_stat.st_gid)
+                os.fchmod(temp_fd, stat.S_IMODE(original_stat.st_mode))
+                offset = 0
+                while offset < len(encoded):
+                    written = os.write(temp_fd, encoded[offset:])
+                    if written <= 0:
+                        raise RegistryError("short atomic campaign temp write")
+                    offset += written
+                os.fsync(temp_fd)
+                os.close(temp_fd)
+                temp_fd = -1
+                os.replace(temp_path, self.path)
+                temp_path = None
+                directory_fd = os.open(self.path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+            finally:
+                if temp_fd >= 0:
+                    os.close(temp_fd)
+                if temp_path is not None:
+                    try:
+                        os.unlink(temp_path)
+                    except FileNotFoundError:
+                        pass
+            _read(self.path)
+            return payloads
+
+    def revise_g008_competitive_campaign_v2_packages(self, revision: dict[str, Any]) -> dict[str, Any]:
+        """Append a one-time, exact-head package correction after a registered train ERROR."""
+        return self._append("g008_competitive_campaign_v2_package_revision_v1", revision)
+
+    def authorize_g008_competitive_campaign_v2_retry_budget(self, authorization: dict[str, Any]) -> dict[str, Any]:
+        """Append the single exact retry authorization after package revision event 73."""
+        return self._append("g008_competitive_campaign_v2_retry_budget_v1", authorization)
+
+    def revise_g008_competitive_campaign_v2_package_v2(self, revision: dict[str, Any]) -> dict[str, Any]:
+        """Append the exact row-56 correction following the failed a2 retry."""
+        return self._append("g008_competitive_campaign_v2_package_revision_v2", revision)
+
+    def authorize_g008_competitive_campaign_v2_retry_budget_v2(
+            self, authorization: dict[str, Any]) -> dict[str, Any]:
+        """Append the one-shot a3 authorization following the second package correction."""
+        return self._append("g008_competitive_campaign_v2_retry_budget_v2", authorization)
+
+    def revise_g008_competitive_campaign_v2_packages_v3(self, revision: dict[str, Any]) -> dict[str, Any]:
+        """Append the exact row-57 repair and bind corrected packages for remaining train rows."""
+        return self._append("g008_competitive_campaign_v2_package_revision_v3", revision)
+
+    def authorize_g008_competitive_campaign_v2_retry_budget_v3(
+            self, authorization: dict[str, Any]) -> dict[str, Any]:
+        """Append the one-shot row-57 retry while retaining the existing campaign caps."""
+        return self._append("g008_competitive_campaign_v2_retry_budget_v3", authorization)
+
+    def authorize_g008_competitive_campaign_v2_dispatch_retry(self, authorization: dict[str, Any]) -> dict[str, Any]:
+        """Authorize the one fresh row-62 attempt after exact no-assignment reconciliation."""
+        return self._append("g008_competitive_campaign_v2_dispatch_retry_v1", authorization)
+
+    def revise_g008_competitive_campaign_v2_validation_packages(self, revision: dict[str, Any]) -> dict[str, Any]:
+        """Bind one consistent corrected source package set for all six validations."""
+        return self._append("g008_competitive_campaign_v2_package_revision_v4", revision)
+
+    def authorize_g008_competitive_campaign_v2_dispatch_retry_v2(
+            self, authorization: dict[str, Any]) -> dict[str, Any]:
+        """Authorize one row-62 reattempt after the revised validation packages are frozen."""
+        return self._append("g008_competitive_campaign_v2_dispatch_retry_v2", authorization)
+
+    def authorize_g008_competitive_campaign_v2_dispatch_retry_v3(
+            self, authorization: dict[str, Any]) -> dict[str, Any]:
+        """Authorize one diagnostic row-62 attempt after an exact server HTTP 400 rejection."""
+        return self._append("g008_competitive_campaign_v2_dispatch_retry_v3", authorization)
+
+    def authorize_g008_competitive_campaign_v2_dispatch_retry_v4(
+            self, authorization: dict[str, Any]) -> dict[str, Any]:
+        """Authorize one row-62 attempt with bounded Kaggle response-body diagnostics."""
+        return self._append("g008_competitive_campaign_v2_dispatch_retry_v4", authorization)
+
+    def revise_g008_competitive_campaign_v2_validation_packages_v5(
+            self, revision: dict[str, Any]) -> dict[str, Any]:
+        """Bind sub-1-MiB validation packages after the exact source-size rejection."""
+        return self._append("g008_competitive_campaign_v2_package_revision_v5", revision)
+
+    def authorize_g008_competitive_campaign_v2_dispatch_retry_v5(
+            self, authorization: dict[str, Any]) -> dict[str, Any]:
+        """Authorize one row-62 submission of the corrected validation source."""
+        return self._append("g008_competitive_campaign_v2_dispatch_retry_v5", authorization)
+
+    def revise_g008_competitive_campaign_v2_final_package(self, revision: dict[str, Any]) -> dict[str, Any]:
+        """Rebind only the undispatched final row-68 package at the frozen candidate head."""
+        return self._append("g008_competitive_campaign_v2_final_package_revision_v1", revision)
+
+    def register_g008_competitive_campaign_v2_batch(self, amendment: dict[str, Any]) -> list[dict[str, Any]]:
+        """Atomically freeze the six paired training jobs and two evaluations after Cycle 3."""
+        _validate_data("g008_competitive_campaign_amendment_v2", amendment)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = self.path.with_name(self.path.name + ".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open("a+b") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            events = _read(self.path)
+            if (len(events) != 55 or events[-1]["event_index"] != 54
+                    or events[-1]["event_type"] != "workload_attempt"
+                    or amendment["prior_final_event_index"] != 54
+                    or amendment["prior_head_hash"] != events[-1]["event_hash"]):
+                raise RegistryError("campaign v2 requires exact current parent head at event 54")
+            if any(e["event_type"] in {"g008_competitive_campaign_amendment_v1",
+                                        "g008_competitive_campaign_amendment_v2"} for e in events):
+                raise RegistryError("a competitive campaign amendment already exists")
+            candidate = list(events)
+            payloads = []
+            amendment_payload = _payload(55, "g008_competitive_campaign_amendment_v2", amendment,
+                                         events[-1]["event_hash"])
+            amendment_payload["event_hash"] = _event_hash(amendment_payload)
+            candidate.append(amendment_payload)
+            payloads.append(amendment_payload)
+            for row in amendment["records"]:
+                record = dict(row["record"])
+                record.update({"competitive_campaign_v2_event_index": amendment_payload["event_index"],
+                               "competitive_campaign_v2_event_hash": amendment_payload["event_hash"]})
+                data = {"registration_id": row["registration_id"],
+                        "registration_kind": row["registration_kind"], "record": record,
+                        "cycle_id": "g008-competitive-campaign-v2"}
+                _validate_data("registration", data)
+                payload = _payload(len(candidate), "registration", data, candidate[-1]["event_hash"])
+                payload["event_hash"] = _event_hash(payload)
+                candidate.append(payload)
+                payloads.append(payload)
+            _validate_g008_competitive_campaign_v2(candidate)
+            encoded = self.path.read_bytes() + b"".join(canonical_bytes(event) + b"\n" for event in payloads)
+            original_stat = self.path.stat()
+            temp_fd = -1
+            temp_path: str | None = None
+            try:
+                temp_fd, temp_path = tempfile.mkstemp(prefix=f".{self.path.name}.", suffix=".tmp",
+                                                     dir=self.path.parent)
+                os.fchown(temp_fd, original_stat.st_uid, original_stat.st_gid)
+                os.fchmod(temp_fd, stat.S_IMODE(original_stat.st_mode))
+                offset = 0
+                while offset < len(encoded):
+                    written = os.write(temp_fd, encoded[offset:])
+                    if written <= 0:
+                        raise RegistryError("short atomic campaign v2 temp write")
+                    offset += written
+                os.fsync(temp_fd)
+                os.close(temp_fd)
+                temp_fd = -1
+                os.replace(temp_path, self.path)
+                temp_path = None
+                directory_fd = os.open(self.path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+            finally:
+                if temp_fd >= 0:
+                    os.close(temp_fd)
+                if temp_path is not None:
+                    try:
+                        os.unlink(temp_path)
+                    except FileNotFoundError:
+                        pass
+            _read(self.path)
+            return payloads
+
+    def freeze_competitive_candidate(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Append exact candidate/checkpoint identity after all paired training jobs finish."""
+        return self._append("competitive_candidate_freeze", data)
+
+    def freeze_competitive_candidate_v2(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Append a v2 candidate checkpoint only after all six training runs complete."""
+        return self._append("competitive_candidate_freeze_v2", data)
+
+    def record_competitive_training_artifact_v2(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Bind one verified checkpoint bundle to an exact COMPLETE v2 training attempt."""
+        return self._append("competitive_training_artifact_v2", data)
+
+    def record_competitive_validation_result(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Append the reserved, non-final validation outcome for a frozen candidate."""
+        return self._append("competitive_validation_result", data)
+
+    def record_competitive_validation_result_v2(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Append the unique v2 validation result for the frozen candidate."""
+        return self._append("competitive_validation_result_v2", data)
+
+    def record_competitive_strategy_comparison_v2(self, created_at_utc: str) -> dict[str, Any]:
+        """Compute the preregistered paired decision from all six v2 validation results."""
+        data = _competitive_v2_comparison_payload(self.events(), created_at_utc=created_at_utc)
+        return self._append("competitive_strategy_comparison_v2", data)
+
+    def record_competitive_final_result(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Append the final-only open-space result after a COMPLETE registered evaluation."""
+        return self._append("competitive_final_result", data)
+
+    def record_competitive_final_result_v2(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Append final open-space evidence only after the v2 validation passes."""
+        return self._append("competitive_final_result_v2", data)
+
     def register_recovery_workload(self, registration_id: str, registration_kind: str,
                                    record: dict[str, Any]) -> dict[str, Any]:
         """Append one of the two exact workload identities named by the amendment."""
@@ -2620,6 +5515,150 @@ class Registry:
     def resolve_workload_attempt(self, data: dict[str, Any]) -> dict[str, Any]:
         """Resolve an attempt only with terminal status or proven pre-assignment rejection."""
         return self._append("workload_attempt", data)
+
+    def reject_benchmark_artifact_validation(self, attempt_event_index: int, attempt_event_hash: str, *,
+                                             artifact_sha256: str | None,
+                                             output_sha256: str | None,
+                                             validation_codes: list[str], validator_id: str,
+                                             created_at_utc: str) -> dict[str, Any]:
+        """Append a structured rejection for an invalid COMPLETE Cycle-3 benchmark output."""
+        events = self.events()
+        if (not isinstance(attempt_event_index, int) or isinstance(attempt_event_index, bool)
+                or attempt_event_index < 0 or attempt_event_index >= len(events)
+                or events[attempt_event_index]["event_type"] != "workload_attempt"):
+            raise RegistryError("artifact rejection requires an exact prior terminal attempt")
+        attempt = events[attempt_event_index]["event_data"]
+        matches = [event for event in events if event["event_type"] == "registration"
+                   and event["event_index"] == attempt["registration_event_index"]]
+        if (len(matches) != 1 or matches[0]["event_data"]["registration_kind"] != "benchmark"
+                or attempt.get("outcome") != "terminal" or attempt.get("terminal_status") != "COMPLETE"):
+            raise RegistryError("artifact rejection requires an exact COMPLETE registered benchmark")
+        registered_cycle = matches[0]["event_data"].get("cycle_id")
+        cycle_id = (registered_cycle if registered_cycle in {
+            "g008-competitive-campaign-v1", "g008-competitive-campaign-v2"}
+                    else "g008-recovery-cycle-3")
+        data = {
+            "schema_id": "g008-benchmark-artifact-validation-rejection", "schema_version": 1,
+            "cycle_id": cycle_id, "created_at_utc": created_at_utc,
+            "attempt_event_index": attempt_event_index, "attempt_event_hash": attempt_event_hash,
+            "registration_event_index": matches[0]["event_index"], "registration_event_hash": matches[0]["event_hash"],
+            "artifact_sha256": artifact_sha256, "output_sha256": output_sha256,
+            "validator_id": validator_id, "validation_codes": validation_codes,
+        }
+        return self._append("benchmark_artifact_validation_rejected", data)
+
+    def authorize_cycle3_retry_continuation(self, prior_attempt_id: str, *,
+                                            created_at_utc: str) -> dict[str, Any]:
+        """Append a head- and registration-bound authorization for one budgeted retry."""
+        events = self.events()
+        if len(events) < 36 or events[35]["event_type"] != "registration":
+            raise RegistryError("Cycle-3 continuation requires the existing retry registration")
+        terminal = next((event for event in events if event["event_type"] == "workload_attempt"
+                         and event["event_data"].get("attempt_id") == prior_attempt_id), None)
+        if terminal is None or terminal["event_data"].get("registration_event_index") != 35:
+            raise RegistryError("Cycle-3 continuation requires the exact prior benchmark attempt")
+        terminal_data = terminal["event_data"]
+        status = terminal_data.get("terminal_status")
+        rejection = next((event for event in events if event["event_type"] == "benchmark_artifact_validation_rejected"
+                          and event["event_data"].get("attempt_event_index") == terminal["event_index"]), None)
+        if status == "COMPLETE":
+            if rejection is None or rejection["event_index"] != len(events) - 1:
+                raise RegistryError("COMPLETE attempt needs explicit latest artifact-validation rejection")
+        elif status not in {"ERROR", "CANCELLED", "TIMEOUT"} or rejection is not None:
+            raise RegistryError("Cycle-3 continuation requires terminal failure or rejected COMPLETE output")
+        head = events[-1]
+        data = {
+            "schema_id": "g008-cycle3-retry-policy-amendment", "schema_version": 1,
+            "cycle_id": "g008-recovery-cycle-3-retry", "created_at_utc": created_at_utc,
+            "policy_sha256": _CYCLE3_RETRY_POLICY_SHA256,
+            "prior_head_hash": head["event_hash"], "prior_final_event_index": head["event_index"],
+            "registration_event_index": 35, "registration_event_hash": events[35]["event_hash"],
+            "registration_id": events[35]["event_data"]["registration_id"],
+            "prior_attempt_id": prior_attempt_id, "prior_attempt_event_index": terminal["event_index"],
+            "prior_attempt_event_hash": terminal["event_hash"], "prior_terminal_status": status,
+            "validation_rejection_event_index": rejection["event_index"] if rejection else None,
+            "validation_rejection_event_hash": rejection["event_hash"] if rejection else None,
+        }
+        return self._append("cycle3_retry_policy_amendment_v1", data)
+
+    def record_exploratory_kernel_observation(self, *, version_number: int, run_uuid: str,
+                                             terminal_status: str, artifact_sha256: dict[str, str],
+                                             actual_gpu_seconds: int, output_bytes: int,
+                                             created_at_utc: str) -> dict[str, Any]:
+        """Record an already-existing, non-promotable Cycle-3 kernel version.
+
+        The observation must immediately supersede the pending one-shot retry policy.
+        It advances the factual Kaggle version cursor but creates no workload attempt,
+        benchmark artifact, or authority to push another run.
+        """
+        events = self.events()
+        if not events or events[-1]["event_type"] != "cycle3_retry_policy_amendment_v1":
+            raise RegistryError("exploratory observation requires the exact pending retry continuation head")
+        policy = events[-1]
+        registration = events[policy["event_data"]["registration_event_index"]]
+        data = {
+            "schema_id": "g008-exploratory-kernel-observation", "schema_version": 1,
+            "cycle_id": "g008-recovery-cycle-3-retry", "created_at_utc": created_at_utc,
+            "kernel_id": registration["event_data"]["record"]["kernel_id"],
+            "version_number": version_number, "run_uuid": run_uuid,
+            "terminal_status": terminal_status, "exploratory": True, "promotable": False,
+            "continuation_event_index": policy["event_index"],
+            "continuation_event_hash": policy["event_hash"], "artifact_sha256": artifact_sha256,
+            "actual_gpu_seconds": actual_gpu_seconds, "output_bytes": output_bytes,
+        }
+        return self._append("exploratory_kernel_observation_v1", data)
+
+    def authorize_cycle3_retry_rebased(self, attempt_id: str, *, created_at_utc: str) -> dict[str, Any]:
+        """Authorize exactly one retry from the observed kernel cursor, with a fresh attempt ID."""
+        events = self.events()
+        if not events or events[-1]["event_type"] != "exploratory_kernel_observation_v1":
+            raise RegistryError("Cycle-3 retry rebase requires the exact exploratory-observation head")
+        observation = events[-1]
+        policy = events[observation["event_data"]["continuation_event_index"]]
+        registration = events[policy["event_data"]["registration_event_index"]]
+        record = registration["event_data"]["record"]
+        prior_head = events[-1]
+        if (not isinstance(attempt_id, str) or not attempt_id
+                or any(event["event_type"] == "workload_preflight"
+                       and event["event_data"].get("attempt_id") == attempt_id for event in events)):
+            raise RegistryError("rebased retry requires a fresh non-empty attempt ID")
+        data = {
+            "schema_id": "g008-cycle3-retry-rebased-authorization", "schema_version": 1,
+            "cycle_id": "g008-recovery-cycle-3-retry", "created_at_utc": created_at_utc,
+            "prior_head_hash": prior_head["event_hash"], "prior_final_event_index": prior_head["event_index"],
+            "observation_event_index": observation["event_index"],
+            "observation_event_hash": observation["event_hash"],
+            "registration_event_index": registration["event_index"],
+            "registration_event_hash": registration["event_hash"],
+            "registration_id": registration["event_data"]["registration_id"],
+            "kernel_id": observation["event_data"]["kernel_id"],
+            "expected_current_version": observation["event_data"]["version_number"],
+            "observed_run_uuid": observation["event_data"]["run_uuid"],
+            "observed_terminal_status": observation["event_data"]["terminal_status"],
+            "attempt_id": attempt_id,
+            "session_timeout_seconds": record["session_timeout_seconds"],
+            "reserved_gpu_seconds": record["session_timeout_seconds"],
+        }
+        for key in ("package_sha256", "source_sha256", "config_sha256", "seed_plan_sha256",
+                    "backend_sha256", "trainer_sha256", "engine_sha256"):
+            data[key] = record[key]
+        return self._append("cycle3_retry_rebased_authorization_v1", data)
+
+    def observed_kernel_cursor(self, kernel_id: str) -> dict[str, Any] | None:
+        """Return the latest hash-chained exploratory observation for a kernel, if any."""
+        for event in reversed(self.events()):
+            if (event["event_type"] == "exploratory_kernel_observation_v1"
+                    and event["event_data"]["kernel_id"] == kernel_id):
+                data = event["event_data"]
+                return {
+                    "kernel_id": kernel_id,
+                    "current_version_number": data["version_number"],
+                    "observation_event_index": event["event_index"],
+                    "observation_event_hash": event["event_hash"],
+                    "run_uuid": data["run_uuid"],
+                    "promotable": False,
+                }
+        return None
 
     def register_benchmark_artifact(self, artifact_sha256: str, registration_event_index: int,
                                     registration_event_hash: str, *, attempt_event_index: int | None = None,

@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.kaggle.cli import KaggleError, _load_run_settings, _sdk_metadata, download, poll_status, prepare, submit
+from tools.kaggle.cli import (KaggleError, _campaign_evaluation_output_root,
+                              _load_run_settings, _sdk_metadata, download, poll_status, prepare, submit)
 from training.arena.engine import ACTION_ORDER, initialize_episode, step
 from training.ppo.protocol import digest_json, file_sha256
 from training.ppo.train import TrainConfig
@@ -110,6 +111,22 @@ def make_run(root: Path, run_id="run-42") -> None:
     }
     manifest["manifest_sha256"] = digest_json(manifest, "manifest_sha256")
     (root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def test_campaign_evaluation_output_root_resolves_exact_kaggle_run(tmp_path):
+    run_uuid = "c19ca811-b968-562f-a813-6f249547109d"
+    output = tmp_path / "download"
+    run_root = output / "arena-output" / run_uuid
+    run_root.mkdir(parents=True)
+    (run_root / "g008-evaluation.json").write_text("{}", encoding="utf-8")
+
+    assert _campaign_evaluation_output_root(output, run_uuid) == run_root
+
+
+def test_campaign_evaluation_output_root_accepts_direct_output(tmp_path):
+    (tmp_path / "g008-evaluation.json").write_text("{}", encoding="utf-8")
+
+    assert _campaign_evaluation_output_root(tmp_path, "unused") == tmp_path
 
 
 def make_g008_benchmark(root: Path, run_id="g008-run") -> None:
@@ -216,9 +233,44 @@ def make_g008_benchmark(root: Path, run_id="g008-run") -> None:
     report_path.write_text(json.dumps(report))
     evidence = {"format": "circuit-ai-kaggle-g008-benchmark-evidence/1", "run_id": run_id,
                 "python_version": "3.11.11", "torch_version": "2.5.1+cu124", "cuda_version": "12.4",
-                "visible_cuda_devices": ["Tesla T4"],
+                "visible_cuda_devices": ["Tesla T4", "Tesla T4"], "visible_cuda_device_count": 2,
+                "training_device_index": 0, "training_cuda_device_count": 1,
                 "benchmark_report_sha256": file_sha256(report_path), "benchmark_report": report}
     (root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence))
+
+
+def _embedded_package_files(package: Path) -> dict[str, bytes]:
+    import base64
+    import re
+    import zipfile
+
+    runner = (package / "run_kaggle.py").read_text(encoding="utf-8")
+    match = re.search(r'SOURCE_ARCHIVE_B64 = "([^"]+)"', runner)
+    assert match is not None
+    with zipfile.ZipFile(__import__("io").BytesIO(base64.b64decode(match.group(1)))) as archive:
+        return {name: archive.read(name) for name in archive.namelist() if not name.endswith("/")}
+
+
+def _assert_nonfinal_campaign_archive_has_no_final_holdout(package: Path) -> None:
+    files = _embedded_package_files(package)
+    forbidden_paths = {
+        "training/configs/g008-split-seed-plan.json",
+        "training/eval/provenance.py", "training/eval/registry.py",
+        "training/eval/lc_eval.py", "training/eval/g008_final_roster.py",
+        "training/eval/g008_final_opponent.py",
+        "training/ppo/g008_benchmark.py",
+        "training/ppo/g008_incumbent/train.py",
+        "schemas/g008-split-seed-plan-3.schema.json",
+    }
+    assert forbidden_paths.isdisjoint(files)
+    assert "training/eval/g008_campaign_seed.py" in files
+    source = b"\n".join(files.values()).lower()
+    for token in (
+            b"open-space", b"open_space", b"4000000", b"4_000_000",
+            b"final-suite-v1", b"0fa20d714149054782dd5a83ab9ae99ebca6582b6c5702bdcc206bf7e3b61c27",
+            b"9e5103176218ca092206ba50899a35c43ad488ce825a95af487e76798ce60123",
+            b"4043dda35bb8cc2adc43112cb5b00eff50ac721eb062b15d0d83b7ae41510b7f"):
+        assert token not in source
 
 
 def test_submit_requires_explicit_confirmation_and_validates_source(tmp_path):
@@ -970,6 +1022,51 @@ def test_cycle3_registration_must_pin_the_exact_v2_amendment_event():
     record["recovery_cycle_amendment_event_hash"] = "c" * 64
     with pytest.raises(KaggleError, match="amendment identity"):
         _cycle3_amendment(registry.events(), records["benchmark"])
+
+
+def test_cycle3_expected_cursor_and_status_advance_to_exploratory_observation():
+    from tools.kaggle.cli import (
+        _expected_recovery_current_version,
+        _expected_recovery_terminal_status,
+    )
+
+    registry, records = _cycle3_budget_fixture(include_terminal_attempt=True)
+    events = registry.events()
+    registration = records["benchmark"]
+    events.extend([
+        {"event_index": len(events), "event_type": "cycle3_retry_policy_amendment_v1",
+         "event_data": {"registration_event_index": registration["event_index"]}},
+        {"event_index": len(events) + 1, "event_type": "exploratory_kernel_observation_v1",
+         "event_data": {"kernel_id": "owner/kernel", "version_number": 15,
+                        "terminal_status": "COMPLETE", "continuation_event_index": len(events)}},
+    ])
+
+    assert _expected_recovery_current_version(events, registration) == 15
+    assert _expected_recovery_terminal_status(events, registration) == "COMPLETE"
+
+
+def test_cycle3_budget_counts_exploratory_observation_gpu_and_output_once():
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    registry, records = _cycle3_budget_fixture(include_terminal_attempt=True)
+    registration = records["benchmark"]
+    events = registry.events()
+    policy_index = len(events)
+    events.extend([
+        {"event_index": policy_index, "event_type": "cycle3_retry_policy_amendment_v1",
+         "event_data": {"registration_event_index": registration["event_index"]}},
+        {"event_index": policy_index + 1, "event_type": "exploratory_kernel_observation_v1",
+         "event_data": {"continuation_event_index": policy_index,
+                        "actual_gpu_seconds": 10, "output_bytes": 5}},
+    ])
+
+    class Registry:
+        def events(self):
+            return events
+
+    budget = _validate_recovery_budget(Registry(), registration, 2800, quota_remaining=99468)
+    assert budget["actual"] == {"benchmark": 135, "train": 0}
+    assert budget["output_bytes"] == {"benchmark": 4524, "training": 0}
 
 
 def _cycle3_recovery_setup(tmp_path):
@@ -1994,6 +2091,423 @@ def test_recovery_cli_requires_operator_gates_before_registry_or_kaggle_access(t
     assert not (tmp_path / "registry.jsonl").exists()
 
 
+def _campaign_cli_fixture(kind="train", role="baseline"):
+    from tools.kaggle.cli import _campaign_amendment
+
+    campaign_id = "g008-competitive-20261020-v1"
+    amendment = {
+        "campaign_id": campaign_id, "current_version_number": 14,
+        "benchmark_gpu_seconds_cap": 2800, "training_gpu_seconds_cap": 10800,
+        "evaluation_gpu_seconds_cap": 1800, "total_gpu_seconds_cap": 15400,
+        "protected_final_reserve_gpu_seconds": 7200, "records": [{} for _ in range(9)],
+    }
+    events = [{"event_index": 0, "event_type": "g008_competitive_campaign_amendment_v1",
+               "event_hash": "a" * 64, "event_data": amendment}]
+    target = None
+    for index in range(9):
+        row_kind = "benchmark" if index == 0 else "train" if index < 7 else "validation" if index == 7 else "final"
+        row_role = role if row_kind == "train" else "benchmark" if row_kind == "benchmark" else None
+        record = {"campaign_id": campaign_id, "competitive_campaign_event_index": 0,
+                  "competitive_campaign_event_hash": "a" * 64, "kernel_id": "owner/kernel",
+                  "session_timeout_seconds": 100, "workload_gpu_seconds_cap": 2800 if row_kind == "benchmark" else 7200,
+                  "workload_output_bytes_cap": 1_000_000, "accelerator_count": 1,
+                  "machine_shape": "NvidiaTeslaT4", "strategy_role": row_role,
+                  "package_sha256": "b" * 64, "source_sha256": "c" * 64,
+                  "config_sha256": "d" * 64, "seed_plan_sha256": "e" * 64,
+                  "backend_sha256": "f" * 64, "trainer_sha256": "1" * 64,
+                  "engine_sha256": "2" * 64}
+        event = {"event_index": index + 1, "event_type": "registration",
+                 "event_hash": str(index + 1) * 64,
+                 "event_data": {"registration_id": f"campaign-{index}", "registration_kind": row_kind,
+                                "cycle_id": "g008-competitive-campaign-v1", "record": record}}
+        events.append(event)
+        if row_kind == kind and target is None:
+            target = event
+    assert target is not None
+    assert _campaign_amendment(events, target) == amendment
+    return events, target
+
+
+def _campaign_v2_cli_fixture(kind="train", role="baseline"):
+    from tools.kaggle.cli import _campaign_amendment
+
+    campaign_id = "g008-competitive-20261021-v2"
+    events = [{"event_index": index, "event_type": "history_placeholder",
+               "event_hash": f"{index + 1:064x}", "event_data": {}}
+              for index in range(55)]
+    run_uuid = "12345678-1234-4234-8234-123456789abc"
+    selected_record = {"run_uuid": run_uuid,
+                       "allowed_implementation_variants": [{"variant_id": "incumbent"}]}
+    events[29] = {"event_index": 29, "event_type": "registration", "event_hash": "a" * 64,
+                  "event_data": {"registration_id": "selected-training", "registration_kind": "train",
+                                 "cycle_id": "g008-recovery-cycle-3", "record": selected_record}}
+    events[48] = {**events[48], "event_type": "benchmark_artifact"}
+    events[49] = {**events[49], "event_type": "registration_closed"}
+    events[50] = {**events[50], "event_type": "benchmark_attestation"}
+    events[54] = {"event_index": 54, "event_type": "workload_attempt", "event_hash": "b" * 64,
+                  "event_data": {"registration_event_index": 29, "registration_event_hash": "a" * 64,
+                                 "implementation_variant_id": "incumbent",
+                                 "terminal_status": "COMPLETE", "assigned_version": 17,
+                                 "actual_gpu_seconds": 100, "output_bytes": 100}}
+    amendment = {"schema_id": "g008-competitive-campaign", "schema_version": 2,
+                 "campaign_id": campaign_id, "current_version_number": 17,
+                 "prior_final_event_index": 54, "prior_head_hash": "b" * 64,
+                 "benchmark_artifact_event_index": 48, "benchmark_artifact_event_hash": events[48]["event_hash"],
+                 "benchmark_lock_event_index": 49, "benchmark_lock_event_hash": events[49]["event_hash"],
+                 "benchmark_attestation_event_index": 50, "benchmark_attestation_event_hash": events[50]["event_hash"],
+                 "selected_training_registration_event_index": 29,
+                 "selected_training_registration_event_hash": "a" * 64,
+                 "selected_training_attempt_event_index": 54,
+                 "selected_training_attempt_event_hash": "b" * 64,
+                 "selected_training_run_uuid": run_uuid,
+                 "training_gpu_seconds_cap": 7200,
+                 "total_gpu_seconds_cap": 11400, "evaluation_gpu_seconds_cap": 4200,
+                 "protected_final_reserve_gpu_seconds": 7200,
+                 "validation_roster": {"roster_sha256": "5" * 64, "opponent_code_sha256": "6" * 64,
+                                       "game_count": 512, "seat_order": [0, 1],
+                                       "paired_seeds_sha256": "7" * 64},
+                 "candidate_selection_rule_id": "paired-score-gain-t95-lower-positive-no-pair-regresses-over-5pt-then-median-arm-checkpoint-v1",
+                 "records": [{} for _ in range(13)],
+                 "output_caps_bytes": {"aggregate": 5_000_000_000, "per_run": 100_000_000}}
+    events.append({"event_index": 55, "event_type": "g008_competitive_campaign_amendment_v2",
+                   "event_hash": "c" * 64, "event_data": amendment})
+    target = None
+    for offset in range(13):
+        row_kind = "train" if offset < 6 else "validation" if offset < 12 else "final"
+        row_role = role if row_kind == "train" else None
+        timeout = 1000 if row_kind == "train" else 600
+        record = {"campaign_id": campaign_id, "competitive_campaign_v2_event_index": 55,
+                  "competitive_campaign_v2_event_hash": "c" * 64, "kernel_id": "owner/kernel",
+                  "session_timeout_seconds": timeout,
+                  "workload_gpu_seconds_cap": 7200, "workload_output_bytes_cap": 100_000_000,
+                  "accelerator_count": 1, "machine_shape": "NvidiaTeslaT4", "strategy_role": row_role,
+                  "pair_id": f"seed-pair-{offset // 2 + 1}" if row_kind == "train" else None,
+                  "run_uuid": f"87654321-1234-4234-8234-{offset:012d}",
+                  "package_sha256": "d" * 64, "source_sha256": "e" * 64,
+                  "config_sha256": "f" * 64, "seed_plan_sha256": "1" * 64,
+                  "backend_sha256": "2" * 64, "trainer_sha256": "3" * 64,
+                  "engine_sha256": "4" * 64}
+        event = {"event_index": 56 + offset, "event_type": "registration",
+                 "event_hash": f"{56 + offset:064x}",
+                 "event_data": {"registration_id": f"v2-{offset}", "registration_kind": row_kind,
+                                "cycle_id": "g008-competitive-campaign-v2", "record": record}}
+        events.append(event)
+        if row_kind == kind and target is None:
+            target = event
+    assert _campaign_amendment(events, target) == amendment
+    return events, target
+
+
+def test_campaign_v2_resolves_exact_thirteen_registration_block_and_selected_v17_history():
+    from tools.kaggle.cli import (_campaign_amendment, _expected_recovery_current_version,
+                                  _expected_recovery_terminal_status, _recovery_record,
+                                  _validate_campaign_v2_benchmark_lineage)
+
+    events, registration = _campaign_v2_cli_fixture("train", "mixed")
+    amendment = _campaign_amendment(events, registration)
+    _validate_campaign_v2_benchmark_lineage(events, events[55], amendment)
+    record, hashes = _recovery_record(registration, "mixed")
+    assert amendment["current_version_number"] == 17
+    assert record["strategy_role"] == "mixed"
+    assert hashes["package_sha256"] == "d" * 64
+    assert _expected_recovery_current_version(events, registration) == 17
+    assert _expected_recovery_terminal_status(events, registration) == "COMPLETE"
+
+
+def test_campaign_v2_cursor_tracks_latest_assigned_terminal_attempt_and_ignores_unassigned_retry():
+    from tools.kaggle.cli import _expected_recovery_current_version, _expected_recovery_terminal_status
+
+    events, registration = _campaign_v2_cli_fixture()
+    events.extend([
+        {"event_type": "workload_attempt", "event_data": {"cycle_id": "g008-competitive-campaign-v2",
+          "assigned_version": 18, "terminal_status": "COMPLETE", "outcome": "terminal"}},
+        {"event_type": "workload_attempt", "event_data": {"cycle_id": "g008-competitive-campaign-v2",
+          "assigned_version": 19, "terminal_status": "ERROR", "outcome": "terminal"}},
+        {"event_type": "workload_attempt", "event_data": {"cycle_id": "g008-competitive-campaign-v2",
+          "assigned_version": None, "outcome": "pre_assignment_rejected"}},
+    ])
+    assert _expected_recovery_current_version(events, registration) == 19
+    assert _expected_recovery_terminal_status(events, registration) == "ERROR"
+
+
+def test_campaign_v2_budget_counts_exploratory_v15_once_and_reuses_prior_attestation():
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    events, registration = _campaign_v2_cli_fixture()
+    events.append({"event_type": "exploratory_kernel_observation_v1",
+                   "event_data": {"kernel_id": "owner/kernel", "version_number": 15,
+                                  "actual_gpu_seconds": 204, "output_bytes": 222}})
+
+    class Registry:
+        def events(self):
+            return events
+
+    budget = _validate_recovery_budget(Registry(), registration, 1000, 20_000)
+    assert budget["cycle_id"] == "g008-competitive-campaign-v2"
+    assert budget["actual"]["training"] == 0
+    assert budget["exploratory_gpu_seconds"] == 204
+    assert budget["output_bytes"]["training"] == 222
+    assert budget["campaign_gpu_seconds_projected"] == 10_200
+    assert budget["campaign_gpu_seconds_with_final_reserve"] == 17_400
+    assert budget["project_gpu_seconds_projected"] == 10_504
+    assert budget["project_gpu_seconds_with_final_reserve"] == 17_704
+
+
+def test_campaign_v2_retry_budget_amendment_covers_one_exact_error_overhead():
+    from tools.kaggle.cli import KaggleError, _validate_recovery_budget
+
+    events, registration = _campaign_v2_cli_fixture()
+    failed = {"attempt_id": "g008-v2-pair1-baseline-a1", "cycle_id": "g008-competitive-campaign-v2",
+              "registration_event_index": registration["event_index"], "actual_gpu_seconds": 516,
+              "output_bytes": 80_238_970}
+    events.append({"event_type": "workload_attempt", "event_data": failed})
+    events.append({"event_type": "exploratory_kernel_observation_v1",
+                   "event_data": {"kernel_id": "owner/kernel", "version_number": 15,
+                                  "actual_gpu_seconds": 6, "output_bytes": 100}})
+    events.append({"event_type": "g008_competitive_campaign_v2_retry_budget_v1", "event_data": {
+        "failed_registration_event_index": 56, "retry_attempt_id": "g008-v2-pair1-baseline-a2",
+        "effective_training_gpu_seconds_cap": 7_716,
+        "effective_evaluation_gpu_seconds_cap": 4_200,
+        "effective_total_gpu_seconds_cap": 11_916,
+    }})
+
+    class Registry:
+        def events(self):
+            return events
+
+    budget = _validate_recovery_budget(
+        Registry(), registration, 1_000, 20_000, attempt_id="g008-v2-pair1-baseline-a2")
+    assert budget["actual"]["training"] == 516
+    assert budget["campaign_gpu_seconds_projected"] == 10_716
+    assert budget["project_gpu_seconds_projected"] == 10_822
+    with pytest.raises(KaggleError, match="exact retry attempt ID"):
+        _validate_recovery_budget(Registry(), registration, 1_000, 20_000, attempt_id="other-retry")
+
+
+def test_campaign_v2_validation_and_final_cli_gates_follow_comparison_lifecycle():
+    from tools.kaggle.cli import KaggleError, _validate_campaign_v2_phase
+
+    events, registration = _campaign_v2_cli_fixture("final")
+    with pytest.raises(KaggleError, match="six per-arm results"):
+        _validate_campaign_v2_phase(events, registration)
+    campaign_id = "g008-competitive-20261021-v2"
+    for _ in range(6):
+        events.append({"event_type": "competitive_validation_result_v2",
+                       "event_data": {"campaign_id": campaign_id}})
+    events.append({"event_type": "competitive_strategy_comparison_v2",
+                   "event_data": {"campaign_id": campaign_id}})
+    events.append({"event_type": "competitive_candidate_freeze_v2",
+                   "event_data": {"campaign_id": campaign_id}})
+    _validate_campaign_v2_phase(events, registration)
+
+
+def test_campaign_v2_validation_requires_all_six_training_artifact_attestations():
+    from tools.kaggle.cli import KaggleError, _validate_campaign_v2_phase
+
+    events, registration = _campaign_v2_cli_fixture("validation")
+    with pytest.raises(KaggleError, match="six COMPLETE training runs"):
+        _validate_campaign_v2_phase(events, registration)
+    campaign_id = "g008-competitive-20261021-v2"
+    for index in range(6):
+        events.append({"event_type": "workload_attempt", "event_data": {
+            "cycle_id": "g008-competitive-campaign-v2", "registration_event_index": 56 + index,
+            "terminal_status": "COMPLETE"}})
+        events.append({"event_type": "competitive_training_artifact_v2", "event_data": {
+            "campaign_id": campaign_id}})
+    _validate_campaign_v2_phase(events, registration)
+
+
+def test_campaign_recovery_record_uses_registered_strategy_and_exact_hashes():
+    from tools.kaggle.cli import _recovery_record
+
+    _, registration = _campaign_cli_fixture("train", "mixed")
+    record, hashes = _recovery_record(registration, "mixed")
+    assert record["strategy_role"] == "mixed"
+    assert hashes["package_sha256"] == "b" * 64
+    with pytest.raises(KaggleError, match="exact registered implementation variant"):
+        _recovery_record(registration, "baseline")
+
+
+def test_campaign_training_artifact_reconciliation_binds_cuda_telemetry_and_checkpoint_files(tmp_path):
+    from training.ppo.protocol import digest_json, file_sha256
+    from tools.kaggle.cli import _validate_campaign_training_output
+
+    source, output = tmp_path / "source", tmp_path / "output"
+    source.mkdir()
+    output.mkdir()
+    run_id = "23456789-1234-4234-8234-123456789abc"
+    seed_sha = "a" * 64
+    train_config = {"device": "auto", "total_updates": 2, "seed": 1234,
+                    "snapshot_opponent_probability": 0.1,
+                    "heuristic_opponent_probability": 1 / 3}
+    (source / "run-config.json").write_text(json.dumps({
+        "run_id": run_id, "train_config": train_config, "g008_train_schedule": {
+            "run_uuid": run_id, "root_seed": 2_100_000, "seed_plan_sha256": seed_sha,
+        },
+    }))
+    updates = [{"update": index, "device": "cuda", "cuda_updates": 1, "optimizer_updates": 1,
+                "episodes_by_opponent": {}, "partial_episodes_at_rollout_end": 0,
+                "policy_loss": 0.1, "value_loss": 0.2, "entropy": 0.3,
+                "approx_kl": 0.01, "clip_fraction": 0.02, "mean_step_reward": 0.4,
+                "rollout_seconds": 0.5, "optimizer_seconds": 0.6,
+                "update_latency_seconds": 0.7} for index in (1, 2)]
+    runtime = {"format": "circuit-ai-kaggle-runtime-evidence/1", "run_id": run_id,
+               "python_version": "3.12.0 (test)", "torch_version": "2.5.1+cu121",
+               "cuda_version": "12.1", "visible_cuda_devices": ["Tesla T4", "Tesla T4"],
+               "visible_cuda_device_count": 2, "training_device": "Tesla T4",
+               "training_device_index": 0, "training_cuda_device_count": 1}
+    (output / "kaggle-execution-evidence.json").write_text(json.dumps(runtime))
+    metrics = {"run_id": run_id, "device": {"device": "cuda", "cuda_available": True,
+                "cuda_name": "Tesla T4", "optimizer_updates": 2, "cuda_optimizer_updates": 2},
+               "software": {"python": "3.12.0", "torch": "2.5.1+cu121", "cuda": "12.1"},
+               "training": {"start_update": 0,
+                            "config": {**train_config, "device": "cuda"}, "updates": updates}}
+    (output / "training-metrics.json").write_text(json.dumps(metrics))
+    checkpoints = output / "checkpoints"
+    checkpoints.mkdir()
+    for checkpoint_step in (0, 2):
+        pt = checkpoints / f"step-{checkpoint_step}.pt"
+        onnx = checkpoints / f"step-{checkpoint_step}.onnx"
+        pt.write_bytes(f"pytorch checkpoint {checkpoint_step}".encode())
+        onnx.write_bytes(f"onnx checkpoint {checkpoint_step}".encode())
+        metadata = {"format": "lc-checkpoint/1", "checkpoint_id": f"step-{checkpoint_step}",
+                    "step": checkpoint_step,
+                    "pytorch": {"file": f"checkpoints/step-{checkpoint_step}.pt", "sha256": file_sha256(pt)},
+                    "onnx": {"file": f"checkpoints/step-{checkpoint_step}.onnx", "sha256": file_sha256(onnx)}}
+        metadata["metadata_sha256"] = digest_json(metadata, "metadata_sha256")
+        (checkpoints / f"step-{checkpoint_step}.metadata.json").write_text(json.dumps(metadata))
+    pt = checkpoints / "step-2.pt"
+    record = {"campaign_id": "g008-competitive-20261020-v1", "run_uuid": run_id,
+              "root_seed": 2_100_000, "seed_plan_sha256": seed_sha, "update_budget": 2,
+              "ppo_config": {"total_updates": 2, "seed": 1234},
+              "opponent_probabilities": {"latest": 6000, "step0": 1000, "cruise": 1000,
+                                          "local_mobility": 1000, "interceptor": 1000}}
+    event = {"event_index": 8, "event_hash": "b" * 64, "event_data": {"record": record}}
+
+    artifact = _validate_campaign_training_output(event, output, source)
+    assert artifact["checkpoint_sha256"] == file_sha256(pt)
+    manifest = json.loads((output / "g008-training-artifact-manifest.json").read_text())
+    assert manifest["run_uuid"] == run_id
+    assert manifest["manifest_sha256"] == digest_json(manifest, "manifest_sha256")
+
+    metadata["pytorch"]["sha256"] = "0" * 64
+    (checkpoints / "step-2.metadata.json").write_text(json.dumps(metadata))
+    with pytest.raises(KaggleError, match="checkpoint metadata"):
+        _validate_campaign_training_output(event, output, source)
+
+
+def test_campaign_evaluation_artifact_reconciliation_verifies_replay_and_roster(tmp_path, monkeypatch):
+    from training.ppo.protocol import digest_json, file_sha256
+    import training.eval.g008_validation as eval_module
+    from tools.kaggle.cli import _validate_campaign_evaluation_output
+
+    source, output = tmp_path / "source", tmp_path / "output"
+    source.mkdir()
+    output.mkdir()
+    run_id = "23456789-1234-4234-8234-123456789abc"
+    candidate_sha = "a" * 64
+    roster = {"opponent_id": "g007-step-300", "root_range": (10, 265),
+              "roster_sha256": "b" * 64, "opponent_code_sha256": "c" * 64}
+    monkeypatch.setitem(eval_module._EXPECTED_ROSTERS, "validation", roster)
+    settings = {"campaign_id": "g008-competitive-20261020-v1", "registration_kind": "validation",
+                "mode": "validation", "run_uuid": run_id, "roster_sha256": roster["roster_sha256"],
+                "opponent_code_sha256": roster["opponent_code_sha256"]}
+    run_config_path = source / "run-config.json"
+    run_config_path.write_text(json.dumps({"g008_evaluation": settings}))
+    episodes = [{"root_seed": root, "target_seat": seat,
+                 "result": "win" if root == 10 and seat == 0 else "loss",
+                 "failure_diagnosis": (None if root == 10 and seat == 0 else {
+                     "category": "wall", "terminal_causes": ["out_of_bounds"]})}
+                for root in range(10, 266) for seat in (0, 1)]
+    replay_dir = output / "replays"
+    replay_dir.mkdir()
+    replay = json.loads((Path(__file__).resolve().parents[2]
+                         / "shared/fixtures/lc-replay-1.valid.json").read_text())
+    replay["run_id"] = run_id
+    replay.pop("replay_sha256", None)
+    replay["replay_sha256"] = digest_json(replay, "replay_sha256")
+    replay_path = replay_dir / "representative-00-win-wall.json"
+    replay_path.write_text(json.dumps(replay, sort_keys=True, indent=2) + "\n")
+    sample = {"root_seed": 10, "target_seat": 0, "result": "win", "terminal_reason": "wall",
+              "replay_file": "replays/representative-00-win-wall.json",
+              "replay_sha256": replay["replay_sha256"]}
+    report = {"format": "g008-registered-evaluation/1", "status": "complete", "game_count": 512,
+              "promotion_eligible": False,
+              "campaign_id": settings["campaign_id"], "registration_kind": "validation", "mode": "validation",
+              "run_id": run_id, "run_uuid": run_id, "roster_sha256": roster["roster_sha256"],
+              "opponent_code_sha256": roster["opponent_code_sha256"], "opponent_id": "g007-step-300",
+              "seed_plan_sha256": "d" * 64, "candidate_checkpoint_sha256": candidate_sha,
+              "runtime_evidence": {"format": "circuit-ai-kaggle-runtime-evidence/1", "run_id": run_id,
+                                   "python_version": "3.12.0 (test)", "torch_version": "2.5.1+cu121",
+                                   "cuda_version": "12.1", "visible_cuda_devices": ["Tesla T4", "Tesla T4"],
+                                   "visible_cuda_device_count": 2, "training_device": "Tesla T4",
+                                   "training_device_index": 0, "training_cuda_device_count": 1},
+              "run_config_sha256": digest_json(settings, "__no_digest_field__"),
+              "run_config_file_sha256": file_sha256(run_config_path), "episodes": episodes,
+              "summary": {"game_count": 512, "wins": 1, "draws": 0, "losses": 511,
+                          "failure_diagnostics": {"losses_classified": 511,
+                                                  "categories": {"wall": 511}}},
+              "representative_replays": [sample]}
+    report_path = output / "g008-evaluation.json"
+    report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
+    (output / "kaggle-execution-evidence.json").write_text(
+        json.dumps(report["runtime_evidence"], sort_keys=True, indent=2) + "\n")
+    files = [{"path": "g008-evaluation.json", "sha256": file_sha256(report_path)},
+             {"path": "kaggle-execution-evidence.json",
+              "sha256": file_sha256(output / "kaggle-execution-evidence.json")},
+             {"path": sample["replay_file"], "sha256": file_sha256(replay_path)}]
+    manifest = {"format": "g008-evaluation-artifacts/1", "run_uuid": run_id,
+                "run_config_sha256": report["run_config_sha256"],
+                "run_config_file_sha256": report["run_config_file_sha256"], "files": files}
+    manifest["manifest_sha256"] = digest_json(manifest, "manifest_sha256")
+    (output / "g008-evaluation-manifest.json").write_text(json.dumps(manifest))
+    record = {"campaign_id": settings["campaign_id"], "run_uuid": run_id,
+              "roster_sha256": roster["roster_sha256"], "opponent_code_sha256": roster["opponent_code_sha256"],
+              "seed_plan_sha256": report["seed_plan_sha256"]}
+    registration = {"event_index": 7, "event_hash": "e" * 64,
+                   "event_data": {"registration_kind": "validation", "record": record}}
+    attempt = {"event_index": 12, "event_hash": "f" * 64}
+
+    result = _validate_campaign_evaluation_output(registration, attempt, output, candidate_sha, source)
+    assert (result["wins"], result["draws"], result["losses"]) == (1, 0, 511)
+    replay_path.write_text("tampered")
+    with pytest.raises(KaggleError, match="replay"):
+        _validate_campaign_evaluation_output(registration, attempt, output, candidate_sha, source)
+
+
+def test_campaign_recovery_budget_reserves_all_unfinished_workloads_and_final_quota():
+    from tools.kaggle.cli import _validate_recovery_budget
+
+    events, registration = _campaign_cli_fixture("train", "baseline")
+
+    class Registry:
+        def events(self):
+            return events
+
+    budget = _validate_recovery_budget(Registry(), registration, 100, 22_000)
+    assert budget["campaign_gpu_seconds_with_final_reserve"] == 8_100
+    with pytest.raises(KaggleError, match="unfinished campaign workload"):
+        _validate_recovery_budget(Registry(), registration, 100, 7_200)
+
+
+def test_campaign_expected_version_tracks_last_assigned_attempt_after_retry():
+    from tools.kaggle.cli import _expected_recovery_current_version
+
+    events, registration = _campaign_cli_fixture("train", "baseline")
+    events.extend([
+        {"event_type": "workload_attempt", "event_data": {"cycle_id": "g008-competitive-campaign-v1",
+          "assigned_version": 15, "outcome": "terminal"}},
+        {"event_type": "workload_attempt", "event_data": {"cycle_id": "g008-competitive-campaign-v1",
+          "assigned_version": None, "outcome": "pre_assignment_rejected"}},
+    ])
+
+    class Registry:
+        def events(self):
+            return events
+
+    assert _expected_recovery_current_version(events, registration) == 15
+
+
 def test_g008_v3_importer_rejects_incomplete_frozen_warmup_roster(tmp_path):
     from tools.kaggle.cli import validate_principal_benchmark_artifacts
 
@@ -2006,7 +2520,8 @@ def test_g008_v3_importer_rejects_incomplete_frozen_warmup_roster(tmp_path):
     evidence = {"format": "circuit-ai-kaggle-g008-benchmark-evidence/1", "run_id": "g008-v3",
                 "benchmark_report": report, "benchmark_report_sha256": file_sha256(report_path),
                 "python_version": "3.11", "torch_version": "2.5", "cuda_version": "12.1",
-                "visible_cuda_devices": ["Tesla T4"]}
+                "visible_cuda_devices": ["Tesla T4", "Tesla T4"], "visible_cuda_device_count": 2,
+                "training_device_index": 0, "training_cuda_device_count": 1}
     (root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence))
     with pytest.raises(KaggleError, match="all five pairs and sixteen warmups"):
         validate_principal_benchmark_artifacts(root, "g008-v3")
@@ -2027,6 +2542,15 @@ def test_recovery_selection_projection_matches_registry_shape_for_v3_report():
                         "selection": "candidate", "selected_variant_id": "candidate"}
 
 
+def test_recovery_artifact_rejects_download_root_without_principal_report(tmp_path):
+    from tools.kaggle.cli import register_recovery_benchmark_artifact
+
+    attempt_event = {"event_index": 1, "event_hash": "a" * 64, "event_type": "workload_attempt",
+                     "event_data": {"outcome": "terminal", "terminal_status": "COMPLETE"}}
+    with pytest.raises(KaggleError, match="exactly one principal report artifact directory"):
+        register_recovery_benchmark_artifact(object(), attempt_event, tmp_path, tmp_path / "envelope.json")
+
+
 def test_recovery_artifact_binds_valid_v3_report_and_selection_to_registry(tmp_path, monkeypatch):
     import hashlib
     import statistics
@@ -2035,16 +2559,21 @@ def test_recovery_artifact_binds_valid_v3_report_and_selection_to_registry(tmp_p
     from tools.kaggle.cli import register_recovery_benchmark_artifact
     from training.eval.provenance import benchmark_run_keys, schedule_spec_digest, seed_plan_sha256
     from training.ppo.g008_benchmark import (CONFIG_PATH, CANDIDATE_SOURCE_COMMIT,
-                                             INCUMBENT_SOURCE_COMMIT, implementation_hashes,
-                                             load_principal_config, prepare_benchmark_schedules)
+                                             INCUMBENT_SOURCE_COMMIT, load_principal_config,
+                                             prepare_benchmark_schedules)
 
-    artifact_root = tmp_path / "downloaded"
-    artifact_root.mkdir()
+    download_root = tmp_path / "downloaded"
+    artifact_root = download_root / "arena-output" / "g008-valid-v3"
+    artifact_root.mkdir(parents=True)
     run_keys = benchmark_run_keys()
     run_ids = {key: str(uuid.uuid5(uuid.NAMESPACE_URL, f"fake-valid-v3:{key}")) for key in run_keys}
     schedules = prepare_benchmark_schedules(run_ids)
     config, config_doc = load_principal_config()
-    implementations = {role: implementation_hashes(role) for role in ("incumbent", "candidate")}
+    implementations = {
+        role: {"trainer_sha256": hashlib.sha256(f"{role}-trainer".encode()).hexdigest(),
+               "engine_sha256": hashlib.sha256(f"{role}-engine".encode()).hexdigest()}
+        for role in ("incumbent", "candidate")
+    }
     source_sha = hashlib.sha256(json.dumps(implementations, sort_keys=True, separators=(",", ":"),
                                             ensure_ascii=False).encode()).hexdigest()
     commits = {"incumbent": INCUMBENT_SOURCE_COMMIT, "candidate": CANDIDATE_SOURCE_COMMIT}
@@ -2185,7 +2714,9 @@ def test_recovery_artifact_binds_valid_v3_report_and_selection_to_registry(tmp_p
     report_path.write_text(json.dumps(report, sort_keys=True), encoding="utf-8")
     evidence = {"format": "circuit-ai-kaggle-g008-benchmark-evidence/1", "run_id": "g008-valid-v3",
                 "python_version": "3.11.11", "torch_version": "2.5.1+cu124", "cuda_version": "12.4",
-                "visible_cuda_devices": ["Tesla T4"], "benchmark_report": report,
+                "visible_cuda_devices": ["Tesla T4", "Tesla T4"], "visible_cuda_device_count": 2,
+                "training_device_index": 0, "training_cuda_device_count": 1,
+                "benchmark_report": report,
                 "benchmark_report_sha256": file_sha256(report_path)}
     (artifact_root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
 
@@ -2222,8 +2753,8 @@ def test_recovery_artifact_binds_valid_v3_report_and_selection_to_registry(tmp_p
             return self.recorded
 
     registry = ArtifactRegistry()
-    envelope_path = artifact_root / "g008-recovery-benchmark-artifact.json"
-    result = register_recovery_benchmark_artifact(registry, attempt_event, artifact_root, envelope_path)
+    envelope_path = download_root / "g008-recovery-benchmark-artifact.json"
+    result = register_recovery_benchmark_artifact(registry, attempt_event, download_root, envelope_path)
     expected_evidence = {"parity": {"passed": True},
                          "pairs": [{"candidate_speedup_ratio": ratio} for ratio in ratios],
                          "summary": {"candidate_speedup_ratio": {"median": statistics.median(ratios)}},
@@ -2235,7 +2766,14 @@ def test_recovery_artifact_binds_valid_v3_report_and_selection_to_registry(tmp_p
     assert envelope["raw_metrics_sha256"] == metric_hashes
     assert envelope["attempt"]["assigned_version"] == 11
 
-    report["parity"]["pairs"]["pair-00"]["candidate"]["sha256"] = "0" * 64
+    duplicate_root = download_root / "other-output"
+    duplicate_root.mkdir()
+    (duplicate_root / "g008-principal-benchmark.json").write_text(report_path.read_text(encoding="utf-8"),
+                                                                    encoding="utf-8")
+    with pytest.raises(KaggleError, match="exactly one principal report artifact directory"):
+        register_recovery_benchmark_artifact(registry, attempt_event, download_root,
+                                             download_root / "ambiguous-envelope.json")
+
     from training.ppo import g008_benchmark
     monkeypatch.setattr(g008_benchmark, "prepare_benchmark_schedules", lambda _: schedules)
     from tools.kaggle.cli import validate_principal_benchmark_artifacts
@@ -2246,6 +2784,31 @@ def test_recovery_artifact_binds_valid_v3_report_and_selection_to_registry(tmp_p
         evidence["benchmark_report_sha256"] = file_sha256(report_path)
         (artifact_root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
 
+    legacy_fields = {
+        "candidate_update_only_joint_transitions_per_second": [
+            pair["arms"]["candidate"]["update_only_joint_transitions_per_second"] for pair in pairs],
+        "incumbent_update_only_joint_transitions_per_second": [
+            pair["arms"]["incumbent"]["update_only_joint_transitions_per_second"] for pair in pairs],
+        "candidate_speedup_ratio": [pair["candidate_speedup_ratio"] for pair in pairs],
+        "wall_inclusive_joint_transitions_per_second": [
+            pair["arms"]["candidate"]["wall_inclusive_joint_transitions_per_second"] for pair in pairs],
+        "update_only_seconds": [pair["arms"]["candidate"]["update_only_seconds"] for pair in pairs],
+        "wall_seconds": [pair["arms"]["candidate"]["wall_seconds"] for pair in pairs],
+        "optimizer_seconds": [pair["arms"]["candidate"]["optimizer_seconds"] for pair in pairs],
+        "rollout_seconds": [pair["arms"]["candidate"]["rollout_seconds"] for pair in pairs],
+    }
+    report["summary"] = {field: percentiles(values) for field, values in legacy_fields.items()}
+    refresh_report_evidence()
+    validate_principal_benchmark_artifacts(artifact_root, "g008-valid-v3")
+
+    report["summary"]["wall_seconds"]["median"] += 1
+    refresh_report_evidence()
+    with pytest.raises(KaggleError, match="summary or selected implementation is invalid"):
+        validate_principal_benchmark_artifacts(artifact_root, "g008-valid-v3")
+    report["summary"] = {field: percentiles(values) for field, values in legacy_fields.items()}
+    refresh_report_evidence()
+
+    report["parity"]["pairs"]["pair-00"]["candidate"]["sha256"] = "0" * 64
     refresh_report_evidence()
     with pytest.raises(KaggleError, match="passed flag contradicts its two parity trace hashes"):
         validate_principal_benchmark_artifacts(artifact_root, "g008-valid-v3")
@@ -2489,6 +3052,8 @@ def test_prepare_builds_deterministic_self_contained_package_without_kaggle(tmp_
     try:
         assert (embedded_root / "run-config.json").is_file()
         assert (embedded_root / "training/ppo/train.py").is_file()
+        assert not (embedded_root / "training/ppo/g008_incumbent").exists()
+        assert not (embedded_root / "schemas/g008-split-seed-plan-3.schema.json").exists()
         incumbent_root = embedded_root / "training/ppo/g008_incumbent"
         assert {"train.py", "engine.py", "manifest.json"} <= {path.name for path in incumbent_root.iterdir()}
         incumbent_manifest = json.loads((incumbent_root / "manifest.json").read_text())
@@ -2588,6 +3153,118 @@ def test_prepare_freezes_g008_train_schedule_and_uuid(tmp_path):
     assert staged["g008_train_schedule"] == settings["g008_train_schedule"]
     metadata = json.loads((package / "kernel-metadata.json").read_text())
     assert metadata["machine_shape"] == "NvidiaTeslaT4"
+
+
+@pytest.mark.parametrize(("pair_id", "role", "ppo_seed", "root_seed"), [
+    ("seed-pair-1", "baseline", 3301, 2_100_001),
+    ("seed-pair-2", "mixed", 3302, 2_200_001),
+])
+def test_load_run_settings_binds_v2_campaign_train_config_and_compact_seed_schedule(
+        tmp_path, pair_id, role, ppo_seed, root_seed):
+    from dataclasses import asdict, replace
+    from training.eval.provenance import seed_plan_sha256
+    from training.ppo.g008_benchmark import load_principal_config
+    from training.ppo.protocol import digest_json
+    from training.ppo.train import g008_campaign_schedule_descriptor
+
+    run_uuid = "23456789-1234-4234-8234-123456789abc"
+    seed_sha = seed_plan_sha256()
+    base, _ = load_principal_config()
+    config_obj = replace(base, device="auto", seed=ppo_seed, total_updates=1000,
+                         checkpoint_every=50,
+                         snapshot_opponent_probability=0.1 if role == "mixed" else 0.0,
+                         heuristic_opponent_probability=(1 / 3) if role == "mixed" else 0.0)
+    config = asdict(config_obj)
+    shared = {name: value for name, value in config.items()
+              if name not in {"device", "seed", "snapshot_opponent_probability",
+                              "heuristic_opponent_probability"}}
+    descriptor = g008_campaign_schedule_descriptor(
+        run_uuid=run_uuid, root_seed=root_seed, arena_count=config_obj.arena_count,
+        total_updates=config_obj.total_updates, rollout_steps=config_obj.rollout_steps,
+        seed_plan_sha=seed_sha)
+    probabilities = ({"latest": 10_000, "step0": 0, "cruise": 0,
+                      "local_mobility": 0, "interceptor": 0} if role == "baseline" else
+                     {"latest": 6_000, "step0": 1_000, "cruise": 1_000,
+                      "local_mobility": 1_000, "interceptor": 1_000})
+    training = {
+        "campaign_id": "g008-competitive-20261021-v2", "registration_id": "v2-train-1",
+        "run_uuid": run_uuid, "pair_id": pair_id, "strategy_role": role,
+        "root_seed": root_seed, "ppo_seed": ppo_seed, "update_budget": 1_000,
+        "seed_plan_sha256": seed_sha, "opponent_probabilities": probabilities,
+        "config_sha256": digest_json(config, ""), "shared_config_sha256": digest_json(shared, ""),
+        "schedule_descriptor_sha256": descriptor["schedule_descriptor_sha256"],
+    }
+    path = tmp_path / "g008-campaign-train.json"
+    path.write_text(json.dumps({"run_id": run_uuid, "train_config": config,
+                                "g008_campaign_train": training}))
+
+    loaded = _load_run_settings(path)
+
+    assert loaded["g008_campaign_train"] == training
+    assert loaded["run_id"] == run_uuid
+    package = prepare("me/circuit-ai", f"v2-{pair_id}-{role}", tmp_path / "package", path)
+    runner_source = (package / "run_kaggle.py").read_text(encoding="utf-8")
+    assert 'g008_campaign_train = settings.get("g008_campaign_train")' in runner_source
+    assert "run_evaluation=False" in runner_source
+    assert 'run_id=g008_campaign_train["run_uuid"]' in runner_source
+    assert '"g008_campaign_train"' in runner_source and "Registered G008 workloads require cuda:0 to be a Tesla T4" in runner_source
+    assert "from dataclasses import asdict, dataclass, replace" in (
+        package / "training/ppo/train.py").read_text(encoding="utf-8")
+    _assert_nonfinal_campaign_archive_has_no_final_holdout(package)
+
+    training["config_sha256"] = "f" * 64
+    path.write_text(json.dumps({"run_id": run_uuid, "train_config": config,
+                                "g008_campaign_train": training}))
+    with pytest.raises(KaggleError, match="full TrainConfig hash"):
+        _load_run_settings(path)
+
+
+def test_load_run_settings_rejects_campaign_train_depth_drift(tmp_path):
+    from dataclasses import asdict, replace
+    from training.eval.provenance import seed_plan_sha256
+    from training.ppo.g008_benchmark import load_principal_config
+    from training.ppo.protocol import digest_json
+    from training.ppo.train import g008_campaign_schedule_descriptor
+
+    run_uuid = "23456789-1234-4234-8234-123456789abc"
+    seed_sha = seed_plan_sha256()
+    base, _ = load_principal_config()
+    config = asdict(replace(base, device="auto", seed=3301, total_updates=3, checkpoint_every=50))
+    shared = {name: value for name, value in config.items()
+              if name not in {"device", "seed", "snapshot_opponent_probability",
+                              "heuristic_opponent_probability"}}
+    descriptor = g008_campaign_schedule_descriptor(
+        run_uuid=run_uuid, root_seed=2_100_001, arena_count=config["arena_count"],
+        total_updates=1000, rollout_steps=config["rollout_steps"], seed_plan_sha=seed_sha)
+    path = tmp_path / "invalid-campaign-train.json"
+    path.write_text(json.dumps({"run_id": run_uuid, "train_config": config,
+        "g008_campaign_train": {
+            "campaign_id": "g008-competitive-20261021-v2", "registration_id": "v2-train-1",
+            "run_uuid": run_uuid, "pair_id": "seed-pair-1", "strategy_role": "baseline",
+            "root_seed": 2_100_001, "ppo_seed": 3301, "update_budget": 1000,
+            "seed_plan_sha256": seed_sha,
+            "opponent_probabilities": {"latest": 10000, "step0": 0, "cruise": 0,
+                                       "local_mobility": 0, "interceptor": 0},
+            "config_sha256": digest_json(config, ""), "shared_config_sha256": digest_json(shared, ""),
+            "schedule_descriptor_sha256": descriptor["schedule_descriptor_sha256"],
+        }}))
+    with pytest.raises(KaggleError, match="TrainConfig differs from the frozen v2 training baseline"):
+        _load_run_settings(path)
+
+
+def test_campaign_train_config_registry_wire_round_trips_float_fields():
+    from tools.kaggle.cli import _campaign_train_config_native, _campaign_train_config_wire
+
+    source = {"device": "auto", "seed": 3302, "learning_rate": 0.0003,
+              "gamma": 0.99, "gae_lambda": 0.95, "clip_ratio": 0.2,
+              "entropy_coef": 0.01, "value_coef": 0.5,
+              "snapshot_opponent_probability": 0.1,
+              "heuristic_opponent_probability": 1 / 3}
+    wire = _campaign_train_config_wire(source)
+
+    assert wire["learning_rate"] == "0.0003"
+    assert wire["heuristic_opponent_probability"] == "0.3333333333333333"
+    assert _campaign_train_config_native(wire) == source
 
 
 @pytest.mark.parametrize(("run_uuid", "root_seed", "run_id", "extra", "match"), [
@@ -2705,8 +3382,8 @@ def test_kaggle_runner_resolves_auto_to_cuda_and_trains_on_gpu(tmp_path, monkeyp
     fake_torch = types.ModuleType("torch")
     fake_torch.__version__ = "torch-test"
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
-    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 1,
-                                            get_device_name=lambda index: "Tesla T4")
+    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
+                                            get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     output_root = tmp_path / "kaggle-output"
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(output_root))
@@ -2738,8 +3415,8 @@ def test_kaggle_runner_passes_frozen_g008_train_schedule_and_uuid_to_train(tmp_p
     fake_torch = types.ModuleType("torch")
     fake_torch.__version__ = "torch-test"
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
-    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 1,
-                                            get_device_name=lambda index: "Tesla T4")
+    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
+                                            get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(tmp_path / "kaggle-output"))
     monkeypatch.setattr(importlib.util, "find_spec", lambda _: object())
@@ -2766,6 +3443,112 @@ def test_kaggle_runner_passes_frozen_g008_train_schedule_and_uuid_to_train(tmp_p
                       "run_id": run_uuid}
 
 
+def test_prepared_kaggle_runner_dispatches_registered_g008_final_evaluation(tmp_path, monkeypatch):
+    import importlib.util
+    import uuid
+    from training.eval.g008_final_roster import EXPECTED_FINAL_ROSTER
+    from training.eval.provenance import seed_plan_sha256
+    from training.ppo.protocol import file_sha256
+
+    run_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, "g008-final-runner-template"))
+    roster = EXPECTED_FINAL_ROSTER
+    run_config = tmp_path / "g008-final-config.json"
+    run_config.write_text(json.dumps({
+        "run_id": run_uuid,
+        "train_config": {"device": "auto"},
+        "g008_evaluation": {
+            "campaign_id": "g008-competitive-20261021-v2",
+            "registration_kind": "final", "mode": "final", "run_uuid": run_uuid,
+            "candidate_dataset_source": "pascalcoimbra/g008-frozen-candidate",
+            "candidate_checkpoint_path": "/kaggle/input/g008-frozen-candidate/candidate.pt",
+            "roster_sha256": roster["roster_sha256"],
+            "opponent_code_sha256": roster["opponent_code_sha256"],
+            "game_count": 512, "seat_order": [0, 1],
+            "seed_plan_sha256": seed_plan_sha256(), "opponent_id": "open-space",
+        },
+    }))
+    package = prepare("me/circuit-ai", "g008-final-runner-template", tmp_path / "package-final", run_config)
+    assert (package / "training/configs/g008-split-seed-plan.json").is_file()
+    assert (package / "training/eval/provenance.py").is_file()
+    assert (package / "training/eval/registry.py").is_file()
+    assert (package / "training/eval/lc_eval.py").is_file()
+    assert (package / "training/eval/g008_final_roster.py").is_file()
+    final_archive = _embedded_package_files(package)
+    assert {
+        "training/configs/g008-split-seed-plan.json",
+        "training/eval/provenance.py", "training/eval/registry.py",
+        "training/eval/lc_eval.py", "training/eval/g008_final_roster.py",
+        "training/eval/g008_final_opponent.py",
+    } <= final_archive.keys()
+    metadata = json.loads((package / "kernel-metadata.json").read_text())
+    assert metadata["dataset_sources"] == ["pascalcoimbra/g008-frozen-candidate"]
+    assert (package / "schemas/lc-replay-1.schema.json").is_file()
+    monkeypatch.setattr(importlib.util, "find_spec", lambda _name: object())
+
+    fake_torch = types.ModuleType("torch")
+    fake_torch.__version__ = "torch-test"
+    fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
+    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
+                                            get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    output_root = tmp_path / "kaggle-output"
+    monkeypatch.setenv("ARENA_OUTPUT_DIR", str(output_root))
+    calls = []
+    evaluation_module = types.ModuleType("training.eval.g008_validation")
+    evaluation_module.evaluate_registered = lambda settings, output, **kwargs: (
+        calls.append((settings, output, kwargs)) or {"game_count": 512})
+    monkeypatch.setitem(sys.modules, "training.eval.g008_validation", evaluation_module)
+    namespace = {"__name__": "runner_test", "__file__": str(package / "run_kaggle.py")}
+    source = (package / "run_kaggle.py").read_text()
+    exec(compile(source, str(package / "run_kaggle.py"), "exec"), namespace)
+    namespace["main"]()
+
+    assert calls[0][0]["mode"] == "final"
+    assert calls[0][0]["device"] == "cuda"
+    assert calls[0][1] == output_root / run_uuid
+    assert calls[0][2]["config_file_sha256"] == file_sha256(package / "run-config.json")
+    from training.ppo.protocol import digest_json
+    frozen_settings = json.loads((package / "run-config.json").read_text())["g008_evaluation"]
+    assert calls[0][2]["settings_sha256"] == digest_json(frozen_settings, "__no_digest_field__")
+    assert calls[0][2]["runtime_evidence"]["visible_cuda_devices"] == ["Tesla T4", "Tesla T4"]
+    assert calls[0][2]["runtime_evidence"]["visible_cuda_device_count"] == 2
+    assert calls[0][2]["runtime_evidence"]["training_device_index"] == 0
+    assert calls[0][2]["runtime_evidence"]["training_cuda_device_count"] == 1
+
+
+def test_prepare_embeds_frozen_g007_opponent_for_registered_validation(tmp_path):
+    import uuid
+    from training.eval.g008_validation import _EXPECTED_ROSTERS
+    from training.eval.provenance import seed_plan_sha256
+    from training.ppo.protocol import file_sha256
+
+    run_uuid = str(uuid.uuid5(uuid.NAMESPACE_URL, "g008-validation-package-assets"))
+    opponent_source = Path(__file__).parents[2] / "artifacts/circuit-ai/runs/lc-circuit-ai-selfplay-300-viewer-ready/checkpoints/step-300.pt"
+    roster = _EXPECTED_ROSTERS["validation"]
+    run_config = tmp_path / "g008-validation-config.json"
+    run_config.write_text(json.dumps({
+        "run_id": run_uuid, "train_config": {"device": "auto"},
+        "g008_evaluation": {
+            "campaign_id": "g008-competitive-20261021-v2",
+            "registration_kind": "validation", "mode": "validation", "run_uuid": run_uuid,
+            "candidate_dataset_source": "pascalcoimbra/g008-frozen-candidate",
+            "candidate_checkpoint_path": "/kaggle/input/g008-frozen-candidate/candidate.pt",
+            "roster_sha256": roster["roster_sha256"],
+            "opponent_code_sha256": roster["opponent_code_sha256"],
+            "game_count": 512, "seat_order": [0, 1], "seed_plan_sha256": seed_plan_sha256(),
+            "opponent_id": "g007-step-300",
+            "opponent_asset_path": "training/eval/assets/g007-step-300.pt",
+            "opponent_checkpoint_sha256": file_sha256(opponent_source),
+        },
+    }))
+    package = prepare("me/circuit-ai", "g008-validation-package-assets", tmp_path / "package-validation", run_config)
+    embedded_opponent = package / "training/eval/assets/g007-step-300.pt"
+    assert file_sha256(embedded_opponent) == file_sha256(opponent_source)
+    _assert_nonfinal_campaign_archive_has_no_final_holdout(package)
+    assert json.loads((package / "kernel-metadata.json").read_text())["dataset_sources"] == [
+        "pascalcoimbra/g008-frozen-candidate"]
+
+
 def test_kaggle_runner_runs_bounded_cuda_sweep_and_hashes_report_in_manifest(tmp_path, monkeypatch):
     config_path = tmp_path / "run-config.json"
     config_path.write_text(json.dumps({"run_id": "run-bench", "train_config": {"device": "auto"},
@@ -2774,8 +3557,8 @@ def test_kaggle_runner_runs_bounded_cuda_sweep_and_hashes_report_in_manifest(tmp
     fake_torch = types.ModuleType("torch")
     fake_torch.__version__ = "torch-test"
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
-    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 1,
-                                            get_device_name=lambda index: "Tesla T4")
+    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
+                                            get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     output_root = tmp_path / "kaggle-output"
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(output_root))
@@ -2833,8 +3616,8 @@ def test_kaggle_runner_executes_g008_benchmark_only_and_records_cuda_evidence(tm
     fake_torch = types.ModuleType("torch")
     fake_torch.__version__ = "torch-test"
     fake_torch.version = types.SimpleNamespace(cuda="cuda-test")
-    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 1,
-                                            get_device_name=lambda index: "Tesla T4")
+    fake_torch.cuda = types.SimpleNamespace(is_available=lambda: True, device_count=lambda: 2,
+                                            get_device_name=lambda index: "Tesla T4", set_device=lambda index: None)
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     output_root = tmp_path / "kaggle-output"
     monkeypatch.setenv("ARENA_OUTPUT_DIR", str(output_root))
@@ -2859,7 +3642,10 @@ def test_kaggle_runner_executes_g008_benchmark_only_and_records_cuda_evidence(tm
     output = output_root / "g008-runner"
     evidence = json.loads((output / "kaggle-execution-evidence.json").read_text())
     assert called == [(str(output), run_ids)]
-    assert evidence["visible_cuda_devices"] == ["Tesla T4"]
+    assert evidence["visible_cuda_devices"] == ["Tesla T4", "Tesla T4"]
+    assert evidence["visible_cuda_device_count"] == 2
+    assert evidence["training_device_index"] == 0
+    assert evidence["training_cuda_device_count"] == 1
     assert evidence["benchmark_report"]["format"] == "test-report"
     assert evidence["benchmark_report_sha256"] == file_sha256(output / "g008-principal-benchmark.json")
 

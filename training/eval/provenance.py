@@ -212,6 +212,34 @@ def encode_seed_tuple(seed_tuple: Mapping[str, Any]) -> bytes:
     return bytes(payload)
 
 
+def encode_frozen_train_seed_tuple(seed_tuple: Mapping[str, Any]) -> bytes:
+    """Encode one train tuple under a schedule descriptor already checked against the seed plan.
+
+    This keeps the env-seed/v1 bytes identical while avoiding a seed-plan file
+    reload and full tuple-policy validation for every collector transition.
+    Callers must first validate the compact descriptor with
+    ``g008_campaign_schedule_descriptor``.
+    """
+    if not isinstance(seed_tuple, Mapping) or set(seed_tuple) != set(SEED_TUPLE_FIELDS):
+        raise ProvenanceError("seed tuple must contain exactly the nine codec fields")
+    if seed_tuple.get("split") != "train" or seed_tuple.get("domain_label") not in {
+            "g008/train/initial", "g008/train/reset"}:
+        raise ProvenanceError("compact campaign seed tuple must be in the frozen train domain")
+    split, domain, root, run_key, *indices = (seed_tuple[name] for name in SEED_TUPLE_FIELDS)
+    if not isinstance(run_key, str) or not re.fullmatch(
+            r"train-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+            run_key):
+        raise ProvenanceError("compact campaign run_key must bind a canonical training UUID")
+    payload = bytearray(SEED_CODEC_PREFIX)
+    payload.extend(_encode_string(split))
+    payload.extend(_encode_string(domain))
+    payload.extend(_encode_required_uint64(root, "env_root_seed"))
+    payload.extend(_encode_string(run_key))
+    for name, value in zip(SEED_TUPLE_FIELDS[4:], indices):
+        payload.extend(_encode_required_uint64(value, name))
+    return bytes(payload)
+
+
 def derive_environment_seed(seed_tuple: Mapping[str, Any]) -> tuple[str, int, bytes]:
     payload = encode_seed_tuple(seed_tuple)
     digest = hashlib.sha256(payload).digest()

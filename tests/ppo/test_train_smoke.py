@@ -9,6 +9,13 @@ import pytest
 from training.ppo.train import TrainConfig, train
 
 
+def test_action_mask_version_is_an_explicit_validated_training_setting():
+    TrainConfig(action_mask_version=1).validate()
+    TrainConfig(action_mask_version=2).validate()
+    with pytest.raises(ValueError, match="action_mask_version must be 1 or 2"):
+        TrainConfig(action_mask_version=3).validate()
+
+
 def test_contiguous_observation_batch_matches_public_observation_contract():
     import numpy as np
     from training.arena.engine import initialize_episode, observe, step
@@ -74,7 +81,7 @@ def test_g008_training_cannot_call_g007_open_space_evaluator(tmp_path):
     config = TrainConfig(width=6, height=6, arena_count=1, rollout_steps=1,
                          total_updates=1, update_epochs=1, minibatch_size=4,
                          hidden_size=8, device="cpu")
-    with pytest.raises(ValueError, match="must not invoke the G007 open-space evaluator"):
+    with pytest.raises(ValueError, match="must not invoke a held-out evaluator"):
         train(config, tmp_path / "g008-run", g008_schedule=_g008_train_schedule(
             arena_count=1, reset_indices=(1,), run_id=run_id), run_id=run_id)
 
@@ -124,6 +131,39 @@ def test_g008_schedule_binds_initial_and_reset_seed_domains_reproducibly():
     assert initial_seed != reset_seed
     assert initialize_episode(5, 5, initial_seed, 0)[0] == initialize_episode(5, 5, initial_seed, 0)[0]
     assert initialize_episode(5, 5, reset_seed, 0)[0] == initialize_episode(5, 5, reset_seed, 0)[0]
+
+
+def test_g008_campaign_lazy_schedule_matches_expanded_schedule_and_rejects_bad_bindings(monkeypatch):
+    import training.eval.provenance as provenance
+    from training.eval.provenance import build_training_run_schedule, seed_plan_sha256
+    from training.ppo.train import (G008CampaignEnvironmentSeedSchedule,
+                                    g008_campaign_schedule_descriptor)
+
+    run_uuid = "12345678-1234-4234-8234-123456789abc"
+    seed_sha = seed_plan_sha256()
+    expanded = build_training_run_schedule(run_id=run_uuid, root_seed=2_100_001,
+                                           arena_count=2, total_updates=2,
+                                           rollout_steps=2, seed_plan_sha=seed_sha)
+    descriptor = g008_campaign_schedule_descriptor(
+        run_uuid=run_uuid, root_seed=2_100_001, arena_count=2,
+        total_updates=2, rollout_steps=2, seed_plan_sha=seed_sha)
+    lazy = G008CampaignEnvironmentSeedSchedule(descriptor)
+    expanded_seeds = {(slot["update_index"], slot["arena_index"], slot["reset_index"]):
+                      slot["derived_seed_uint64"] for slot in expanded["slots"]}
+    for (update, arena, reset_index), expected in expanded_seeds.items():
+        assert lazy.seed_for(update=update, arena=arena, reset_index=reset_index) == expected
+
+    tampered = {**descriptor, "root_seed": 2_100_002}
+    with pytest.raises(ValueError, match="descriptor hash or frozen dimensions"):
+        G008CampaignEnvironmentSeedSchedule(tampered)
+
+    # Environment seeding uses the cached, validated codec directly; it does
+    # not reload the plan for each one of the millions of collector slots.
+    monkeypatch.setattr(provenance, "_load_seed_plan_snapshot",
+                        lambda: (_ for _ in ()).throw(AssertionError("unexpected plan reload")))
+    assert lazy.seed_for(update=1, arena=1, reset_index=2) == expanded_seeds[(1, 1, 2)]
+    with pytest.raises(ValueError, match="coordinates are outside"):
+        lazy.seed_for(update=2, arena=0, reset_index=0)
 
 
 def test_g008_schedule_fails_closed_for_missing_stale_wrong_run_and_unreserved_slots():
@@ -188,6 +228,61 @@ def test_actor_critic_never_assigns_probability_to_reverse_action():
         reverse = (heading + 2) % 4
         assert logits[heading, reverse].item() < -1e20
         assert torch.isfinite(logits[heading, [a for a in range(4) if a != reverse]]).all()
+
+
+def test_actor_critic_masks_immediate_wall_and_trail_collisions():
+    torch = pytest.importorskip("torch")
+    from training.ppo.train import _model_class
+
+    model = _model_class(torch)(5, 5, 16)
+    observation = torch.zeros((4, 5, 5, 12), dtype=torch.float32)
+    for row, heading in enumerate(range(4)):
+        x = y = 2
+        observation[row, y, x, 0] = 1.0
+        observation[row, y, x, 4 + heading] = 1.0
+        # Each row blocks a different forward action in a different trail plane.
+        action = (heading + 1) % 4
+        dx, dy = ((0, -1), (1, 0), (0, 1), (-1, 0))[action]
+        channel = 2 if row % 2 == 0 else 3
+        observation[row, y + dy, x + dx, channel] = 1.0
+
+    logits, _ = model(observation)
+    for row, heading in enumerate(range(4)):
+        reverse = (heading + 2) % 4
+        blocked = (heading + 1) % 4
+        assert logits[row, reverse].item() < -1e20
+        assert logits[row, blocked].item() < -1e20
+        assert torch.isfinite(logits[row, [a for a in range(4) if a not in (reverse, blocked)]]).all()
+
+    legacy_model = _model_class(torch)(5, 5, 16, action_mask_version=1)
+    legacy_logits, _ = legacy_model(observation)
+    assert torch.isfinite(legacy_logits[0, 1])
+
+
+def test_actor_critic_masks_wall_actions_and_falls_back_when_trapped():
+    torch = pytest.importorskip("torch")
+    from training.ppo.train import _model_class
+
+    model = _model_class(torch)(5, 5, 16)
+    observation = torch.zeros((2, 5, 5, 12), dtype=torch.float32)
+    # Facing up at the top edge: UP is fatal, but RIGHT remains safe.
+    observation[0, 0, 2, 0] = 1.0
+    observation[0, 0, 2, 4] = 1.0
+    # A trapped agent has all three forward destinations occupied. It should
+    # retain a finite, sampleable distribution over those doomed moves.
+    observation[1, 2, 2, 0] = 1.0
+    observation[1, 2, 2, 4] = 1.0
+    for x, y in ((2, 1), (3, 2), (1, 2)):
+        observation[1, y, x, 2] = 1.0
+
+    logits, _ = model(observation)
+    assert logits[0, 0].item() < -1e20
+    assert torch.isfinite(logits[0, 1])
+    assert logits[1, 2].item() < -1e20
+    assert torch.isfinite(logits[1, [0, 1, 3]]).all()
+    probabilities = torch.distributions.Categorical(logits=logits[1]).probs
+    assert torch.isfinite(probabilities).all()
+    assert probabilities.sum().item() == pytest.approx(1.0)
 
 
 def test_onnx_export_embeds_weights_for_single_file_browser_loading(tmp_path):

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import json
 import math
 import os
@@ -21,7 +21,6 @@ OBSERVATION_SCHEMA = "lc-observation/1"
 ACTION_SCHEMA = "lc-action/1"
 ENGINE_VERSION = "lc-engine/1"
 ARCH_NAME = "mlp-hwc-flatten"
-ARCH_VERSION = "1"
 
 
 @dataclass
@@ -44,6 +43,7 @@ class TrainConfig:
     device: str = "auto"
     checkpoint_every: int = 10
     onnx_opset: int = 17
+    action_mask_version: int = 2
     snapshot_opponent_probability: float = 0.0
     heuristic_opponent_probability: float = 0.0
 
@@ -65,6 +65,8 @@ class TrainConfig:
             raise ValueError("heuristic_opponent_probability must be in [0,1]")
         if type(self.onnx_opset) is not int or self.onnx_opset < 13:
             raise ValueError("onnx_opset must be an integer >= 13")
+        if type(self.action_mask_version) is not int or self.action_mask_version not in (1, 2):
+            raise ValueError("action_mask_version must be 1 or 2")
         if self.device == "cuda" and not _torch().cuda.is_available():
             raise RuntimeError("CUDA requested but unavailable")
         if type(self.seed) is not int or not 32 <= self.seed <= (1 << 64) - 1:
@@ -81,9 +83,12 @@ def _torch():
 
 def _model_class(torch):
     class ActorCritic(torch.nn.Module):
-        def __init__(self, width: int, height: int, hidden: int):
+        def __init__(self, width: int, height: int, hidden: int, action_mask_version: int = 2):
             super().__init__()
+            if action_mask_version not in (1, 2):
+                raise ValueError(f"unsupported action mask version: {action_mask_version}")
             self.width, self.height = width, height
+            self.action_mask_version = action_mask_version
             self.encoder = torch.nn.Sequential(
                 torch.nn.Flatten(),
                 torch.nn.Linear(width * height * 12, hidden), torch.nn.Tanh(),
@@ -95,15 +100,34 @@ def _model_class(torch):
         def forward(self, observation):
             features = self.encoder(observation)
             logits = self.policy(features)
-            # Reversing is not a legal Light Cycles move. The observation
-            # marks our heading at the head cell (channel 0); mask the opposite
-            # action before both rollout sampling and browser inference so PPO
-            # never trains on an impossible action and exported ONNX agrees.
+            head = observation[..., 0]
             heading_planes = observation[..., 4:8]
-            head = observation[..., 0:1]
-            heading = (heading_planes * head).sum(dim=(1, 2)).argmax(dim=-1)
+            heading = (heading_planes * head.unsqueeze(-1)).sum(dim=(1, 2)).argmax(dim=-1)
             reverse_action = (heading + 2) % 4
-            illegal = torch.nn.functional.one_hot(reverse_action, num_classes=4).to(torch.bool)
+            reverse = torch.nn.functional.one_hot(reverse_action, num_classes=4).to(torch.bool)
+            illegal = reverse
+            if self.action_mask_version >= 2:
+                # Channels 2/3 mark all currently occupied cells. Exclude a
+                # move that immediately hits a wall or existing trail when
+                # another non-reverse move is available. The engine still
+                # resolves simultaneous head collisions after both agents act.
+                height, width = observation.shape[1:3]
+                x = (head * torch.arange(width, device=observation.device,
+                                        dtype=observation.dtype).view(1, 1, width)).sum((1, 2)).long()
+                y = (head * torch.arange(height, device=observation.device,
+                                        dtype=observation.dtype).view(1, height, 1)).sum((1, 2)).long()
+                occupied = (observation[..., 2] + observation[..., 3]).reshape(-1, height * width) > 0
+                offsets = torch.tensor((-width, 1, width, -1), device=observation.device)
+                destination = y[:, None] * width + x[:, None] + offsets[None, :]
+                in_bounds = torch.stack((y > 0, x < width - 1, y < height - 1, x > 0), dim=1)
+                destination_occupied = torch.gather(
+                    occupied, 1, destination.clamp(0, height * width - 1))
+                unsafe = ~in_bounds | destination_occupied
+
+                # If every forward move is blocked, preserve the v1 forward
+                # distribution so action sampling stays finite.
+                has_safe_move = (~unsafe & ~reverse).any(dim=1, keepdim=True)
+                illegal = reverse | (unsafe & has_safe_move)
             logits = logits.masked_fill(illegal, torch.finfo(logits.dtype).min)
             return logits, self.value(features).squeeze(-1)
     return ActorCritic
@@ -351,6 +375,71 @@ class G008EnvironmentSeedSchedule:
             raise ProvenanceError(f"benchmark schedule has no reset seed for collector slot {key}") from error
 
 
+def g008_campaign_schedule_descriptor(*, run_uuid: str, root_seed: int, arena_count: int,
+                                      total_updates: int, rollout_steps: int,
+                                      seed_plan_sha: str) -> dict[str, Any]:
+    """Create the compact v2 commitment for a lazily derived training seed schedule."""
+    from training.eval.g008_campaign_seed import campaign_schedule_descriptor
+
+    return campaign_schedule_descriptor(run_uuid=run_uuid, root_seed=root_seed,
+                                        arena_count=arena_count, total_updates=total_updates,
+                                        rollout_steps=rollout_steps, seed_plan_sha=seed_plan_sha)
+
+
+class G008CampaignEnvironmentSeedSchedule:
+    """Derive v2 train seeds lazily from the exact compact descriptor."""
+
+    def __init__(self, descriptor: Mapping[str, Any]):
+        from training.eval.g008_campaign_seed import CampaignSeedError, encode_frozen_train_seed_tuple
+        import hashlib
+
+        if not isinstance(descriptor, Mapping):
+            raise CampaignSeedError("G008 campaign training requires a compact schedule descriptor")
+        values = dict(descriptor)
+        expected_keys = {"format", "seed_plan_sha256", "codec", "run_uuid", "run_key",
+                         "root_seed", "arena_count", "total_updates", "rollout_steps",
+                         "schedule_descriptor_sha256"}
+        if set(values) != expected_keys:
+            raise CampaignSeedError("G008 campaign schedule descriptor has unknown or missing fields")
+        expected = g008_campaign_schedule_descriptor(
+            run_uuid=values["run_uuid"], root_seed=values["root_seed"],
+            arena_count=values["arena_count"], total_updates=values["total_updates"],
+            rollout_steps=values["rollout_steps"], seed_plan_sha=values["seed_plan_sha256"])
+        if values != expected:
+            raise CampaignSeedError("G008 campaign schedule descriptor hash or frozen dimensions differ")
+        self.is_benchmark = False
+        self.run_key = values["run_key"]
+        self.run_uuid = values["run_uuid"]
+        self.root_seed = values["root_seed"]
+        self.arena_count = values["arena_count"]
+        self.total_updates = values["total_updates"]
+        self.rollout_steps = values["rollout_steps"]
+        self._encode_seed_tuple = encode_frozen_train_seed_tuple
+        self._sha256 = hashlib.sha256
+        self.schedule_descriptor_sha256 = values["schedule_descriptor_sha256"]
+
+    def seed_for(self, *, update: int, arena: int, reset_index: int) -> int:
+        from training.eval.g008_campaign_seed import CampaignSeedError
+
+        if (type(update) is not int or not 0 <= update < self.total_updates
+                or type(arena) is not int or not 0 <= arena < self.arena_count
+                or type(reset_index) is not int or not 0 <= reset_index <= self.rollout_steps):
+            raise CampaignSeedError("G008 campaign collector coordinates are outside the frozen schedule")
+        seed_tuple = {
+            "split": "train",
+            "domain_label": "g008/train/initial" if reset_index == 0 else "g008/train/reset",
+            "env_root_seed": self.root_seed,
+            "run_key": f"train-{self.run_uuid}",
+            "update_index": update,
+            "rollout_index": 0,
+            "arena_index": arena,
+            "game_index": 0,
+            "reset_index": reset_index,
+        }
+        digest = self._sha256(self._encode_seed_tuple(seed_tuple)).digest()
+        return int.from_bytes(digest[:8], "big")
+
+
 def updates_remaining(total_updates: int, completed_updates: int) -> int:
     """Interpret total_updates as a global target; reject already-complete runs."""
     if completed_updates >= total_updates:
@@ -370,7 +459,7 @@ def make_checkpoint_metadata(checkpoint_id: str, step_num: int, config: TrainCon
                              onnx_path: Path, pt_path: Path) -> dict[str, Any]:
     """Build the schema-bound metadata for paired browser/native checkpoint files."""
     return {"format": "lc-checkpoint/1", "checkpoint_id": checkpoint_id, "step": step_num,
-            "model_architecture": {"name": ARCH_NAME, "version": ARCH_VERSION,
+            "model_architecture": {"name": ARCH_NAME, "version": str(config.action_mask_version),
                                    "config": {"width": config.width, "height": config.height,
                                               "hidden_size": config.hidden_size}},
             "observation_schema": OBSERVATION_SCHEMA, "action_schema": ACTION_SCHEMA,
@@ -437,6 +526,10 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
     learner_seats = [(update + arena) % 2 for arena in range(config.arena_count)]
     obs_steps, action_steps, logp_steps, value_steps, reward_steps, done_steps = [], [], [], [], [], []
     completed = 0
+    episode_lengths = [state.tick for state in states]
+    completed_by_opponent: dict[str, dict[str, Any]] = {}
+    reward_sum = 0.0
+    reward_sample_count = 0
     benchmark_reset_counts = [0] * config.arena_count
     model.eval()
     for step_no in range(config.rollout_steps):
@@ -475,6 +568,7 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
             trans = step(state, joint_actions[arena * 2:arena * 2 + 2],
                          occupied_cells=occupied_cells[arena])
             next_states.append(trans.state)
+            episode_lengths[arena] += 1
             for old_agent, new_agent in zip(state.agents, trans.state.agents):
                 if old_agent.position != new_agent.position:
                     occupied_cells[arena].add(new_agent.position)
@@ -482,6 +576,28 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
                 completed += 1
                 rewards[arena] = terminal_rewards(trans.state.result)[learner_seats[arena]]
                 dones[arena] = 1.0
+                if trans.state.result == "draw":
+                    outcome = "draws"
+                elif trans.state.result == f"agent_{learner_seats[arena]}_win":
+                    outcome = "wins"
+                else:
+                    outcome = "losses"
+                label = ("snapshot:step-0" if snapshot_opponents[arena]
+                         else (f"heuristic:{heuristic_styles[arena]}"
+                               if heuristic_styles[arena] is not None else "latest"))
+                stats = completed_by_opponent.setdefault(label, {
+                    "episodes": 0, "wins": 0, "draws": 0, "losses": 0,
+                    "episode_return_sum": 0.0, "duration_ticks_sum": 0,
+                })
+                stats["episodes"] += 1
+                stats[outcome] += 1
+                # Every nonterminal transition gives +0.001; terminal reward
+                # replaces, rather than adds to, the reward on the death tick.
+                stats["episode_return_sum"] += 0.001 * max(0, episode_lengths[arena] - 1) + rewards[arena]
+                stats["duration_ticks_sum"] += episode_lengths[arena]
+                episode_lengths[arena] = 0
+        reward_sum += sum(rewards)
+        reward_sample_count += len(rewards)
         obs_steps.append(learner_obs)
         action_steps.append(actions)
         logp_steps.append(log_probs)
@@ -524,9 +640,28 @@ def _collect(torch, model, snapshot_model, config: TrainConfig, master_seed: int
     heuristic_style_counts = {style: sum(sampled_style == style for sampled_style in heuristic_styles)
                               for style in HEURISTIC_STYLES}
     latest_games = config.arena_count - snapshot_games - heuristic_games
+    opponent_result_metrics = {}
+    for label, stats in sorted(completed_by_opponent.items()):
+        episodes = stats["episodes"]
+        opponent_result_metrics[label] = {
+            "episodes": episodes,
+            "wins": stats["wins"],
+            "draws": stats["draws"],
+            "losses": stats["losses"],
+            "win_rate": stats["wins"] / episodes if episodes else None,
+            "mean_terminal_reward": (stats["wins"] - stats["losses"]) / episodes if episodes else None,
+            "mean_episode_reward": stats["episode_return_sum"] / episodes if episodes else None,
+            "mean_duration_ticks": stats["duration_ticks_sum"] / episodes if episodes else None,
+        }
+    rollout_metrics = {
+        "mean_step_reward": reward_sum / reward_sample_count if reward_sample_count else 0.0,
+        "partial_episodes_at_rollout_end": sum(length > 0 for length in episode_lengths),
+        "episodes_by_opponent": opponent_result_metrics,
+    }
     return (torch.cat(obs_steps), torch.cat(action_steps), torch.cat(logp_steps),
             advantages.reshape(-1), returns.reshape(-1), completed,
-            snapshot_games, latest_games, heuristic_games, heuristic_style_counts, states)
+            snapshot_games, latest_games, heuristic_games, heuristic_style_counts, states,
+            rollout_metrics)
 
 
 def _save_checkpoint(torch, model, optimizer, config, step_num: int, device, output: Path,
@@ -536,7 +671,7 @@ def _save_checkpoint(torch, model, optimizer, config, step_num: int, device, out
     checkpoints.mkdir(parents=True, exist_ok=True)
     pt_path = checkpoints / f"{checkpoint_id}.pt"
     torch.save({"format": "lc-checkpoint/1", "checkpoint_id": checkpoint_id, "step": step_num,
-                "model_architecture": {"name": ARCH_NAME, "version": ARCH_VERSION,
+                "model_architecture": {"name": ARCH_NAME, "version": str(config.action_mask_version),
                                        "config": {"width": config.width, "height": config.height, "hidden_size": config.hidden_size}},
                 "observation_schema": OBSERVATION_SCHEMA, "action_schema": ACTION_SCHEMA,
                 "model_state_dict": model.state_dict(), "optimizer_state_dict": optimizer.state_dict(),
@@ -570,11 +705,66 @@ def _onnx_available() -> bool:
 def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
           resume: str | Path | None = None, run_evaluation: bool = True,
           g008_schedule: Mapping[str, Any] | None = None,
+          g008_campaign_train: Mapping[str, Any] | None = None,
           run_id: str | None = None,
           g008_backend_role: str | None = None) -> dict[str, Any]:
     config.validate()
     environment_schedule = None
-    if g008_schedule is not None:
+    campaign_metadata = None
+    if g008_campaign_train is not None:
+        from training.eval.g008_campaign_seed import CampaignSeedError as ProvenanceError
+        from training.eval.g008_campaign_seed import seed_plan_sha256
+
+        campaign_metadata = dict(g008_campaign_train)
+        required = {"campaign_id", "registration_id", "run_uuid", "pair_id", "strategy_role",
+                    "root_seed", "ppo_seed", "update_budget", "seed_plan_sha256",
+                    "opponent_probabilities", "config_sha256", "shared_config_sha256",
+                    "schedule_descriptor_sha256"}
+        if (set(campaign_metadata) != required
+                or campaign_metadata.get("campaign_id") != "g008-competitive-20261021-v2"
+                or campaign_metadata.get("strategy_role") not in {"baseline", "mixed"}
+                or campaign_metadata.get("pair_id") not in {"seed-pair-1", "seed-pair-2", "seed-pair-3"}
+                or campaign_metadata.get("run_uuid") != run_id
+                or campaign_metadata.get("ppo_seed") != config.seed
+                or campaign_metadata.get("update_budget") != config.total_updates
+                or config.total_updates != 1_000 or config.checkpoint_every != 50
+                or campaign_metadata.get("seed_plan_sha256") != seed_plan_sha256()
+                or g008_schedule is not None or g008_backend_role is not None):
+            raise ProvenanceError("G008 campaign config differs from its exact registered v2 workload")
+        role = campaign_metadata["strategy_role"]
+        expected_seed = {"seed-pair-1": 3301, "seed-pair-2": 3302, "seed-pair-3": 3303}[
+            campaign_metadata["pair_id"]]
+        expected_root = {"seed-pair-1": 2_100_001, "seed-pair-2": 2_200_001,
+                         "seed-pair-3": 2_300_001}[campaign_metadata["pair_id"]]
+        expected_probability = ({"latest": 10_000, "step0": 0, "cruise": 0,
+                                 "local_mobility": 0, "interceptor": 0} if role == "baseline" else
+                                {"latest": 6_000, "step0": 1_000, "cruise": 1_000,
+                                 "local_mobility": 1_000, "interceptor": 1_000})
+        if (campaign_metadata["ppo_seed"] != expected_seed
+                or campaign_metadata["root_seed"] != expected_root
+                or campaign_metadata["opponent_probabilities"] != expected_probability):
+            raise ProvenanceError("G008 campaign pair seeds or opponent distribution differ from preregistration")
+        from training.ppo.protocol import digest_json
+        registered_config = asdict(replace(config, device="auto"))
+        if digest_json(registered_config, "") != campaign_metadata["config_sha256"]:
+            raise ProvenanceError("G008 campaign full TrainConfig hash differs from preregistration")
+        shared_config = {name: value for name, value in asdict(config).items()
+                         if name not in {"device", "seed", "snapshot_opponent_probability",
+                                         "heuristic_opponent_probability"}}
+        if digest_json(shared_config, "") != campaign_metadata["shared_config_sha256"]:
+            raise ProvenanceError("G008 campaign shared PPO config hash differs from preregistration")
+        expected_snapshot, expected_heuristic = ((0.0, 0.0) if role == "baseline" else (0.1, 1 / 3))
+        if (config.snapshot_opponent_probability != expected_snapshot
+                or config.heuristic_opponent_probability != expected_heuristic):
+            raise ProvenanceError("G008 campaign opponent sampling differs from preregistered strategy")
+        descriptor = g008_campaign_schedule_descriptor(
+            run_uuid=run_id, root_seed=campaign_metadata["root_seed"],
+            arena_count=config.arena_count, total_updates=config.total_updates,
+            rollout_steps=config.rollout_steps, seed_plan_sha=campaign_metadata["seed_plan_sha256"])
+        if descriptor["schedule_descriptor_sha256"] != campaign_metadata["schedule_descriptor_sha256"]:
+            raise ProvenanceError("G008 campaign environment schedule hash differs from registration")
+        environment_schedule = G008CampaignEnvironmentSeedSchedule(descriptor)
+    elif g008_schedule is not None:
         from training.eval.provenance import ProvenanceError, _read_seed_plan
 
         plan, _ = _read_seed_plan()
@@ -594,7 +784,7 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
         raise ValueError("G008 heuristic opponents require a frozen g008-train schedule")
     g008_training_run = environment_schedule is not None and not environment_schedule.is_benchmark
     if g008_training_run and run_evaluation:
-        raise ValueError("G008 training must not invoke the G007 open-space evaluator; use split-aware validation")
+        raise ValueError("G008 training must not invoke a held-out evaluator; use split-aware validation")
     if export_onnx and not run_evaluation and not g008_training_run:
         raise ValueError("ONNX manifest export requires the fixed evaluation report")
     torch = _torch()
@@ -605,7 +795,8 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
     torch.manual_seed(config.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(config.seed)
-    model = _model_class(torch)(config.width, config.height, config.hidden_size).to(device)
+    model = _model_class(torch)(config.width, config.height, config.hidden_size,
+                                action_mask_version=config.action_mask_version).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     start_update = 0
     optimizer_updates = 0
@@ -615,6 +806,8 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
             raise ValueError("resume checkpoint has an unsupported contract")
         if saved.get("master_seed") != str(config.seed):
             raise ValueError("resume checkpoint master seed does not match training config")
+        if saved.get("model_architecture", {}).get("version") != str(config.action_mask_version):
+            raise ValueError("resume checkpoint action-mask semantics do not match current trainer")
         architecture = saved["model_architecture"]["config"]
         if (architecture["width"], architecture["height"], architecture["hidden_size"]) != (config.width, config.height, config.hidden_size):
             raise ValueError("resume checkpoint architecture does not match training config")
@@ -625,7 +818,10 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
         random.setstate(saved["python_random_state"])
         torch.set_rng_state(saved["torch_random_state"].cpu())
         if device.type == "cuda" and saved.get("cuda_random_states"):
-            torch.cuda.set_rng_state_all(saved["cuda_random_states"])
+            # torch.load(map_location=device) moves every tensor in the
+            # checkpoint, including CUDA RNG byte states, onto the GPU.
+            # PyTorch's CUDA RNG restore API expects those state tensors on CPU.
+            torch.cuda.set_rng_state_all([state.cpu() for state in saved["cuda_random_states"]])
     model.to(device)
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -647,7 +843,8 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
         initial_weights = torch.load(initial["pt"], map_location=device, weights_only=False)
         snapshot_config = initial_weights["model_architecture"]["config"]
         snapshot_model = _model_class(torch)(snapshot_config["width"], snapshot_config["height"],
-                                             snapshot_config["hidden_size"]).to(device)
+                                             snapshot_config["hidden_size"],
+                                             action_mask_version=int(initial_weights["model_architecture"]["version"])).to(device)
         snapshot_model.load_state_dict(initial_weights["model_state_dict"])
         snapshot_model.eval()
         for parameter in snapshot_model.parameters():
@@ -660,7 +857,7 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
         update_started = time.perf_counter()
         absolute_update = start_update + local_update
         rollout_started = time.perf_counter()
-        obs, actions, old_logp, advantages, returns, completed, snapshot_games, latest_games, heuristic_games, heuristic_style_counts, final_environment_states = _collect(
+        obs, actions, old_logp, advantages, returns, completed, snapshot_games, latest_games, heuristic_games, heuristic_style_counts, final_environment_states, rollout_metrics = _collect(
             torch, model, snapshot_model, config, config.seed, device, absolute_update,
             environment_schedule, carried_environment_states)
         if environment_schedule is not None and environment_schedule.is_benchmark:
@@ -670,6 +867,12 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
         advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)
         model.train()
         loss_sum = torch.zeros((), dtype=torch.float32, device=device)
+        policy_loss_sum = torch.zeros((), dtype=torch.float32, device=device)
+        value_loss_sum = torch.zeros((), dtype=torch.float32, device=device)
+        entropy_sum = torch.zeros((), dtype=torch.float32, device=device)
+        approx_kl_sum = torch.zeros((), dtype=torch.float32, device=device)
+        clip_fraction_sum = torch.zeros((), dtype=torch.float32, device=device)
+        metric_weight_sum = 0
         loss_count = 0
         update_cuda_count = 0
         for _ in range(config.update_epochs):
@@ -678,12 +881,15 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
                 logits, values = model(obs[indices])
                 dist = torch.distributions.Categorical(logits=logits)
                 logp = dist.log_prob(actions[indices])
-                ratio = (logp - old_logp[indices]).exp()
+                log_ratio = logp - old_logp[indices]
+                ratio = log_ratio.exp()
                 unclipped = ratio * advantages[indices]
                 clipped = torch.clamp(ratio, 1 - config.clip_ratio, 1 + config.clip_ratio) * advantages[indices]
                 policy_loss = -torch.minimum(unclipped, clipped).mean()
                 value_loss = 0.5 * (returns[indices] - values).square().mean()
                 entropy = dist.entropy().mean()
+                approx_kl = ((ratio - 1) - log_ratio).mean()
+                clip_fraction = (torch.abs(ratio - 1) > config.clip_ratio).float().mean()
                 loss = policy_loss + config.value_coef * value_loss - config.entropy_coef * entropy
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
@@ -695,12 +901,30 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
                     update_cuda_count += 1
                 # Keep minibatch metrics on-device; copying each scalar here
                 # would synchronize CUDA once per optimizer step.
+                sample_count = indices.numel()
                 loss_sum.add_(loss.detach())
+                policy_loss_sum.add_(policy_loss.detach() * sample_count)
+                value_loss_sum.add_(value_loss.detach() * sample_count)
+                entropy_sum.add_(entropy.detach() * sample_count)
+                approx_kl_sum.add_(approx_kl.detach() * sample_count)
+                clip_fraction_sum.add_(clip_fraction.detach() * sample_count)
+                metric_weight_sum += sample_count
                 loss_count += 1
         mean_loss = float((loss_sum / max(1, loss_count)).item())
+        policy_loss_mean = float((policy_loss_sum / max(1, metric_weight_sum)).item())
+        value_loss_mean = float((value_loss_sum / max(1, metric_weight_sum)).item())
+        entropy_mean = float((entropy_sum / max(1, metric_weight_sum)).item())
+        approx_kl_mean = float((approx_kl_sum / max(1, metric_weight_sum)).item())
+        clip_fraction_mean = float((clip_fraction_sum / max(1, metric_weight_sum)).item())
         optimizer_seconds = time.perf_counter() - optimizer_started
         logs.append({"update": absolute_update + 1, "episodes_completed": completed,
                      "optimizer_updates": loss_count, "mean_loss": mean_loss,
+                     "policy_loss": policy_loss_mean, "value_loss": value_loss_mean,
+                     "entropy": entropy_mean, "approx_kl": approx_kl_mean,
+                     "clip_fraction": clip_fraction_mean,
+                     "mean_step_reward": rollout_metrics["mean_step_reward"],
+                     "partial_episodes_at_rollout_end": rollout_metrics["partial_episodes_at_rollout_end"],
+                     "episodes_by_opponent": rollout_metrics["episodes_by_opponent"],
                      "device": str(device), "cuda_updates": update_cuda_count,
                      "rollout_seconds": rollout_seconds, "optimizer_seconds": optimizer_seconds,
                      "checkpoint_seconds": 0.0,
@@ -727,19 +951,28 @@ def train(config: TrainConfig, output: str | Path, export_onnx: bool = True,
                 "cuda": torch.version.cuda or "unavailable", "onnx_exporter": "torch.onnx.export",
                 "onnx_opset": config.onnx_opset, "kaggle_cli": "not-used"}
     run_id = run_id or re.sub(r"[^A-Za-z0-9.:+-]", "-", output.name or "light-cycles-run")
+    training_report = {"config": asdict(config), "start_update": start_update,
+                       "training_steps": (start_update + updates) * config.rollout_steps * config.arena_count,
+                       "elapsed_seconds": elapsed, "update_elapsed_seconds": update_elapsed,
+                       "checkpoint_elapsed_seconds": checkpoint_elapsed,
+                       "environment_steps_per_second": measured_steps / max(update_elapsed, 1e-9),
+                       "wall_environment_steps_per_second": measured_steps / max(elapsed, 1e-9),
+                       "mean_rollout_seconds": rollout_total / max(1, len(logs)),
+                       "mean_optimizer_seconds": optimizer_total / max(1, len(logs)),
+                       "rollout_to_optimizer_ratio": rollout_total / max(optimizer_total, 1e-9),
+                       "mean_update_latency_seconds": sum(log["update_latency_seconds"] for log in logs) / max(1, len(logs)),
+                       "updates": logs}
+    if campaign_metadata is not None:
+        training_report.update({"campaign_id": campaign_metadata["campaign_id"],
+                                "registration_id": campaign_metadata["registration_id"],
+                                "pair_id": campaign_metadata["pair_id"],
+                                "strategy_role": campaign_metadata["strategy_role"],
+                                "root_seed": campaign_metadata["root_seed"],
+                                "schedule_descriptor_sha256": campaign_metadata["schedule_descriptor_sha256"]})
     report = {"run_id": run_id, "device": {"device": str(device),
               "cuda_available": bool(torch.cuda.is_available()), "cuda_name": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
               "optimizer_updates": sum(log["optimizer_updates"] for log in logs), "cuda_optimizer_updates": cuda_update_count},
-              "training": {"config": asdict(config), "start_update": start_update, "training_steps": (start_update + updates) * config.rollout_steps * config.arena_count,
-                           "elapsed_seconds": elapsed, "update_elapsed_seconds": update_elapsed,
-                           "checkpoint_elapsed_seconds": checkpoint_elapsed,
-                           "environment_steps_per_second": measured_steps / max(update_elapsed, 1e-9),
-                           "wall_environment_steps_per_second": measured_steps / max(elapsed, 1e-9),
-                           "mean_rollout_seconds": rollout_total / max(1, len(logs)),
-                           "mean_optimizer_seconds": optimizer_total / max(1, len(logs)),
-                           "rollout_to_optimizer_ratio": rollout_total / max(optimizer_total, 1e-9),
-                           "mean_update_latency_seconds": sum(log["update_latency_seconds"] for log in logs) / max(1, len(logs)),
-                           "updates": logs},
+              "training": training_report,
               "software": software, "initial_checkpoint": initial["pt"].relative_to(output).as_posix()}
     (output / "training-metrics.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     evaluation = None
@@ -792,8 +1025,12 @@ def load_policy(checkpoint: str | Path, device: str = "cpu"):
     saved = torch.load(checkpoint, map_location=device, weights_only=False)
     if saved.get("format") != "lc-checkpoint/1" or saved.get("observation_schema") != OBSERVATION_SCHEMA:
         raise ValueError("unsupported checkpoint format/schema")
+    architecture_version = saved.get("model_architecture", {}).get("version")
+    if architecture_version not in ("1", "2"):
+        raise ValueError("unsupported checkpoint action-mask semantics")
     cfg = saved["model_architecture"]["config"]
-    model = _model_class(torch)(cfg["width"], cfg["height"], cfg["hidden_size"]).to(device)
+    model = _model_class(torch)(cfg["width"], cfg["height"], cfg["hidden_size"],
+                                action_mask_version=int(architecture_version)).to(device)
     model.load_state_dict(saved["model_state_dict"])
     model.eval()
 

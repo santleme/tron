@@ -8,6 +8,8 @@ function checkpointMetadata(){
 }
 test('checkpoint metadata validates full contract and supports declared model dimensions',async()=>{
  const m=checkpointMetadata();await validateCheckpointMetadata(m);
+ const v2=structuredClone(m);v2.model_architecture.version='2';v2.metadata_sha256=digest(v2,'metadata_sha256');await validateCheckpointMetadata(v2);
+ const unsupported=structuredClone(v2);unsupported.model_architecture.version='3';unsupported.metadata_sha256=digest(unsupported,'metadata_sha256');await assert.rejects(()=>validateCheckpointMetadata(unsupported),/Unsupported checkpoint model architecture/);
  await assert.rejects(()=>validateCheckpointMetadata({...m,onnx:{...m.onnx,opset:18}}),/Unsupported ONNX opset/);
  await assert.rejects(()=>validateCheckpointMetadata({...m,metadata_sha256:'0'.repeat(64)}),/digest/);
  const unknown={...m,unmodeled:true};unknown.metadata_sha256=digest(unknown,'metadata_sha256');await assert.rejects(()=>validateCheckpointMetadata(unknown),/unknown fields/);

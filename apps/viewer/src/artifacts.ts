@@ -31,7 +31,7 @@ export async function validateCheckpointMetadata(value: CheckpointMetadata): Pro
   if (value.format !== 'lc-checkpoint/1' || value.observation_schema !== 'lc-observation/1' || value.action_schema !== 'lc-action/1') throw new Error('Unsupported checkpoint metadata or schemas');
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value.checkpoint_id ?? '') || !Number.isSafeInteger(value.step) || value.step < 0) throw new Error('Checkpoint metadata has an invalid ID or step');
   if(!hasOnlyKeys(value.model_architecture,['name','version','config'])||!hasOnlyKeys(value.model_architecture?.config,['width','height','hidden_size']))throw new Error('Checkpoint model architecture config is incomplete or contains unknown fields');
-  if (value.model_architecture?.name !== 'mlp-hwc-flatten' || value.model_architecture?.version !== '1') throw new Error('Unsupported checkpoint model architecture');
+  if (value.model_architecture?.name !== 'mlp-hwc-flatten' || !['1','2'].includes(value.model_architecture?.version)) throw new Error('Unsupported checkpoint model architecture');
   const config=value.model_architecture.config;
   if (!config || !Number.isSafeInteger(config.width) || config.width < 2 || !Number.isSafeInteger(config.height) || config.height < 2 || !Number.isSafeInteger(config.hidden_size) || config.hidden_size < 1) throw new Error('Checkpoint architecture config must include valid width, height, and hidden_size');
   if (!hasOnlyKeys(value.onnx,['file','sha256','opset','runtime'])||value.onnx?.runtime !== 'onnxruntime-web') throw new Error('Checkpoint ONNX details are incomplete or runtime is unsupported');

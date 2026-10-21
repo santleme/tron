@@ -45,27 +45,91 @@ def ensure_support_dependencies(torch):
         raise RuntimeError(f"Kaggle image lacks support packages {still_missing}; dependencies were not resolved.")
 
 
+def constrain_cuda_visibility():
+    """Expose one deterministic Kaggle GPU before importing CUDA libraries."""
+    configured = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if configured is None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        return
+    first_device = configured.split(",", 1)[0].strip()
+    if not first_device:
+        raise RuntimeError("Kaggle benchmark requires at least one visible CUDA device.")
+    os.environ["CUDA_VISIBLE_DEVICES"] = first_device
+
+
+def run_campaign_train(settings, output, runtime_evidence, torch):
+    """Run one registered v2 training arm without entering the generic path."""
+    if not torch.cuda.is_available():
+        raise RuntimeError("Registered G008 campaign training requires the Kaggle CUDA runtime.")
+    ensure_support_dependencies(torch)
+    from training.ppo.train import TrainConfig, train
+
+    config = TrainConfig(**settings["train_config"])
+    if config.device != "cuda":
+        raise RuntimeError("G008 campaign training device must resolve to CUDA.")
+    run_id = settings.get("run_id")
+    report = train(config, output, export_onnx=True, run_evaluation=False,
+                   g008_campaign_train=settings["g008_campaign_train"], run_id=run_id)
+    (output / "kaggle-execution-evidence.json").write_text(
+        json.dumps(runtime_evidence, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return report
+
+
 def main():
     # Import/check PyTorch before any optional dependency installation. Kaggle
     # training is deliberately GPU-only; local training retains CPU support.
+    constrain_cuda_visibility()
     import torch
     settings = json.loads((ROOT / "run-config.json").read_text(encoding="utf-8"))
-    requested_device = settings["train_config"].get("device", "auto")
+    campaign_id = (settings.get("g008_campaign_train", {}).get("campaign_id")
+                   or settings.get("g008_evaluation", {}).get("campaign_id"))
+    v2_nonfinal = (campaign_id == "g008-competitive-20261021-v2"
+                   and settings.get("g008_evaluation", {}).get("mode") != "final")
+    if v2_nonfinal:
+        forbidden_sources = (
+            ROOT / "training/configs/g008-split-seed-plan.json",
+            ROOT / "training/eval/provenance.py",
+            ROOT / "training/eval/registry.py",
+            ROOT / "training/eval/lc_eval.py",
+            ROOT / "training/eval/g008_final_roster.py",
+            ROOT / "training/eval/g008_final_opponent.py",
+        )
+        if any(path.exists() for path in forbidden_sources):
+            raise RuntimeError("Nonfinal G008 campaign package contains final-only source or seed data.")
+        if not (ROOT / "training/eval/g008_campaign_seed.py").is_file():
+            raise RuntimeError("Nonfinal G008 campaign package is missing its safe seed codec.")
+    requested_device = settings.get("train_config", {}).get("device", "auto")
     if requested_device == "cpu":
         raise RuntimeError("Kaggle self-play training requires CUDA; device=cpu is not allowed.")
     cuda_available = torch.cuda.is_available()
     if not cuda_available:
         raise RuntimeError("Kaggle self-play training requires an available CUDA GPU; refusing CPU fallback.")
     device_names = [torch.cuda.get_device_name(index) for index in range(torch.cuda.device_count())]
+    torch.cuda.set_device(0)
     print(f"Preinstalled PyTorch={torch.__version__} CUDA={torch.version.cuda} available={cuda_available} "
           f"visible_cuda_devices={device_names}; training_device={device_names[0] if device_names else 'none'}")
-    settings["train_config"]["device"] = "cuda"
-    from training.ppo.train import TrainConfig, train
-    run_id = settings["run_id"]
+    campaign_runtime = any(key in settings for key in
+                           ("g008_principal_benchmark", "g008_train_schedule",
+                            "g008_campaign_train", "g008_evaluation"))
+    if campaign_runtime and (not device_names or device_names[0] != "Tesla T4"):
+        raise RuntimeError(f"Registered G008 workloads require cuda:0 to be a Tesla T4, got {device_names}.")
+    if "train_config" in settings:
+        settings["train_config"]["device"] = "cuda"
+    run_id = settings.get("run_id") or settings.get("g008_evaluation", {}).get("run_uuid")
+    if not isinstance(run_id, str) or not run_id:
+        raise RuntimeError("Kaggle run config must identify run_id or g008_evaluation.run_uuid")
     output_root = Path(os.environ.get("ARENA_OUTPUT_DIR", "/kaggle/working/arena-output"))
     output = output_root / run_id
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite existing Kaggle output: {output}")
+    runtime_evidence = {
+        "format": "circuit-ai-kaggle-runtime-evidence/1", "run_id": run_id,
+        "python_version": sys.version, "torch_version": torch.__version__,
+        "cuda_version": torch.version.cuda, "visible_cuda_devices": device_names,
+        "visible_cuda_device_count": len(device_names),
+        "training_device": device_names[0] if device_names else None,
+        "training_device_index": 0, "training_cuda_device_count": 1,
+    }
     g008_settings = settings.get("g008_principal_benchmark")
     if g008_settings is not None:
         from training.ppo.g008_benchmark import run_principal_benchmark
@@ -79,6 +143,9 @@ def main():
             "torch_version": torch.__version__,
             "cuda_version": torch.version.cuda,
             "visible_cuda_devices": device_names,
+            "visible_cuda_device_count": len(device_names),
+            "training_device": device_names[0] if device_names else None,
+            "training_device_index": 0, "training_cuda_device_count": 1,
             "benchmark_report_sha256": file_sha256(report_path),
             "benchmark_report": report,
         }
@@ -86,6 +153,28 @@ def main():
             json.dumps(evidence, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         print(f"Completed G008 principal benchmark {run_id}; artifacts: {output}")
         return
+    evaluation_settings = settings.get("g008_evaluation")
+    if evaluation_settings is not None:
+        if not torch.cuda.is_available():
+            raise RuntimeError("Registered G008 evaluation requires the Kaggle CUDA runtime.")
+        ensure_support_dependencies(torch)
+        from training.eval.g008_validation import evaluate_registered
+        from training.ppo.protocol import file_sha256
+        evaluation_settings = dict(evaluation_settings)
+        evaluation_settings.setdefault("device", "cuda")
+        report = evaluate_registered(evaluation_settings, output,
+                                    config_file_sha256=file_sha256(ROOT / "run-config.json"),
+                                    runtime_evidence=runtime_evidence)
+        print(f"Completed registered G008 {evaluation_settings['mode']} evaluation; "
+              f"games={report['game_count']}; artifacts: {output}")
+        return
+    campaign_train_settings = settings.get("g008_campaign_train")
+    if campaign_train_settings is not None:
+        report = run_campaign_train(settings, output, runtime_evidence, torch)
+        print(f"Completed registered G008 campaign train {run_id}; "
+              f"updates={len(report['training']['updates'])}; artifacts: {output}")
+        return
+    from training.ppo.train import TrainConfig, train
     ensure_support_dependencies(torch)
     config = TrainConfig(**settings["train_config"])
     if config.device != "cuda":

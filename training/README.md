@@ -11,6 +11,12 @@ environment steps/s, and per-update rollout, optimizer, checkpoint, and
 end-to-end latency. The primary throughput metric excludes checkpoint saves;
 `wall_environment_steps_per_second` includes in-loop checkpoint I/O. PPO loss
 scalars stay on-device until an update ends to avoid per-minibatch CUDA syncs.
+Each update also records sample-weighted policy loss, value loss, entropy,
+approximate KL, and clip fraction. Rollout reward and completed-game W/D/L,
+terminal reward, reward return, and duration are split by sampled opponent
+(`latest`, `snapshot:step-0`, or each heuristic style). Durations and episode
+returns include full games that may span multiple rollouts; the record also
+counts unfinished partial games at rollout end.
 
 ## Local reproducible smoke
 
@@ -44,6 +50,13 @@ to balance seat exposure. Per-update records and the run manifest record the
 opponent sampling mode, probability, snapshot checkpoint ID, and sampled arena
 counts. This is a bounded initial-snapshot mixture, not a league.
 
+`TrainConfig.action_mask_version` freezes immediate-move semantics into both
+checkpoint metadata and ONNX. Version 1 masks only reversal. Version 2 also
+masks a wall or occupied-trail destination when at least one forward safe move
+exists; if trapped, it keeps the finite v1 forward distribution. This mask
+cannot predict simultaneous collisions with the opponent. Compare versions as
+separate registered candidates with identical training and validation settings.
+
 G008 may opt into a heuristic-opponent fraction only with a frozen
 `g008-train` environment schedule. Its built-in training styles (`cruise`,
 `local-mobility`, and `interceptor`) use simple local rules and never call the
@@ -51,6 +64,21 @@ flood-fill `open-space` policy. G008 training also rejects the legacy G007
 evaluator, which would otherwise consult the protected open-space holdout; use
 the split-aware validation path for checkpoint selection and reserve the exact
 open-space policy for final evaluation only.
+
+## G008 failure diagnosis
+
+Registered G008 evaluation classifies each loss during its original 512-game
+run on Kaggle. The compact `g008-evaluation.json` contains per-loss terminal
+cause, legal moves before the fatal action, reachable area, and whether a
+one-step alternative survives while holding the opponent's observed action
+fixed. Its summary aggregates categories by cause and seat. The evaluator keeps
+at most eight representative replays and never recreates hundreds of matches
+locally. One-step counterfactuals are diagnostic signals; they do not prove that
+the opponent would make the same move after a different action or that the
+alternative guarantees a win.
+
+The optional `training.eval.g008_failure_diagnostics` command summarizes an
+already-produced report. It does not simulate games or create replay files.
 
 ## Throughput sweep
 
@@ -102,7 +130,28 @@ statistics, collision causes, and all seed/seat records. Win rate is wins / 64;
 draws are separate from wins. Evaluation does not claim
 that a model improved.
 
-## Kaggle T4 CUDA smoke (manual, user-invoked)
+## Kaggle CUDA workloads
+
+Registered G008 benchmark, training, validation, and final-evaluation packages
+are built with `tools.kaggle/cli.py`. The package freezes the run config and
+source, selects `cuda:0`, records visible GPUs separately from the device used,
+and reconciles downloaded reports and checkpoints against the registry. Kaggle
+can generate the match replays and classify losses inside the original
+simulation; bulk replay files do not need to be copied to the local machine.
+
+Use the registered runner for G008 experiments. A Kaggle kernel showing
+`COMPLETE` is not by itself a reconciled experiment result; its exact version,
+report, manifest, and checkpoint hashes must match the local registry.
+
+For an unregistered smoke run, in the selected Kaggle notebook image first
+record `python --version`,
+`python -c 'import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "no GPU")'`
+and `nvidia-smi`. Do not pip-reinstall PyTorch if the notebook image already
+has a compatible CUDA build. Run a tiny job with `device: "cuda"`, one update,
+two or more arenas, and export enabled; inspect `training-metrics.json` and
+confirm `device.device == "cuda"`, `optimizer_updates > 0`, and
+`cuda_optimizer_updates == optimizer_updates`. Multi-GPU/DDP comparison is not
+implemented. This smoke path is separate from registered G008 results.
 
 In the selected Kaggle notebook image, first record `python --version`,
 `python -c 'import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "no GPU")'`
@@ -123,8 +172,9 @@ notebook image's CUDA-enabled build. The run manifest records the actual
 Python, PyTorch, CUDA, exporter and opset versions, so inspect that metadata
 instead of assuming a specific Kaggle image version.
 
-The default workspace Python has no `torch`, `onnx`, or CUDA. The CPU PPO smoke,
+The default workspace Python has no `torch`, `onnx`, or CUDA. CPU PPO smoke,
 ONNX export/checker, run bundle, and browser WASM playback were independently
 verified in an isolated temporary environment using PyTorch 2.7.1+cpu and ONNX
-1.23.2. No CUDA device or Kaggle job was available; T4 updates, throughput,
-utilization, and CUDA export parity remain external validation items.
+1.23.2. Kaggle jobs have also run; use the experiment registry to distinguish
+completed but rejected artifacts and exploratory runs from fully reconciled
+CUDA evidence.
