@@ -19,7 +19,7 @@ The campaign's registered workloads are consumed. No authorization remains for a
 
 ## Next research direction
 
-Use the existing train/validation outputs, candidate checkpoints, diagnostics, and replay evidence to identify the dominant failure modes before selecting a training change. Do not repeat completed analyses when the retained evidence answers the question. Selection must use train/validation partitions; only a frozen candidate may be evaluated on the fresh final roster. No candidate is promotion-eligible until an independent final evaluation covers at least 512 games and observes at least 60% wins.
+The retained v2 validation reports show `occupied_trail` as the candidate-side terminal cause in 957 of 1,138 losses, and a one-step locally safe terminal action in 1,084 losses. These diagnostics are conditional on the observed opponent action; they are hypotheses for action-safety and space-preservation work, not proof that another action would win. See [G008 validation failure analysis](G008_VALIDATION_FAILURE_ANALYSIS.md) for the hash-linked reports and paired results. Do not repeat completed analyses when retained evidence answers the question. Selection must use train/validation partitions; only a frozen candidate may be evaluated on a fresh final roster. No candidate is promotion-eligible until an independent final evaluation covers at least 512 games and observes at least 60% wins.
 
 ## Historical records
 
