@@ -1,0 +1,107 @@
+{
+  "checkpoints": [
+    {
+      "checkpoint": "step-0",
+      "draws": 18,
+      "games": 512,
+      "losses": 461,
+      "promotion_eligible": false,
+      "win_rate": 0.064453125,
+      "wins": 33
+    },
+    {
+      "checkpoint": "step-28",
+      "draws": 51,
+      "games": 512,
+      "losses": 326,
+      "promotion_eligible": false,
+      "win_rate": 0.263671875,
+      "wins": 135
+    },
+    {
+      "checkpoint": "step-53",
+      "draws": 58,
+      "games": 512,
+      "losses": 273,
+      "promotion_eligible": false,
+      "win_rate": 0.353515625,
+      "wins": 181
+    },
+    {
+      "checkpoint": "step-78",
+      "draws": 47,
+      "games": 512,
+      "losses": 289,
+      "promotion_eligible": false,
+      "win_rate": 0.34375,
+      "wins": 176
+    },
+    {
+      "checkpoint": "step-103",
+      "draws": 41,
+      "games": 512,
+      "losses": 295,
+      "promotion_eligible": false,
+      "win_rate": 0.34375,
+      "wins": 176
+    },
+    {
+      "checkpoint": "step-128",
+      "draws": 44,
+      "games": 512,
+      "losses": 262,
+      "promotion_eligible": false,
+      "win_rate": 0.40234375,
+      "wins": 206
+    },
+    {
+      "checkpoint": "step-153",
+      "draws": 41,
+      "games": 512,
+      "losses": 268,
+      "promotion_eligible": false,
+      "win_rate": 0.396484375,
+      "wins": 203
+    },
+    {
+      "checkpoint": "step-178",
+      "draws": 47,
+      "games": 512,
+      "losses": 263,
+      "promotion_eligible": false,
+      "win_rate": 0.39453125,
+      "wins": 202
+    },
+    {
+      "checkpoint": "step-203",
+      "draws": 55,
+      "games": 512,
+      "losses": 264,
+      "promotion_eligible": false,
+      "win_rate": 0.376953125,
+      "wins": 193
+    },
+    {
+      "checkpoint": "step-228",
+      "draws": 54,
+      "games": 512,
+      "losses": 247,
+      "promotion_eligible": false,
+      "win_rate": 0.412109375,
+      "wins": 211
+    },
+    {
+      "checkpoint": "step-236",
+      "draws": 51,
+      "games": 512,
+      "losses": 244,
+      "promotion_eligible": false,
+      "win_rate": 0.423828125,
+      "wins": 217
+    }
+  ],
+  "format": "g008-exploratory-checkpoint-sweep/1",
+  "opponent": "g007-step-300",
+  "same_512_seed_roster": true,
+  "status": "exploratory_unregistered"
+}

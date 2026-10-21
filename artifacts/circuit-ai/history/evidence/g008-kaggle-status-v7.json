@@ -1,0 +1,16 @@
+{
+  "cuda_visible_devices": [
+    "Tesla T4",
+    "Tesla T4"
+  ],
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "logs_available": true,
+  "quota_raw": "resource  used   remaining  total   refreshAt            \n--------  -----  ---------  ------  -------------------  \nGPU       2.24h  27.76h     30.00h  2026-10-24T00:00:00  \nTPU       0.00h  20.00h     20.00h  2026-10-24T00:00:00",
+  "result": "error_before_training_roster_order_validation",
+  "status": "pascalcoimbra/circuit-ai/7 has status \"KernelWorkerStatus.ERROR\"",
+  "stderr_summary": "Traceback (most recent call last):\n  File \"/kaggle/src/script.py\", line 127, in <module>\n    main()\n    ~~~~^^\n  File \"/kaggle/src/script.py\", line 72, in main\n    report = run_principal_benchmark(output, run_ids=g008_settings[\"run_ids\"])\n  File \"/tmp/circuit-ai-source-ppeebybb/training/ppo/g008_benchmark.py\", line 162, in run_principal_benchmark\n    schedules = prepare_benchmark_schedules(run_ids)\n  File \"/tmp/circuit-ai-source-ppeebybb/training/ppo/g008_benchmark.py\", line 124, in prepare_benchmark_schedules\n    raise ProvenanceError(\"benchmark requires exact frozen measured/warmup run-key roster order\")\ntraining.eval.provenance.ProvenanceError: benchmark requires exact frozen measured/warmup run-key roster order\n/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n[NbConvertApp] Converting notebook __script__.ipynb to html\n[NbConvertApp] Writing 393640 bytes to __results__.html\n",
+  "stdout_summary": "Preinstalled PyTorch=2.11.0+cu128 CUDA=12.8 available=True visible_cuda_devices=['Tesla T4', 'Tesla T4']; training_device=Tesla T4\n",
+  "training_device": "Tesla T4",
+  "training_started": false,
+  "version": 7
+}

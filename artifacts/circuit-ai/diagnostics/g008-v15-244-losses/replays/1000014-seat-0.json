@@ -1,0 +1,102 @@
+{
+  "action_schema": "lc-action/1",
+  "agents": [
+    {
+      "agent_id": "candidate",
+      "checkpoint_id": "step-236"
+    },
+    {
+      "agent_id": "g007-step-300",
+      "checkpoint_id": "step-300"
+    }
+  ],
+  "arena_index": 0,
+  "derived_streams": [
+    {
+      "initseq": "9315230857377885290",
+      "initstate": "11998604216317033226",
+      "label": "episode"
+    },
+    {
+      "initseq": "4045452987371705881",
+      "initstate": "13707817975467979999",
+      "label": "agent/0"
+    },
+    {
+      "initseq": "9027070987533305599",
+      "initstate": "8105673540970018497",
+      "label": "agent/1"
+    }
+  ],
+  "engine_version": "lc-engine/1",
+  "format": "lc-replay/1",
+  "initial_state": {
+    "headings": [
+      "LEFT",
+      "UP"
+    ],
+    "height": 12,
+    "positions": [
+      {
+        "x": 5,
+        "y": 2
+      },
+      {
+        "x": 5,
+        "y": 4
+      }
+    ],
+    "trails": [
+      [
+        {
+          "x": 5,
+          "y": 2
+        }
+      ],
+      [
+        {
+          "x": 5,
+          "y": 4
+        }
+      ]
+    ],
+    "width": 12
+  },
+  "master_seed": "12873044696233036633",
+  "match_id": "loss-12873044696233036633-0",
+  "observation_schema": "lc-observation/1",
+  "replay_sha256": "76a1ba430b0d44f5ab5bc03b693d7dba3e4d8af1468bfedd3324955931dbf72b",
+  "result": "agent_1_win",
+  "run_id": "g008-v15-continuation-236",
+  "tick_count": 2,
+  "ticks": [
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        2,
+        1
+      ],
+      "terminal_causes": [],
+      "tick": 0
+    },
+    {
+      "collision_causes": [
+        [
+          "occupied_trail"
+        ],
+        []
+      ],
+      "joint_actions": [
+        2,
+        2
+      ],
+      "terminal_causes": [
+        "agent_0_dead"
+      ],
+      "tick": 1
+    }
+  ]
+}

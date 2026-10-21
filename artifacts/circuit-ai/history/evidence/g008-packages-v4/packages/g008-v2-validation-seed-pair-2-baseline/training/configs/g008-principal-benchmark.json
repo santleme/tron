@@ -1,0 +1,26 @@
+{
+  "format": "circuit-ai-principal-benchmark/1",
+  "source": "artifacts/circuit-ai/runs/lc-circuit-ai-smoke-r4/benchmark-results.json#trials[2]",
+  "config_sha256": "0ec65b7978e26ecb13b893e76ec358d48c41428db96b0a60dd810f9f24f0e484",
+  "config": {
+    "arena_count": 128,
+    "checkpoint_every": 1,
+    "clip_ratio": 0.2,
+    "device": "cuda",
+    "entropy_coef": 0.01,
+    "gae_lambda": 0.95,
+    "gamma": 0.99,
+    "height": 12,
+    "hidden_size": 128,
+    "learning_rate": 0.0003,
+    "minibatch_size": 1024,
+    "onnx_opset": 17,
+    "rollout_steps": 32,
+    "seed": 1234,
+    "snapshot_opponent_probability": 0.0,
+    "total_updates": 3,
+    "update_epochs": 1,
+    "value_coef": 0.5,
+    "width": 12
+  }
+}

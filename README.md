@@ -18,14 +18,17 @@ provenance, and a TypeScript replay viewer.
 
 ## Run checks
 
-Python 3.10+:
+Python 3.10, 3.12, and 3.13 are the CI-supported versions. CI installs the
+hash-locked CPU test environment; Kaggle continues to use its supplied CUDA
+PyTorch image.
 
 ```bash
-python -m pip install -r training/requirements.txt
+python -m pip install uv==0.11.7
+uv pip sync --system --require-hashes --torch-backend cpu training/requirements-ci.lock
 python -m pytest -q
 ```
 
-Viewer checks (Node.js with the version supported by the lockfile):
+Viewer checks use Node.js 22 and 24 in CI:
 
 ```bash
 cd apps/viewer

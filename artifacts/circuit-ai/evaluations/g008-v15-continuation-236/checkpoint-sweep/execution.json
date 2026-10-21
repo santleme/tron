@@ -1,0 +1,10 @@
+{
+  "kernel": "pascalcoimbra/circuit-ai-g008-checkpoint-sweep-v15/2",
+  "status": "COMPLETE",
+  "accelerator": "Tesla T4",
+  "checkpoints_evaluated": 11,
+  "games_per_checkpoint": 512,
+  "opponent": "g007-step-300",
+  "seed_roster": "same exploratory 512-slot roster used for step-3 and step-236 comparison",
+  "status_kind": "exploratory_unregistered"
+}

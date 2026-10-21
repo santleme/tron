@@ -1,3 +1,4 @@
+import hashlib
 import json
 import importlib.util
 import sys
@@ -3035,6 +3036,20 @@ def test_prepare_builds_deterministic_self_contained_package_without_kaggle(tmp_
     assert metadata["enable_gpu"] is True
     assert metadata["enable_internet"] is True
     assert (first / ".arena-source-revision").read_text() == "source-r5\n"
+    source_manifest = json.loads((first / "source-manifest.json").read_text())
+    assert source_manifest["format"] == "circuit-ai-source-manifest/1"
+    assert source_manifest["source_revision"] == "source-r5"
+    assert source_manifest["git_commit"]
+    assert isinstance(source_manifest["git_worktree_dirty"], bool)
+    assert source_manifest["package_builder"]["sha256"] == file_sha256(Path("tools/kaggle/cli.py"))
+    assert len(source_manifest["runner_template_sha256"]) == 64
+    source_paths = {item["path"] for item in source_manifest["files"]}
+    assert {"training/requirements-kaggle.txt", "run-config.json", "kernel-metadata.json",
+            ".arena-source-revision"} <= source_paths
+    assert source_manifest["source_manifest_sha256"] == hashlib.sha256(json.dumps(
+        {key: value for key, value in source_manifest.items() if key != "source_manifest_sha256"},
+        sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+    assert any(item["path"] == "training/ppo/train.py" for item in source_manifest["files"])
     assert (first / "training/arena/engine.py").is_file()
     runner = (first / "run_kaggle.py").read_text()
     assert '"/kaggle/working/arena-output"' in runner
@@ -3051,9 +3066,10 @@ def test_prepare_builds_deterministic_self_contained_package_without_kaggle(tmp_
     embedded_root = Path(namespace["ROOT"])
     try:
         assert (embedded_root / "run-config.json").is_file()
+        assert (embedded_root / "source-manifest.json").read_bytes() == (first / "source-manifest.json").read_bytes()
         assert (embedded_root / "training/ppo/train.py").is_file()
-        assert not (embedded_root / "training/ppo/g008_incumbent").exists()
-        assert not (embedded_root / "schemas/g008-split-seed-plan-3.schema.json").exists()
+        assert (embedded_root / "training/ppo/g008_incumbent").is_dir()
+        assert (embedded_root / "schemas/g008-split-seed-plan-3.schema.json").is_file()
         incumbent_root = embedded_root / "training/ppo/g008_incumbent"
         assert {"train.py", "engine.py", "manifest.json"} <= {path.name for path in incumbent_root.iterdir()}
         incumbent_manifest = json.loads((incumbent_root / "manifest.json").read_text())
@@ -3642,6 +3658,8 @@ def test_kaggle_runner_executes_g008_benchmark_only_and_records_cuda_evidence(tm
     output = output_root / "g008-runner"
     evidence = json.loads((output / "kaggle-execution-evidence.json").read_text())
     assert called == [(str(output), run_ids)]
+    package_source_manifest = json.loads((package / "source-manifest.json").read_text())
+    assert evidence["source_manifest_sha256"] == package_source_manifest["source_manifest_sha256"]
     assert evidence["visible_cuda_devices"] == ["Tesla T4", "Tesla T4"]
     assert evidence["visible_cuda_device_count"] == 2
     assert evidence["training_device_index"] == 0

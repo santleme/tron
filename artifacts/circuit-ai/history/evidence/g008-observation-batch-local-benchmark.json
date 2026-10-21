@@ -1,0 +1,33 @@
+{
+  "contiguous_numpy_median_seconds": 0.03196226500040211,
+  "contiguous_numpy_seconds": [
+    0.06170334599846683,
+    0.03196226500040211,
+    0.03176629799963848,
+    0.03326229999947827,
+    0.030988411001089844
+  ],
+  "environment": {
+    "arena_count": 128,
+    "joint_transitions": 4096,
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "repeats": 5,
+    "rollout_steps": 32
+  },
+  "format": "circuit-ai-g008-observation-batch-microbenchmark/1",
+  "nested_list_median_seconds": 0.23748620600053982,
+  "nested_list_seconds": [
+    0.24927435600147874,
+    0.23406373899888422,
+    0.23748620600053982,
+    0.22674323700084642,
+    0.2510887989992625
+  ],
+  "scope": "CPU microbenchmark of observation construction plus the same deterministic 128-arena stepping workload; not a Kaggle/T4 throughput claim",
+  "source_files": [
+    "training/ppo/train.py",
+    "training/arena/engine.py"
+  ],
+  "speedup": 7.4302057753902
+}

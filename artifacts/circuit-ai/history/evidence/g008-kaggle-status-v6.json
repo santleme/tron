@@ -1,0 +1,17 @@
+{
+  "cancel_attempt": "official Kaggle SDK cancel_kernel_session(session_id=6)",
+  "cancel_cli_command_available": false,
+  "cancel_http_status": 403,
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "logs_available": false,
+  "logs_bytes": 1,
+  "observed_at_utc": "2026-10-20T14:28:49.817201+00:00",
+  "quota_raw": "resource  used   remaining  total   refreshAt            \n--------  -----  ---------  ------  -------------------  \nGPU       2.23h  27.77h     30.00h  2026-10-24T00:00:00  \nTPU       0.00h  20.00h     20.00h  2026-10-24T00:00:00  \n",
+  "recovery_file_listing": "G007 artifacts timestamped 2026-10-19 23:27 UTC; not v6 evidence",
+  "recovery_output_downloaded": false,
+  "source_revision": "g008-r2-173f821e2695d5d4",
+  "status_raw": "pascalcoimbra/circuit-ai/6 has status \"KernelWorkerStatus.CANCEL_ACKNOWLEDGED\"",
+  "terminal": true,
+  "user_cancelled": true,
+  "version": 6
+}

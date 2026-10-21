@@ -1,0 +1,34 @@
+{
+  "kernel": "pascalcoimbra/circuit-ai-g008-validation-v15-continuation/2",
+  "status": "COMPLETE",
+  "accelerator": "Tesla T4",
+  "candidate_run": "g008-v15-exploratory",
+  "candidate_checkpoint": "step-236",
+  "opponent": "g007-step-300",
+  "games": 512,
+  "unique_seeds": 512,
+  "summary": {
+    "draws": 51,
+    "losses": 244,
+    "win_rate": 0.423828125,
+    "wins": 217
+  },
+  "candidate_seat_results": {
+    "seat0": {
+      "wins": 106,
+      "draws": 21,
+      "losses": 129
+    },
+    "seat1": {
+      "wins": 111,
+      "draws": 30,
+      "losses": 115
+    }
+  },
+  "terminal_reasons": {
+    "collision": 496,
+    "wall": 16
+  },
+  "mean_ticks": 12.822265625,
+  "result_kind": "exploratory_unregistered; promotion_eligible=false"
+}

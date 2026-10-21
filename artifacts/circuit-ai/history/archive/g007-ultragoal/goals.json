@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "createdAt": "2026-10-19T21:22:44.618Z",
+  "updatedAt": "2026-10-19T23:56:15.002Z",
+  "briefPath": ".omx/ultragoal/brief.md",
+  "goalsPath": ".omx/ultragoal/goals.json",
+  "ledgerPath": ".omx/ultragoal/ledger.jsonl",
+  "codexGoalMode": "aggregate",
+  "goals": [
+    {
+      "id": "G001-contract-gate",
+      "title": "Contract Gate",
+      "objective": "Create project scaffold and freeze shared lc-run/1, lc-replay/1, checkpoint, seed, observation/action, collision and lc-eval/1 contracts plus shared golden fixtures before implementation lanes diverge; test canonical digest and schema compatibility per approved PRD/test-spec.",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-10-19T21:22:44.618Z",
+      "updatedAt": "2026-10-19T21:27:28.660Z",
+      "startedAt": "2026-10-19T21:22:46.474Z",
+      "completedAt": "2026-10-19T21:27:28.660Z",
+      "evidence": "Frozen shared schemas/fixtures at schemas/ and shared/fixtures/; contract suite: python3 -m unittest discover -s tests/contracts -v (11 passed); JSON parse (6 schemas, 7 fixtures) and compileall passed. No unresolved contract questions; no source engine/Kaggle job yet."
+    },
+    {
+      "id": "G002-deterministic-engines",
+      "title": "Deterministic Engines",
+      "objective": "Implement seeded Python reference engine and vectorized runner, then TypeScript browser engine; prove collision rules, transitions, observations, seeds, actions and replay hashes match all shared fixtures exactly.",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-10-19T21:22:44.618Z",
+      "updatedAt": "2026-10-19T21:41:56.612Z",
+      "startedAt": "2026-10-19T21:27:32.257Z",
+      "completedAt": "2026-10-19T21:41:56.612Z",
+      "evidence": "Python and TypeScript deterministic engines implemented. Combined verification: PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider tests/contracts tests/python_engine -q -> 19 passed; node --experimental-strip-types --test tests/typescript_engine/*.test.mjs -> 8 passed incl live Python differential; TS syntax checks passed. Shared collision/replay fixture contradictions corrected and replay digest matches regenerated records. No pycache remains. Static TS typecheck is unavailable (no TypeScript compiler configured); real T4/Kaggle run deferred."
+    },
+    {
+      "id": "G003-ppo-training-and-evaluation",
+      "title": "PPO Training and Evaluation",
+      "objective": "Implement two-agent PPO self-play with GPU updates when available, checkpoint resume/native save, ONNX export and fixed held-out lc-eval/1 reports/replays; produce a tiny CPU smoke and device/update evidence without claiming unmeasured learning gains.",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-10-19T21:22:44.618Z",
+      "updatedAt": "2026-10-19T21:52:44.421Z",
+      "startedAt": "2026-10-19T21:42:04.879Z",
+      "completedAt": "2026-10-19T21:52:44.421Z",
+      "evidence": "Implemented two-seat PPO with optional deterministic step-0 checkpoint opponent, global-target checkpoint resume, ONNX export path, fixed evaluation and run/device/throughput metrics. Verification: full Python suite 31 passed, 1 skipped because PyTorch is unavailable; TypeScript engine 8 passed; compileall clean. GPU optimizer updates, local PyTorch smoke, ONNX export, and Kaggle CUDA runtime remain unverified external validation gaps; no packages installed or remote job run."
+    },
+    {
+      "id": "G004-browser-inference-and-viewer",
+      "title": "Browser Inference and Viewer",
+      "objective": "Build local web spectator that loads downloaded ONNX checkpoint offline, generates fresh seeded matches using the TypeScript engine, records/replays artifacts, scrubs matches and displays checkpoint/training metrics with requested luminous/cinematic visuals; verify browser/Python action parity.",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-10-19T21:22:44.618Z",
+      "updatedAt": "2026-10-19T21:52:51.594Z",
+      "startedAt": "2026-10-19T21:52:46.204Z",
+      "completedAt": "2026-10-19T21:52:51.594Z",
+      "evidence": "Implemented local browser spectator with offline ONNX Runtime Web/WASM inference, deterministic TypeScript match/replay, artifact manifest/schema/digest checks, playback/scrubbing and metrics UI. Verification: npm typecheck passed; viewer tests 4/4; Vite build passed; TS engine tests 8/8 including Python differential. No browser binary or real ONNX checkpoint available, so live browser inference/session parity remains unverified."
+    },
+    {
+      "id": "G005-kaggle-lifecycle",
+      "title": "Kaggle Lifecycle",
+      "objective": "Implement safe explicit Kaggle submit/status/download automation using current official CLI behavior, explicit target/revision/confirmation, bounded polling and staged atomic artifact validation; all tests mocked/dry-run, no credentials and no real remote run.",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-10-19T21:22:44.618Z",
+      "updatedAt": "2026-10-19T21:53:00.587Z",
+      "startedAt": "2026-10-19T21:52:53.442Z",
+      "completedAt": "2026-10-19T21:53:00.587Z",
+      "evidence": "Implemented local deterministic `arena kaggle prepare`, explicit confirmation-guarded submit, version-specific bounded status/download, schema/digest/hash validation and atomic staging promotion. Source bundle contains exact metadata/revision marker and self-contained trainer runner that preserves Kaggle's preinstalled CUDA PyTorch. Verification: Kaggle tests 8/8; package generation and dry-run preflight passed; compileall clean. No real Kaggle CLI, credentials, network submission or download used."
+    },
+    {
+      "id": "G006-benchmark-and-integration-verificati",
+      "title": "Benchmark and Integration Verification",
+      "objective": "Integrate local UX/training/artifacts, document user workflow, measure rollout/PPO throughput on available hardware and choose by evidence (not GPU occupancy); run full tests/build/static checks and produce acceptance evidence for all MVP contracts.",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-10-19T21:22:44.618Z",
+      "updatedAt": "2026-10-19T23:56:15.002Z",
+      "startedAt": "2026-10-19T21:56:07.677Z",
+      "reviewBlockedAt": "2026-10-19T22:10:14.662Z",
+      "evidence": "Final independent code review APPROVE with 0 findings; independent architecture review WATCH solely because PyTorch/ONNX/CUDA and browser WASM inference were unavailable. Local Python suite 57 passed, 1 torch smoke skipped; viewer 11 tests, TS engine 8, typecheck/build pass. This workspace has no torch, onnx runtime, nvidia-smi, ONNX checkpoint or browser binary. Kaggle credentials/remote submission deliberately unused per explicit user-invoked boundary.",
+      "reviewBlockerResolution": {
+        "resolverGoalId": "G007-external-cuda-and-onnx-acceptance-ev",
+        "status": "complete",
+        "resolvedAt": "2026-10-19T23:56:15.002Z",
+        "evidence": "Kaggle v4 smoke/benchmark: cu128 CUDA on two visible T4s; measured best candidate 1,275.171 arena steps/s at 128×32, rollout 3.1946s vs optimizer 0.01793s. Kaggle v5 self-play: 300 PPO updates, 1,228,800 arena steps, 1,200 CUDA optimizer updates on one T4, 857.35s. Fixed paired held-out comparison: step-300 vs step-0 W/D/L 58/2/4 (90.6%, Wilson 81.0–95.6); vs open-space 1/4/59 (1.6%, Wilson 0.3–8.3), paired survival delta +13.125 ticks [11.234,15.000]. Step-300 remains weak against open-space; no DDP claim. Chromium verified actual ONNX WASM inference, match and full run bundle; evidence JSON/screenshot at artifacts/circuit-ai/reports/browser-acceptance/. Integrity review found raw sidecars omitted from manifest; both validators now reject all external-data sidecars, derived inline-weight viewer bundle validates. Final independent code review APPROVE, architect CLEAR; Python 76 passed+8 subtests, viewer 11 passed, typecheck/build pass."
+      },
+      "completedAt": "2026-10-19T23:56:15.002Z"
+    },
+    {
+      "id": "G007-external-cuda-and-onnx-acceptance-ev",
+      "title": "External CUDA and ONNX Acceptance Evidence",
+      "objective": "After the user explicitly invokes the prepared Kaggle kernel, record a successful CUDA PPO update/throughput sweep and validate one exported ONNX checkpoint in the local browser bundle; until then retain the code delivery as unverified for GPU/browser runtime and do not claim end-to-end acceptance.",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-10-19T22:10:14.663Z",
+      "updatedAt": "2026-10-19T23:56:15.002Z",
+      "evidence": "Kaggle v4 smoke/benchmark: cu128 CUDA on two visible T4s; measured best candidate 1,275.171 arena steps/s at 128×32, rollout 3.1946s vs optimizer 0.01793s. Kaggle v5 self-play: 300 PPO updates, 1,228,800 arena steps, 1,200 CUDA optimizer updates on one T4, 857.35s. Fixed paired held-out comparison: step-300 vs step-0 W/D/L 58/2/4 (90.6%, Wilson 81.0–95.6); vs open-space 1/4/59 (1.6%, Wilson 0.3–8.3), paired survival delta +13.125 ticks [11.234,15.000]. Step-300 remains weak against open-space; no DDP claim. Chromium verified actual ONNX WASM inference, match and full run bundle; evidence JSON/screenshot at artifacts/circuit-ai/reports/browser-acceptance/. Integrity review found raw sidecars omitted from manifest; both validators now reject all external-data sidecars, derived inline-weight viewer bundle validates. Final independent code review APPROVE, architect CLEAR; Python 76 passed+8 subtests, viewer 11 passed, typecheck/build pass.",
+      "resolvesReviewBlockedGoalId": "G006-benchmark-and-integration-verificati",
+      "startedAt": "2026-10-19T23:31:01.542Z",
+      "completedAt": "2026-10-19T23:56:15.002Z"
+    }
+  ],
+  "codexObjective": "Complete the durable ultragoal plan in .omx/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .omx/ultragoal/ledger.jsonl as the audit trail.",
+  "aggregateCompletion": {
+    "status": "complete",
+    "completedAt": "2026-10-19T23:56:15.002Z",
+    "evidence": "Kaggle v4 smoke/benchmark: cu128 CUDA on two visible T4s; measured best candidate 1,275.171 arena steps/s at 128×32, rollout 3.1946s vs optimizer 0.01793s. Kaggle v5 self-play: 300 PPO updates, 1,228,800 arena steps, 1,200 CUDA optimizer updates on one T4, 857.35s. Fixed paired held-out comparison: step-300 vs step-0 W/D/L 58/2/4 (90.6%, Wilson 81.0–95.6); vs open-space 1/4/59 (1.6%, Wilson 0.3–8.3), paired survival delta +13.125 ticks [11.234,15.000]. Step-300 remains weak against open-space; no DDP claim. Chromium verified actual ONNX WASM inference, match and full run bundle; evidence JSON/screenshot at artifacts/circuit-ai/reports/browser-acceptance/. Integrity review found raw sidecars omitted from manifest; both validators now reject all external-data sidecars, derived inline-weight viewer bundle validates. Final independent code review APPROVE, architect CLEAR; Python 76 passed+8 subtests, viewer 11 passed, typecheck/build pass.",
+    "codexGoal": {
+      "available": true,
+      "objective": "Complete the durable ultragoal plan in .omx/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .omx/ultragoal/ledger.jsonl as the audit trail.",
+      "status": "complete",
+      "remainingTokens": null,
+      "raw": {
+        "goal": {
+          "threadId": "01a155ef-05f6-74e3-bad5-f2d7df6a634b",
+          "objective": "Complete the durable ultragoal plan in .omx/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .omx/ultragoal/ledger.jsonl as the audit trail.",
+          "status": "complete",
+          "tokensUsed": 2281213,
+          "timeUsedSeconds": 3725,
+          "createdAt": 1792444970,
+          "updatedAt": 1792454125
+        },
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      }
+    }
+  }
+}

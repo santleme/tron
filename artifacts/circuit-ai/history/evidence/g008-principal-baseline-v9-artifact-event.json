@@ -1,0 +1,13 @@
+{
+  "event_data": {
+    "artifact_sha256": "e315d38af4a86ef054e5e6d72ffd5f7791c912e7b543c1cb1477420a3e11dbd6",
+    "pre_lock_final_event_index": 9,
+    "pre_lock_head_hash": "93527dd4c80eeb655837a7158b5dd3e9a8a5d1794c87b1ca4b769b9b6305c570",
+    "registration_event_hash": "c86801b3d7aac3ecd1964a4d5e9121a2be6595cfdf58491c7b786576cd3fe8f6",
+    "registration_event_index": 8
+  },
+  "event_hash": "f5bcc3f6eea70f7355205634b7daede7a6345b3d9fa9c0e8bd10f5533b34ceab",
+  "event_index": 10,
+  "event_type": "benchmark_artifact",
+  "prev_event_hash": "93527dd4c80eeb655837a7158b5dd3e9a8a5d1794c87b1ca4b769b9b6305c570"
+}

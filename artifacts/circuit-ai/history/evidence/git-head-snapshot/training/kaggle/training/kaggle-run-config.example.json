@@ -1,0 +1,8 @@
+{
+  "run_id": "kaggle-run-r1",
+  "train_config": {
+    "device": "auto",
+    "arena_count": 32,
+    "total_updates": 10
+  }
+}

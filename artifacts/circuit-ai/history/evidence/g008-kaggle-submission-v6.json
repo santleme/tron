@@ -1,0 +1,18 @@
+{
+  "event_data": {
+    "record": {
+      "additional_gpu_seconds_reserved": 0,
+      "kernel_id": "pascalcoimbra/circuit-ai",
+      "kernel_version": 6,
+      "package_tree_sha256": "8dca0be81bf9827d16c06946ff80097595044ff21a34ac663c0bb0d1c22e70e8",
+      "reservation_registration_id": "g008-principal-baseline-20261020-r1",
+      "run_id": "g008-principal-baseline-20261020-r1",
+      "source_revision": "g008-r2-173f821e2695d5d4",
+      "submission_state": "submitted"
+    },
+    "registration_id": "g008-principal-baseline-20261020-r1-kaggle-version-6",
+    "registration_kind": "benchmark"
+  },
+  "event_hash": "b9ee71576adcce23a9aefaec159b96123119e23c6089366657d573371512476f",
+  "event_index": 2
+}

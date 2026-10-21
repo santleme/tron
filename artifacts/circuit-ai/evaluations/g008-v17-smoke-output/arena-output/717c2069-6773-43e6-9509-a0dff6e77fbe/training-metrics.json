@@ -1,0 +1,123 @@
+{
+  "run_id": "717c2069-6773-43e6-9509-a0dff6e77fbe",
+  "device": {
+    "device": "cuda",
+    "cuda_available": true,
+    "cuda_name": "Tesla T4",
+    "optimizer_updates": 12,
+    "cuda_optimizer_updates": 12
+  },
+  "training": {
+    "config": {
+      "width": 12,
+      "height": 12,
+      "arena_count": 128,
+      "rollout_steps": 32,
+      "total_updates": 3,
+      "update_epochs": 1,
+      "minibatch_size": 1024,
+      "hidden_size": 128,
+      "learning_rate": 0.0003,
+      "gamma": 0.99,
+      "gae_lambda": 0.95,
+      "clip_ratio": 0.2,
+      "entropy_coef": 0.01,
+      "value_coef": 0.5,
+      "seed": 1234,
+      "device": "cuda",
+      "checkpoint_every": 1,
+      "onnx_opset": 17,
+      "snapshot_opponent_probability": 0.0,
+      "heuristic_opponent_probability": 0.0
+    },
+    "start_update": 0,
+    "training_steps": 12288,
+    "elapsed_seconds": 6.090031576000001,
+    "update_elapsed_seconds": 2.2521112350000294,
+    "checkpoint_elapsed_seconds": 3.8379029670000193,
+    "environment_steps_per_second": 5456.213622592154,
+    "wall_environment_steps_per_second": 2017.7235284666442,
+    "mean_rollout_seconds": 0.5238034196666584,
+    "mean_optimizer_seconds": 0.22689101033334205,
+    "rollout_to_optimizer_ratio": 2.3086124871016303,
+    "mean_update_latency_seconds": 0.7507037450000098,
+    "updates": [
+      {
+        "update": 1,
+        "episodes_completed": 974,
+        "optimizer_updates": 4,
+        "mean_loss": 0.15146100521087646,
+        "device": "cuda",
+        "cuda_updates": 4,
+        "rollout_seconds": 1.2095901269999842,
+        "optimizer_seconds": 0.6456755940000107,
+        "checkpoint_seconds": 1.2912519459999885,
+        "opponent_sampling": "latest",
+        "snapshot_opponent_arenas": 0,
+        "latest_opponent_arenas": 128,
+        "heuristic_opponent_arenas": 0,
+        "heuristic_opponent_style_counts": {
+          "cruise": 0,
+          "local-mobility": 0,
+          "interceptor": 0
+        },
+        "opponent_checkpoint_id": null,
+        "update_latency_seconds": 1.8552760720000094
+      },
+      {
+        "update": 2,
+        "episodes_completed": 940,
+        "optimizer_updates": 4,
+        "mean_loss": 0.14687129855155945,
+        "device": "cuda",
+        "cuda_updates": 4,
+        "rollout_seconds": 0.17885677699999292,
+        "optimizer_seconds": 0.017515147000011666,
+        "checkpoint_seconds": 1.262420834000011,
+        "opponent_sampling": "latest",
+        "snapshot_opponent_arenas": 0,
+        "latest_opponent_arenas": 128,
+        "heuristic_opponent_arenas": 0,
+        "heuristic_opponent_style_counts": {
+          "cruise": 0,
+          "local-mobility": 0,
+          "interceptor": 0
+        },
+        "opponent_checkpoint_id": null,
+        "update_latency_seconds": 0.1963816890000203
+      },
+      {
+        "update": 3,
+        "episodes_completed": 930,
+        "optimizer_updates": 4,
+        "mean_loss": 0.14608217775821686,
+        "device": "cuda",
+        "cuda_updates": 4,
+        "rollout_seconds": 0.18296335499999827,
+        "optimizer_seconds": 0.017482290000003786,
+        "checkpoint_seconds": 1.28423018700002,
+        "opponent_sampling": "latest",
+        "snapshot_opponent_arenas": 0,
+        "latest_opponent_arenas": 128,
+        "heuristic_opponent_arenas": 0,
+        "heuristic_opponent_style_counts": {
+          "cruise": 0,
+          "local-mobility": 0,
+          "interceptor": 0
+        },
+        "opponent_checkpoint_id": null,
+        "update_latency_seconds": 0.2004534739999997
+      }
+    ]
+  },
+  "software": {
+    "python": "3.13.15",
+    "cpu_count": 4,
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "onnx_exporter": "torch.onnx.export",
+    "onnx_opset": 17,
+    "kaggle_cli": "not-used"
+  },
+  "initial_checkpoint": "checkpoints/step-0.pt"
+}

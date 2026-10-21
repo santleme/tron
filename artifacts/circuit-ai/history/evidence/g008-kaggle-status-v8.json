@@ -1,0 +1,17 @@
+{
+  "cuda_optimizer_counts_validated_before_per_update_check": true,
+  "cuda_visible_devices": [
+    "Tesla T4",
+    "Tesla T4"
+  ],
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "logs_available": true,
+  "quota_raw": "resource  used   remaining  total   refreshAt            \n--------  -----  ---------  ------  -------------------  \nGPU       2.28h  27.72h     30.00h  2026-10-24T00:00:00  \nTPU       0.00h  20.00h     20.00h  2026-10-24T00:00:00",
+  "result": "error_after_cuda_training_metrics_during_per_update_count_consistency_check",
+  "status": "pascalcoimbra/circuit-ai/8 has status \"KernelWorkerStatus.ERROR\"",
+  "stderr_summary": "Traceback (most recent call last):\n  File \"/kaggle/src/script.py\", line 127, in <module>\n    main()\n    ~~~~^^\n  File \"/kaggle/src/script.py\", line 72, in main\n    report = run_principal_benchmark(output, run_ids=g008_settings[\"run_ids\"])\n  File \"/tmp/circuit-ai-source-32_xoien/training/ppo/g008_benchmark.py\", line 198, in run_principal_benchmark\n    device = _validate_cuda_run(metrics, config.total_updates, f\"repeat-{index:02d}\")\n  File \"/tmp/circuit-ai-source-32_xoien/training/ppo/g008_benchmark.py\", line 84, in _validate_cuda_run\n    raise RuntimeError(f\"{label}: an optimizer update lacks CUDA evidence\")\nRuntimeError: repeat-00: an optimizer update lacks CUDA evidence\n/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n[NbConvertApp] Converting notebook __script__.ipynb to html\n[NbConvertApp] Writing 393792 bytes to __results__.html\n",
+  "stdout_summary": "Preinstalled PyTorch=2.11.0+cu128 CUDA=12.8 available=True visible_cuda_devices=['Tesla T4', 'Tesla T4']; training_device=Tesla T4\n",
+  "training_device": "Tesla T4",
+  "training_returned": true,
+  "version": 8
+}

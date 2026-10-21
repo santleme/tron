@@ -1,0 +1,10 @@
+{
+  "kernel": "pascalcoimbra/circuit-ai-g008-validation-v15/1",
+  "status": "COMPLETE",
+  "accelerator": "Tesla T4",
+  "candidate_run": "b9941b1a-de48-4274-bafa-0d750ca40520",
+  "candidate_checkpoint": "step-3",
+  "opponent": "g007-step-300",
+  "games": 512,
+  "result_kind": "exploratory; candidate was not registered for promotion"
+}

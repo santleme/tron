@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://light-cycles.local/schemas/lc-replay-1.schema.json",
+  "title": "Light Cycles replay v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "run_id",
+    "match_id",
+    "engine_version",
+    "observation_schema",
+    "action_schema",
+    "master_seed",
+    "arena_index",
+    "derived_streams",
+    "agents",
+    "initial_state",
+    "ticks",
+    "result",
+    "tick_count",
+    "replay_sha256"
+  ],
+  "properties": {
+    "format": {
+      "const": "lc-replay/1"
+    },
+    "run_id": {
+      "$ref": "#/$defs/id"
+    },
+    "match_id": {
+      "$ref": "#/$defs/id"
+    },
+    "engine_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "observation_schema": {
+      "const": "lc-observation/1"
+    },
+    "action_schema": {
+      "const": "lc-action/1"
+    },
+    "master_seed": {
+      "$ref": "#/$defs/u64"
+    },
+    "arena_index": {
+      "$ref": "#/$defs/safeInt"
+    },
+    "derived_streams": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/stream"
+      }
+    },
+    "agents": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/agent"
+      }
+    },
+    "initial_state": {
+      "$ref": "#/$defs/initialState"
+    },
+    "ticks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tick"
+      }
+    },
+    "result": {
+      "enum": [
+        "agent_0_win",
+        "agent_1_win",
+        "draw"
+      ]
+    },
+    "tick_count": {
+      "$ref": "#/$defs/safeInt"
+    },
+    "replay_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "u64": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,18}|(?:1[0-7][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|18[0-3][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|184[0-3][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|1844[0-5][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|18446[0-6][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|184467[0-3][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|1844674[0-3][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|184467440[0-6][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|1844674407[0-2][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|18446744073[0-6][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]|1844674407370[0-8][0-9][0-9][0-9][0-9][0-9][0-9]|18446744073709[0-4][0-9][0-9][0-9][0-9][0-9]|184467440737095[0-4][0-9][0-9][0-9][0-9]|1844674407370955[0-0][0-9][0-9][0-9]|18446744073709551[0-5][0-9][0-9]|184467440737095516[0-0][0-9]|1844674407370955161[0-4]|18446744073709551615))$"
+    },
+    "safeInt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "heading": {
+      "enum": [
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "LEFT"
+      ]
+    },
+    "stream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "initstate",
+        "initseq"
+      ],
+      "properties": {
+        "label": {
+          "enum": [
+            "episode",
+            "agent/0",
+            "agent/1"
+          ]
+        },
+        "initstate": {
+          "$ref": "#/$defs/u64"
+        },
+        "initseq": {
+          "$ref": "#/$defs/u64"
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "checkpoint_id"
+      ],
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/id"
+        },
+        "checkpoint_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "$ref": "#/$defs/safeInt"
+        },
+        "y": {
+          "$ref": "#/$defs/safeInt"
+        }
+      }
+    },
+    "initialState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "height",
+        "positions",
+        "headings",
+        "trails"
+      ],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9007199254740991
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9007199254740991
+        },
+        "positions": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/position"
+          }
+        },
+        "headings": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/heading"
+          }
+        },
+        "trails": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/position"
+            }
+          }
+        }
+      }
+    },
+    "action": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "const": "INVALID"
+        }
+      ]
+    },
+    "tick": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "joint_actions",
+        "collision_causes",
+        "terminal_causes"
+      ],
+      "properties": {
+        "tick": {
+          "$ref": "#/$defs/safeInt"
+        },
+        "joint_actions": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/action"
+          }
+        },
+        "collision_causes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "out_of_bounds",
+                "occupied_trail",
+                "occupied_head",
+                "same_destination",
+                "head_swap",
+                "invalid_action",
+                "reverse_action"
+              ]
+            }
+          }
+        },
+        "terminal_causes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "agent_0_dead",
+              "agent_1_dead"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

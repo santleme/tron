@@ -1,0 +1,19 @@
+{
+  "event_data": {
+    "record": {
+      "billing_changes": false,
+      "gpu_quota_remaining_hours_milli": 27760,
+      "initial_status": "KernelWorkerStatus.RUNNING",
+      "kernel_id": "pascalcoimbra/circuit-ai",
+      "kernel_version": 7,
+      "paid_services": false,
+      "run_id": "g008-principal-baseline-20261020-r1",
+      "source_revision": "g008-r3-machine-shape-20261020",
+      "submission_state": "submitted"
+    },
+    "registration_id": "g008-principal-baseline-20261020-r1-kaggle-version-7-submitted",
+    "registration_kind": "benchmark"
+  },
+  "event_hash": "4bc5cdfdbc35491d88e35896fb5540a8b84bf7bd9b5a7809942c80314d0b940b",
+  "event_index": 4
+}

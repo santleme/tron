@@ -1,0 +1,14 @@
+{
+  "kernel": "pascalcoimbra/circuit-ai-g008-train-v15-continuation/4",
+  "status": "COMPLETE",
+  "accelerator": "Tesla T4",
+  "source_kernel": "pascalcoimbra/circuit-ai/15",
+  "source_checkpoint": "step-3.pt",
+  "target_checkpoint": "step-236.pt",
+  "start_update": 3,
+  "target_updates": 236,
+  "environment_steps": 966656,
+  "elapsed_seconds": 131.30647855,
+  "training_elapsed_seconds": 56.588958585,
+  "evaluation_status": "exploratory_unregistered"
+}

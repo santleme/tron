@@ -1,0 +1,24 @@
+[{"stream_name":"stdout","time":19.067966605,"data":"Preinstalled PyTorch=2.11.0+cu128 CUDA=12.8 available=True visible_cuda_devices=['Tesla T4']; training_device=Tesla T4\n"}
+,{"stream_name":"stdout","time":22.357046732,"data":"Requirement already satisfied: onnx\u003c2,\u003e=1.18 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-cv3skqfu/training/requirements-kaggle.txt (line 4)) (1.22.0)\n"}
+,{"stream_name":"stdout","time":22.787506342,"data":"Collecting onnxscript\u003c1,\u003e=0.5 (from -r /tmp/circuit-ai-source-cv3skqfu/training/requirements-kaggle.txt (line 5))\n"}
+,{"stream_name":"stdout","time":22.845234281,"data":"  Downloading onnxscript-0.7.2-py3-none-any.whl.metadata (13 kB)\n"}
+,{"stream_name":"stdout","time":22.9093796,"data":"Collecting onnx-ir\u003c2,\u003e=0.1.16 (from -r /tmp/circuit-ai-source-cv3skqfu/training/requirements-kaggle.txt (line 6))\n"}
+,{"stream_name":"stdout","time":22.92483383,"data":"  Downloading onnx_ir-1.1.0-py3-none-any.whl.metadata (3.3 kB)\n"}
+,{"stream_name":"stdout","time":22.941772587,"data":"Requirement already satisfied: ml_dtypes\u003e=0.5 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-cv3skqfu/training/requirements-kaggle.txt (line 7)) (0.6.0)\n"}
+,{"stream_name":"stdout","time":22.943054681,"data":"Requirement already satisfied: packaging\u003e=24 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-cv3skqfu/training/requirements-kaggle.txt (line 8)) (26.3)\n"}
+,{"stream_name":"stdout","time":22.944353879,"data":"Requirement already satisfied: typing_extensions\u003e=4.10 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-cv3skqfu/training/requirements-kaggle.txt (line 9)) (4.16.0)\n"}
+,{"stream_name":"stdout","time":22.945987621,"data":"Requirement already satisfied: jsonschema\u003c5,\u003e=4.18 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-cv3skqfu/training/requirements-kaggle.txt (line 10)) (4.26.0)\n"}
+,{"stream_name":"stdout","time":22.971505159,"data":"Downloading onnxscript-0.7.2-py3-none-any.whl (754 kB)\n"}
+,{"stream_name":"stdout","time":23.047292996,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 754.2/754.2 kB 10.3 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":23.0626445,"data":"Downloading onnx_ir-1.1.0-py3-none-any.whl (192 kB)\n"}
+,{"stream_name":"stdout","time":23.086582282,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 192.2/192.2 kB 8.6 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":23.108943317,"data":"Installing collected packages: onnxscript, onnx-ir\n"}
+,{"stream_name":"stdout","time":23.857922085,"data":"Successfully installed onnx-ir-1.1.0 onnxscript-0.7.2\n"}
+,{"stream_name":"stdout","time":42.610722373,"data":"Completed registered G008 validation evaluation; games=512; artifacts: /kaggle/working/arena-output/d5fecabc-d830-5efa-8fa9-ffa0d8918f07\n"}
+,{"stream_name":"stderr","time":51.053078838,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":51.053125029,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":51.528945812,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":51.528974018,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":52.410945772,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":54.003381044,"data":"[NbConvertApp] Writing 398971 bytes to __results__.html\n"}
+]

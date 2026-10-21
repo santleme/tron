@@ -1,0 +1,30 @@
+{
+  "session_id": "01a15941-194a-7c70-b7ef-ecbf54f67dba",
+  "review_cycle": 3,
+  "plan": {
+    "path": ".omx/plans/g008-kaggle-recovery-plan.md",
+    "sha256": "0358c3c00ffa438a3bd033939687827774da5f04ba54746c075eb4680b384d72"
+  },
+  "planner_review": {
+    "path": ".omx/plans/g008-kaggle-recovery-planner-rebind-20261020.md",
+    "sha256": "a79355fe04e3c06192ec56e127169725dfdd65ef57e502f5883722a8a00547bd"
+  },
+  "architect_review": {
+    "path": ".omx/plans/g008-kaggle-recovery-architect-rebind-20261020.md",
+    "sha256": "503baf1841f4abf452e12c84ac4eee1e150e2a9dd778ed633b50d36a2314939f",
+    "verdict": "APPROVE"
+  },
+  "critic_review": {
+    "path": ".omx/plans/g008-kaggle-recovery-critic-rebind-20261020.md",
+    "sha256": "69d6a2847e9f3bcea87e6d3c8faf44a07e97f33dceb3fc78ae99d0efa698948b",
+    "verdict": "APPROVE"
+  },
+  "ralplan_execution_handoff": {
+    "authorized": true,
+    "reason": "The user explicitly requested completion of the approved recovery through Kaggle benchmark and bounded training, then directed continuation when asked about the resource cap. This handoff authorizes transition to Ultragoal execution under the approved plan; individual registry append and Kaggle submission gates remain in force.",
+    "authorized_at": "2026-10-20T19:10:00Z",
+    "session_id": "01a15941-194a-7c70-b7ef-ecbf54f67dba",
+    "review_cycle": 3,
+    "source": "user"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "authentication": {
+    "authenticated": true,
+    "credential_material_recorded": false
+  },
+  "budget": {
+    "actual": {
+      "benchmark": 0,
+      "train": 0
+    },
+    "campaign_gpu_seconds_current_attempt_projected": 12024,
+    "campaign_gpu_seconds_projected": 19224,
+    "campaign_gpu_seconds_with_final_reserve": 26424,
+    "future_train_reserve_gpu_seconds": 7200,
+    "output_bytes": 0,
+    "protected_final_reserve_gpu_seconds": 7200,
+    "quota_gpu_seconds_remaining": 99577
+  },
+  "capture_started_at_utc": "2026-10-20T19:43:46.896541Z",
+  "captured_at_utc": "2026-10-20T19:43:48.491598Z",
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "latest_status_query": {
+    "method": "KaggleApi.kernels_status",
+    "normalized_status": "CANCELLED",
+    "raw_status": "CANCEL_ACKNOWLEDGED",
+    "version_selector": null
+  },
+  "metadata_after_latest_status": {
+    "current_version_number": 10,
+    "kernel_id": "pascalcoimbra/circuit-ai"
+  },
+  "metadata_before_latest_status": {
+    "current_version_number": 10,
+    "kernel_id": "pascalcoimbra/circuit-ai"
+  },
+  "operator_no_external_writer_confirmation": {
+    "confirmed": true,
+    "scope": "Until benchmark terminal status is reconciled",
+    "source": "User confirmation in current conversation"
+  },
+  "package": {
+    "package_sha256": "89d4a948178be91aa74cdeed77c71623053bcfd59501dcf93f25a0659ca54c05",
+    "path": "/tmp/tron-g008-recovery-d43ad6f/benchmark",
+    "registered_package_sha256": "89d4a948178be91aa74cdeed77c71623053bcfd59501dcf93f25a0659ca54c05"
+  },
+  "quota": {
+    "remaining_gpu_seconds": 99577,
+    "source": "Kaggle SDK quota_view",
+    "used_gpu_seconds": 8423
+  },
+  "registry": {
+    "benchmark_registration_hash": "6128a6af953ba333bee47831242f5e9e12d89d83789e5b091be4defc8308287d",
+    "benchmark_registration_index": 14,
+    "event_count": 16,
+    "head_hash": "05ec33c3ad5c2f7aaafa0d13549a7ee565c2542f8cb7745f9669dc4f7916fc4f",
+    "head_index": 15,
+    "no_prior_recovery_attempts": true,
+    "path": ".omx/evidence/g008-experiment-registry.jsonl"
+  },
+  "schema": "tron-kaggle-recovery-prepush-preflight/1"
+}

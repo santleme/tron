@@ -1,0 +1,10 @@
+[{"stream_name":"stdout","time":7.350732558,"data":"Preinstalled PyTorch=2.11.0+cu128 CUDA=12.8 available=True visible_cuda_devices=['Tesla T4', 'Tesla T4']; training_device=Tesla T4\n"}
+,{"stream_name":"stdout","time":198.707280333,"data":"Completed G008 principal benchmark g008-principal-baseline-20261020-r1; artifacts: /kaggle/working/arena-output/g008-principal-baseline-20261020-r1\n"}
+,{"stream_name":"stderr","time":203.675256797,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":203.675284505,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":203.910334568,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":203.910360812,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":204.66013164700001,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":205.548855268,"data":"[NbConvertApp] Writing 393800 bytes to __results__.html\n"}
+]
+

@@ -1,0 +1,88 @@
+{
+  "schema": "tron-g008-cycle3-prepush-preflight/1",
+  "state": "prepared-awaiting-exact-user-authorization",
+  "captured_at_utc": "2026-10-20T21:20:52Z",
+  "source_revision": "585021b",
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "live_context": {
+    "current_version_number": 12,
+    "current_terminal_status": "ERROR",
+    "current_status_evidence": {
+      "status": "ERROR",
+      "current_version_number": 12,
+      "kernel_id": "pascalcoimbra/circuit-ai"
+    },
+    "quota_gpu_seconds_remaining_before": 99372,
+    "quota_evidence": {
+      "remaining_gpu_seconds": 99372,
+      "used_gpu_seconds": 8628,
+      "source": "pinned Kaggle SDK quota_view"
+    }
+  },
+  "proposal_sha256": "731ad7a7b477bc18e87572f6827fa7f18f38bbdedf130765d600fe5558250527",
+  "registration_bindings_sha256": "e770b9d5c46dd947f036f90878cfb384f8c729cd2d20449919fb2572abcd058f",
+  "preflight_context_sha256": "fe56866f53e78be28b2592889b015c136aebbfb6ef2fca74be6d7e67333c0afc",
+  "authorization_statement": "Authorize G008 Cycle 3 proposal sha256:731ad7a7b477bc18e87572f6827fa7f18f38bbdedf130765d600fe5558250527. Registration bindings sha256:e770b9d5c46dd947f036f90878cfb384f8c729cd2d20449919fb2572abcd058f. Preflight context sha256:fe56866f53e78be28b2592889b015c136aebbfb6ef2fca74be6d7e67333c0afc. Exclusive writer: no other writer updates pascalcoimbra/circuit-ai until the benchmark is terminal and reconciled.",
+  "workload_records": [
+    {
+      "registration_id": "g008-kaggle-recovery-benchmark-20261020-cycle3",
+      "registration_kind": "benchmark",
+      "run_uuid": "8c4da7c2-7e08-4a3f-8888-e382baac2923",
+      "record_sha256": "00157a60d8a147354498e6cba29ffd88fd91c62ae92ecd071dcbf9a794539f7c"
+    },
+    {
+      "registration_id": "g008-kaggle-recovery-train-20261020-cycle3",
+      "registration_kind": "train",
+      "run_uuid": "717c2069-6773-43e6-9509-a0dff6e77fbe",
+      "record_sha256": "fdbf2a8f89119826b4f96362d95aa493cfffc612590618bf0299781376cc5ae2"
+    }
+  ],
+  "packages": {
+    "benchmark": "5c7c623a8e2b5fe8a0b26ffa1564bb5323de9375b970a8c73d64ec7f80f975be",
+    "candidate_train": "ece597e73f16ddcb94b2a09c2515782e98a816c5f9d08ee0189775a01331bfe2",
+    "incumbent_train": "b9144a5b9feaee834eb03fc499d9fceb202e64fa8169bedf9008c9dfabad432f"
+  },
+  "variants": [
+    {
+      "variant_id": "incumbent",
+      "package_sha256": "b9144a5b9feaee834eb03fc499d9fceb202e64fa8169bedf9008c9dfabad432f",
+      "source_sha256": "42e604db96eb97863b108cda99c34bff49623138bf31ef1d23da95f1bdb630e2",
+      "trainer_sha256": "18eca4fe98d635646e51dd0e25d229aa64d2563ff7ad177881b89e7459b3f4e1",
+      "backend_sha256": "29730d29ccc9e6594c2acbed0cec4b5dcbaa4c8d87c46177fc4a4b61bc21c978",
+      "engine_sha256": "a93dc0c8001325dbb55bb90da5cd9ae4e262948de9b27be01a195299fd8be25b",
+      "config_sha256": "0ec65b7978e26ecb13b893e76ec358d48c41428db96b0a60dd810f9f24f0e484",
+      "seed_plan_sha256": "c6b16733a045e94e7310183e8be8a62cf4327b5d2bdc3eed40bb9d552ce17593"
+    },
+    {
+      "variant_id": "candidate",
+      "package_sha256": "ece597e73f16ddcb94b2a09c2515782e98a816c5f9d08ee0189775a01331bfe2",
+      "source_sha256": "1044e9f98f0969aa9bc709791609536112d17e004e19192bdb66c9b62365742e",
+      "trainer_sha256": "9991dc8e0c45cf586d2597f82f1cc30ceaf62c6754b976bd39eca70a3f86c38c",
+      "backend_sha256": "29730d29ccc9e6594c2acbed0cec4b5dcbaa4c8d87c46177fc4a4b61bc21c978",
+      "engine_sha256": "cfd6fe1817e06e5e892306f1fac2b5eef3cdeb4e68da2e83b26c8f4f23a6c7d0",
+      "config_sha256": "0ec65b7978e26ecb13b893e76ec358d48c41428db96b0a60dd810f9f24f0e484",
+      "seed_plan_sha256": "c6b16733a045e94e7310183e8be8a62cf4327b5d2bdc3eed40bb9d552ce17593"
+    }
+  ],
+  "resource_projection": {
+    "project_gpu_seconds_before": 8664,
+    "benchmark_cap_gpu_seconds": 5600,
+    "train_cap_gpu_seconds": 7200,
+    "project_experiment_after_caps": 21464,
+    "project_experiment_cap": 21600,
+    "protected_final_reserve_gpu_seconds": 7200,
+    "project_total_with_reserve": 28664,
+    "project_total_cap": 28800,
+    "project_output_bytes_before": 34685,
+    "output_bytes_after_caps": 4000034685,
+    "aggregate_output_cap_bytes": 5000000000
+  },
+  "local_validation": {
+    "cycle3_candidate_batch_validated_on_registry_copy": true,
+    "events_27_29_appended_to_actual_registry": false,
+    "kaggle_submission_sent": false,
+    "benchmark_schedule_ids": 21,
+    "training_run_uuid": "717c2069-6773-43e6-9509-a0dff6e77fbe",
+    "embedded_train_packages_verified_against_component_hashes": true
+  }
+}

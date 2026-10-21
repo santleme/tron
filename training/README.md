@@ -162,9 +162,10 @@ confirm `device.device == "cuda"`, `optimizer_updates > 0`, and
 `cuda_optimizer_updates == optimizer_updates`. Then run the bounded throughput
 sweep on that selected single device and record environment steps/s, end-to-end
 update latency, rollout duration, optimizer duration, their ratio, and CUDA
-update counts. Multi-GPU/DDP comparison is not implemented. This repository has not
-submitted a Kaggle job or verified remote hardware; T4 allocation, quotas and
-image package versions are external checks.
+update counts. Multi-GPU/DDP comparison is not implemented. Kaggle training and
+evaluation have run; see `artifacts/circuit-ai/registry/g008-experiment-registry.jsonl`
+and `docs/G008_STATUS.md` for the reconciled campaign state. Those runs used the
+Kaggle runtime and do not make local CPU checks hardware benchmarks.
 
 Kaggle should use `training/requirements-kaggle.txt` only if ONNX/schema
 dependencies are missing; it intentionally omits PyTorch to preserve the

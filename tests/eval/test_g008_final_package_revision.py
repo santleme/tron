@@ -5,7 +5,7 @@ import pytest
 from training.eval.registry import Registry, RegistryError
 
 
-SOURCE_REGISTRY = ".omx/evidence/g008-experiment-registry.jsonl"
+SOURCE_REGISTRY = "artifacts/circuit-ai/registry/g008-experiment-registry.jsonl"
 
 
 def _registry_copy(tmp_path):

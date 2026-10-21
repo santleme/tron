@@ -1,0 +1,11 @@
+{
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "version": 10,
+  "source_revision": "g008-r6-contiguous-observations-20261020",
+  "status_raw": "KernelWorkerStatus.QUEUED",
+  "observed_at_utc": "2026-10-20T15:23:40Z",
+  "logs_available": false,
+  "gpu_quota_raw": "GPU 2.34h used, 27.66h remaining; refresh 2026-10-24T00:00:00Z",
+  "local_observation_microbenchmark": ".omx/evidence/g008-observation-batch-local-benchmark.json",
+  "note": "No GPU allocation or remote benchmark output is claimed yet."
+}

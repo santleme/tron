@@ -1,0 +1,22 @@
+{
+  "auth_success": true,
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "latest_status_raw": "CANCEL_ACKNOWLEDGED",
+  "metadata_after_status": {
+    "current_version_number": 10,
+    "kernel_id": "pascalcoimbra/circuit-ai"
+  },
+  "metadata_before_status": {
+    "current_version_number": 10,
+    "kernel_id": "pascalcoimbra/circuit-ai"
+  },
+  "metadata_version_unchanged": true,
+  "note": "Latest-status request omitted version selector; credentials and response headers omitted.",
+  "observed_at_utc": "2026-10-20T19:00:40Z",
+  "quota": {
+    "gpu_remaining_seconds": 99577,
+    "gpu_used_seconds": 8422
+  },
+  "read_only": true,
+  "status_poll_completed_at_utc": "2026-10-20T19:00:39Z"
+}

@@ -1,0 +1,32 @@
+{
+  "authentication": {
+    "authenticated": true,
+    "credential_material_recorded": false
+  },
+  "capture_started_at_utc": "2026-10-20T19:36:36.339154Z",
+  "captured_at_utc": "2026-10-20T19:36:37.966893Z",
+  "consistency": {
+    "kernel_identity_and_version_stable_across_status_query": true
+  },
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "latest_status_query": {
+    "method": "KaggleApi.kernels_status",
+    "normalized_status": "CANCELLED",
+    "raw_status": "CANCEL_ACKNOWLEDGED",
+    "version_selector": null
+  },
+  "metadata_after_latest_status": {
+    "current_version_number": 10,
+    "kernel_id": "pascalcoimbra/circuit-ai"
+  },
+  "metadata_before_latest_status": {
+    "current_version_number": 10,
+    "kernel_id": "pascalcoimbra/circuit-ai"
+  },
+  "quota": {
+    "remaining_gpu_seconds": 99577,
+    "source": "Kaggle SDK quota_view",
+    "used_gpu_seconds": 8423
+  },
+  "schema": "tron-kaggle-live-reconciliation/1"
+}

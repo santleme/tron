@@ -6,7 +6,7 @@ from tools.kaggle.cli import KaggleError, _recovery_record, _status_is_waiting_f
 from training.eval.registry import Registry
 
 
-REGISTRY_PATH = Path(__file__).resolve().parents[2] / ".omx/evidence/g008-experiment-registry.jsonl"
+REGISTRY_PATH = Path(__file__).resolve().parents[2] / "artifacts/circuit-ai/registry/g008-experiment-registry.jsonl"
 
 
 def _events_with_final_revision():

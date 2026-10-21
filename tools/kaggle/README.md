@@ -39,10 +39,15 @@ The example config is checked in and valid as-is; copy it and edit `run_id`
 and `train_config` for each run if desired. `prepare` never overwrites it.
 
 The generated package contains Kaggle's `kernel-metadata.json` with `id`
-equal to the exact `owner/slug` and a `.arena-source-revision` marker. The
-revision is intentionally user-set: this greenfield source may be a Git SHA
-or an explicit local revision label. Validate the exact source without network
-access before submission:
+equal to the exact `owner/slug`, a `.arena-source-revision` marker, and a
+`source-manifest.json`. The manifest lists exact staged paths and SHA-256
+values, Kaggle requirements and metadata, package-builder and runner-template
+hashes, a Git commit when available, dirty-tree status, and the explicit
+source revision label. Its digest is included in runtime evidence; the
+registered package tree hash binds the complete submitted kernel.
+Historical packages remain verifiable by their recorded package hashes even
+when they predate readable source manifests. Validate the exact source without
+network access before submission:
 
 ```bash
 python3 -m tools.kaggle kaggle submit --kernel-id owner/light-cycles \

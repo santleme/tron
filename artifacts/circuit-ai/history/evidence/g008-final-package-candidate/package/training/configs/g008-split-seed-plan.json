@@ -1,0 +1,534 @@
+{
+  "format": "circuit-ai-g008-split-seed-plan/3",
+  "protocol": "G008 reproducible data split and evaluation seed lock",
+  "model_ppo_seed": 1234,
+  "seed_roles": {
+    "model_ppo_seed": "TrainConfig.seed initializes Python/NumPy/Torch CPU/CUDA model and PPO randomness only; it is never an environment/game seed.",
+    "environment_roots": "All G008 game/reset randomness is derived from the disjoint partition roots below using env-seed/v1; no global RNG or arithmetic offset is permitted."
+  },
+  "historical_exclusions": {
+    "source": "G007 historical lc-eval/1 holdout",
+    "protocol": "lc-eval/1",
+    "seeds_inclusive": [
+      0,
+      31
+    ],
+    "excluded_from": [
+      "train",
+      "imitation_demo",
+      "benchmark",
+      "validation",
+      "final"
+    ]
+  },
+  "partitions": {
+    "train": {
+      "root_seed_range_inclusive": [
+        2000000,
+        2999999
+      ],
+      "opponent_policy": "non-open-space heuristics and self-play only",
+      "open_space_allowed": false
+    },
+    "imitation_demo": {
+      "root_seed_range_inclusive": [
+        3000000,
+        3999999
+      ],
+      "opponent_policy": "non-open-space heuristics only",
+      "open_space_allowed": false
+    },
+    "benchmark": {
+      "root_seed_range_inclusive": [
+        5000000,
+        5000271
+      ],
+      "purpose": "ephemeral G008 benchmark workload only; benchmark-derived artifacts cannot enter downstream consumers",
+      "open_space_allowed": false,
+      "measured_roots": [
+        {
+          "repeat_id": 0,
+          "root_seed": 5000000,
+          "order": [
+            "incumbent",
+            "candidate"
+          ]
+        },
+        {
+          "repeat_id": 1,
+          "root_seed": 5000001,
+          "order": [
+            "candidate",
+            "incumbent"
+          ]
+        },
+        {
+          "repeat_id": 2,
+          "root_seed": 5000002,
+          "order": [
+            "incumbent",
+            "candidate"
+          ]
+        },
+        {
+          "repeat_id": 3,
+          "root_seed": 5000003,
+          "order": [
+            "candidate",
+            "incumbent"
+          ]
+        },
+        {
+          "repeat_id": 4,
+          "root_seed": 5000004,
+          "order": [
+            "incumbent",
+            "candidate"
+          ]
+        }
+      ],
+      "warmup_assignments": [
+        {
+          "backend_id": "python-oracle",
+          "role": "incumbent",
+          "root_seeds": [
+            5000256,
+            5000257
+          ]
+        },
+        {
+          "backend_id": "python-oracle",
+          "role": "candidate",
+          "root_seeds": [
+            5000258,
+            5000259
+          ]
+        },
+        {
+          "backend_id": "low-risk",
+          "role": "incumbent",
+          "root_seeds": [
+            5000260,
+            5000261
+          ]
+        },
+        {
+          "backend_id": "low-risk",
+          "role": "candidate",
+          "root_seeds": [
+            5000262,
+            5000263
+          ]
+        },
+        {
+          "backend_id": "numpy-control",
+          "role": "incumbent",
+          "root_seeds": [
+            5000264,
+            5000265
+          ]
+        },
+        {
+          "backend_id": "numpy-control",
+          "role": "candidate",
+          "root_seeds": [
+            5000266,
+            5000267
+          ]
+        },
+        {
+          "backend_id": "numba-candidate",
+          "role": "incumbent",
+          "root_seeds": [
+            5000268,
+            5000269
+          ]
+        },
+        {
+          "backend_id": "numba-candidate",
+          "role": "candidate",
+          "root_seeds": [
+            5000270,
+            5000271
+          ]
+        }
+      ],
+      "reserved_unused_root_seed_range_inclusive": [
+        5000005,
+        5000255
+      ]
+    },
+    "validation": {
+      "root_seed_range_inclusive": [
+        1000000,
+        1000255
+      ],
+      "games_per_opponent": 512,
+      "target_seats": [
+        0,
+        1
+      ],
+      "games_per_seed_per_opponent": 2,
+      "opponent_identity_policy": "Exact frozen G007 step-300 checkpoint only; identity and current evaluation-runtime code/config hashes in frozen_evaluation_opponents.validation; prohibit this opponent and aliases from train, imitation_demo, reward, pool, benchmark, and final.",
+      "open_space_allowed": false
+    },
+    "final": {
+      "root_seed_range_inclusive": [
+        4000000,
+        4000255
+      ],
+      "games_per_opponent": 512,
+      "target_seats": [
+        0,
+        1
+      ],
+      "games_per_seed_per_opponent": 2,
+      "opponent_identity_policy": "Exact open-space heuristic only; fingerprinted code/config and null model hash in frozen_evaluation_opponents.final; inaccessible except final evaluation after candidate freeze.",
+      "open_space_allowed": true,
+      "opponent_roster_mutability": "forbidden; the exact single-opponent open-space roster, identity hashes, 512-game count, roots, and seats frozen in Phase A cannot be extended, substituted, or re-keyed."
+    }
+  },
+  "opponent_assignment": {
+    "open-space": {
+      "partition": "final",
+      "training": false,
+      "imitation_demonstrator": false,
+      "reward_design": false,
+      "opponent_pool": false,
+      "benchmark": false,
+      "validation": false,
+      "checkpoint_selection": false
+    },
+    "training_and_imitation": "Use only non-open-space heuristic styles (imitation) and self-play (training); no frozen validation/final opponent identity/hash or alias may enter training, imitation, reward design, benchmark strategy, or the opponent pool.",
+    "g007-step-300": {
+      "partition": "validation",
+      "training": false,
+      "imitation_demonstrator": false,
+      "reward_design": false,
+      "opponent_pool": false,
+      "benchmark": false,
+      "final": false,
+      "checkpoint_selection": true
+    }
+  },
+  "open_space_fingerprint": {
+    "identity_scope": "The fingerprint identifies the current open_space_action function source and the stated heuristic config; it is not a finalized complete game-level manifest.",
+    "function": {
+      "module": "training.eval.lc_eval",
+      "name": "open_space_action",
+      "sha256_inspect_getsource_utf8": "9e5103176218ca092206ba50899a35c43ad488ce825a95af487e76798ce60123"
+    },
+    "config": {
+      "canonicalization": "UTF-8 JSON, sorted keys, compact separators (',', ':')",
+      "value": {
+        "algorithm": "reachable-empty-cells",
+        "tie_break": "lowest-action-index",
+        "action_space": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "reverse_forbidden": true,
+        "version": "open-space-v1"
+      },
+      "sha256": "4043dda35bb8cc2adc43112cb5b00eff50ac721eb062b15d0d83b7ae41510b7f"
+    },
+    "change_control": "Any code edit that changes open_space_action requires re-freezing and re-reviewing this fingerprint before use."
+  },
+  "seed_semantics": {
+    "root_seed": "A root seed is the reproducible game seed; for evaluation, every root seed is played once with each target seat, against the same identified opponent.",
+    "partition_membership": "A seed belongs only to the named partition. Validation/final opponent IDs are separately held out; seed disjointness alone does not establish opponent-identity or hash disjointness.",
+    "evaluation_roster": {
+      "validation": {
+        "opponent_ids": [
+          "g007-step-300"
+        ],
+        "roots_inclusive": [
+          1000000,
+          1000255
+        ],
+        "target_seats": [
+          0,
+          1
+        ],
+        "games_per_root": 2,
+        "total_games": 512,
+        "run_key": "validation-suite-v1",
+        "game_index": "target_seat (0 or 1), one independent initial episode per root/seat; reset_index=0"
+      },
+      "final": {
+        "opponent_ids": [
+          "open-space"
+        ],
+        "roots_inclusive": [
+          4000000,
+          4000255
+        ],
+        "target_seats": [
+          0,
+          1
+        ],
+        "games_per_root": 2,
+        "total_games": 512,
+        "run_key": "final-suite-v1",
+        "game_index": "target_seat (0 or 1), one independent initial episode per root/seat; reset_index=0"
+      }
+    }
+  },
+  "environment_seed_codec": {
+    "version": "env-seed/v1",
+    "prefix_hex": "434952435549542d41492f473030382f454e562d534545442f763100",
+    "fields_in_order": [
+      "split",
+      "domain_label",
+      "env_root_seed",
+      "run_key",
+      "update_index",
+      "rollout_index",
+      "arena_index",
+      "game_index",
+      "reset_index"
+    ],
+    "string_encoding": "NFC UTF-8 framed by uint32 big-endian byte length",
+    "integer_encoding": "uint64 big-endian; optional N/A sentinel ffffffffffffffff",
+    "domain_labels": [
+      "g008/train/initial",
+      "g008/train/reset",
+      "g008/imitation_demo/initial",
+      "g008/imitation_demo/reset",
+      "g008/benchmark/measured/initial",
+      "g008/benchmark/measured/reset",
+      "g008/benchmark/warmup/initial",
+      "g008/benchmark/warmup/reset",
+      "g008/eval/validation/initial",
+      "g008/eval/validation/reset",
+      "g008/eval/final/initial",
+      "g008/eval/final/reset"
+    ],
+    "run_keys": {
+      "measured": "pair-00 through pair-04; shared by both paired backend sides",
+      "warmup": "warmup-<backend_id>-<role>-<rollout_index:02d>",
+      "train": "train-<lowercase-canonical-UUID> frozen in run manifest",
+      "imitation_demo": "imitation-<same lowercase canonical UUID as run_id>; MUST differ from every train run UUID; binding is verified before any run registration/workload",
+      "validation": "validation-suite-v1",
+      "final": "final-suite-v1"
+    },
+    "golden_vector": {
+      "tuple": [
+        "benchmark",
+        "g008/benchmark/measured/reset",
+        5000000,
+        "pair-00",
+        0,
+        0,
+        0,
+        1,
+        1
+      ],
+      "payload_hex": "434952435549542d41492f473030382f454e562d534545442f7631000000000962656e63686d61726b0000001d673030382f62656e63686d61726b2f6d656173757265642f726573657400000000004c4b4000000007706169722d303000000000000000000000000000000000000000000000000000000000000000010000000000000001",
+      "sha256": "e1d2cd7a82ca19bc5277a87aa4819271802e14c23fb9d071f92b6b2e3d539076",
+      "derived_seed_uint64": 16272294329707010492
+    },
+    "split_domain_mapping": {
+      "train": [
+        "g008/train/initial",
+        "g008/train/reset"
+      ],
+      "imitation_demo": [
+        "g008/imitation_demo/initial",
+        "g008/imitation_demo/reset"
+      ],
+      "benchmark": [
+        "g008/benchmark/measured/initial",
+        "g008/benchmark/measured/reset",
+        "g008/benchmark/warmup/initial",
+        "g008/benchmark/warmup/reset"
+      ],
+      "validation": [
+        "g008/eval/validation/initial",
+        "g008/eval/validation/reset"
+      ],
+      "final": [
+        "g008/eval/final/initial",
+        "g008/eval/final/reset"
+      ]
+    },
+    "run_uuid_binding": {
+      "train": {
+        "pattern": "train-<lowercase-canonical-UUID>",
+        "binding": "UUID suffix exactly equals registered run_id UUID"
+      },
+      "imitation_demo": {
+        "pattern": "imitation-<lowercase-canonical-UUID>",
+        "binding": "UUID suffix exactly equals registered run_id UUID",
+        "non_alias": "UUID must not equal any train run UUID"
+      },
+      "canonical_uuid": "lowercase RFC 4122 canonical UUID textual representation; reject uppercase, braces, noncanonical spelling, malformed UUID, or mismatch between run_id and run_key"
+    }
+  },
+  "schedule": {
+    "suite_order": [
+      "train",
+      "imitation_demo",
+      "benchmark",
+      "validation",
+      "final"
+    ],
+    "measured": {
+      "arena_count": 128,
+      "updates": 3,
+      "rollout_steps": 32,
+      "initial_slot": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "reset_slots_inclusive": [
+        1,
+        96
+      ]
+    },
+    "warmup": {
+      "arena_count": 128,
+      "rollout_steps": 32,
+      "initial_slot": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "reset_slots_inclusive": [
+        1,
+        32
+      ]
+    },
+    "allowed_duplicate": "Only the identical environment tuple reused by incumbent and candidate sides of the same measured pair is allowed; all other derived-seed collisions fail closed."
+  },
+  "frozen_evaluation_opponents": {
+    "validation": {
+      "opponents": [
+        {
+          "opponent_id": "g007-step-300",
+          "opponent_kind": "frozen G007 model checkpoint; validation-only",
+          "checkpoint_path": "artifacts/circuit-ai/runs/lc-circuit-ai-selfplay-300-viewer-ready/checkpoints/step-300.pt",
+          "model_sha256": "f79ed460afc6d4419e2e1b0bd084a4f1cf77058fcb8cdcebb7122a2864304412",
+          "onnx_path": "artifacts/circuit-ai/runs/lc-circuit-ai-selfplay-300-viewer-ready/checkpoints/step-300.onnx",
+          "onnx_sha256": "0a894fad19fb9761545719419b0b40586de9e8b53cddd99642db6cbb8a3a5b2b",
+          "g007_run_manifest_path": "artifacts/circuit-ai/runs/lc-circuit-ai-selfplay-300-viewer-ready/manifest.json",
+          "g007_run_manifest_sha256": "a2002518d9c5ad09ec2b0ca4e4504bf6af9a7699957d5ecb812bb8858dff7c0e",
+          "checkpoint_metadata_path": "artifacts/circuit-ai/runs/lc-circuit-ai-selfplay-300-viewer-ready/checkpoints/step-300.metadata.json",
+          "checkpoint_metadata_sha256": "2085a217d160fba5d7b6cdbbd8de2a8e284e6b323d9ead537da138315f40c038",
+          "architecture": {
+            "config": {
+              "height": 12,
+              "hidden_size": 128,
+              "width": 12
+            },
+            "name": "mlp-hwc-flatten",
+            "version": "1"
+          },
+          "architecture_config_sha256": "bfdd632eba908274224372f9029460bb66a737e81091de51a9fc6368134f7681",
+          "g007_training_config_sha256": "c05834a21b43a8829cb2c28714180a33f7fd0dc520a2a6bcf45d76aa34ae36bc",
+          "g007_principal_config_sha256": "0ec65b7978e26ecb13b893e76ec358d48c41428db96b0a60dd810f9f24f0e484",
+          "g008_validation_runtime_code": {
+            "model_loader_and_actor_definition": {
+              "path": "training/ppo/train.py",
+              "sha256": "31b8879708fab5e5bc49968a81f3ad4b2fefb2b6100ba675c03e21300463d25d"
+            },
+            "observation_and_arena_rules": {
+              "path": "training/arena/engine.py",
+              "sha256": "a93dc0c8001325dbb55bb90da5cd9ae4e262948de9b27be01a195299fd8be25b"
+            },
+            "evaluation_dispatch_and_action_decoder": {
+              "path": "training/eval/lc_eval.py",
+              "sha256": "303852ef4011694c7ce8a965d3b6d2d03080c2090168c9023b9ab79c340e735c"
+            }
+          },
+          "g008_validation_runtime_code_identity_sha256": "f09d22638d18c5133dce0242ea65fbe028b7c65588c3bd5a08ee069a43ca7b60",
+          "historical_training_code_sha256": null,
+          "provenance_note": "Historical G007 training-code SHA is absent from the G007 manifest/metadata; do not claim this current G008 evaluator/runtime identity is the original G007 training build."
+        }
+      ],
+      "total_games_per_opponent": 512,
+      "root_seeds_inclusive": [
+        1000000,
+        1000255
+      ],
+      "target_seats": [
+        0,
+        1
+      ],
+      "games_per_root": 2,
+      "seed_roster_order": "root ascending, then target seat 0 then 1",
+      "final_evaluator_only": false,
+      "no_final_data_access": true,
+      "prohibition": "This exact G007 step-300 model/checkpoint/opponent identity and all its aliases are forbidden in train, imitation_demo, reward design, opponent pool, benchmark candidate/incumbent, and final evaluation."
+    },
+    "final": {
+      "opponents": [
+        {
+          "opponent_id": "open-space",
+          "opponent_kind": "deterministic heuristic; final-only",
+          "model_sha256": null,
+          "code_fingerprint": {
+            "module": "training.eval.lc_eval",
+            "symbol": "open_space_action",
+            "method": "sha256(inspect.getsource(symbol).encode(UTF-8))",
+            "sha256": "9e5103176218ca092206ba50899a35c43ad488ce825a95af487e76798ce60123"
+          },
+          "config": {
+            "canonicalization": "UTF-8 JSON, sorted keys, compact separators (',', ':')",
+            "value": {
+              "algorithm": "reachable-empty-cells",
+              "tie_break": "lowest-action-index",
+              "action_space": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "reverse_forbidden": true,
+              "version": "open-space-v1"
+            },
+            "sha256": "4043dda35bb8cc2adc43112cb5b00eff50ac721eb062b15d0d83b7ae41510b7f"
+          },
+          "usage": "final evaluation only; never train/imitation/reward/validation/pool/checkpoint selection"
+        }
+      ],
+      "total_games_per_opponent": 512,
+      "root_seeds_inclusive": [
+        4000000,
+        4000255
+      ],
+      "target_seats": [
+        0,
+        1
+      ],
+      "games_per_root": 2,
+      "seed_roster_order": "root ascending, then target seat 0 then 1",
+      "final_evaluator_only": true,
+      "prohibition": "No read, execution, labels, outcomes, or derived strategic signal before the candidate is frozen; no training, imitation, reward, validation, pool, or checkpoint selection use."
+    }
+  },
+  "schedule_digest_contract": {
+    "canonicalization": "UTF-8 JSON; NFC strings; object keys lexicographically sorted; compact separators; no floats; exact keys validated before hashing.",
+    "schedule_spec_digest": "SHA-256 canonical JSON with successor seed-plan SHA, codec/version/domain labels (including imitation initial/reset), per-split run-key/UUID binding, tuple field schema/order, deterministic tuple-generation rules, immutable partition/root bounds and reserved-root behavior, registry/lock rules, and allowed paired-tuple reuse rule; one common immutable digest.",
+    "expanded_schedule_digest": "SHA-256 canonical JSON with exactly schedule_spec_digest, suite_id, run_id, run_key, slots, collision_scan. Complete finite upper-bound roster only; no runtime outcomes or post-hoc exclusion changes.",
+    "slot_order": "suite order train, imitation_demo, benchmark, validation, final; then root order in seed-plan, arena_index, update_index, rollout_index, game_index, reset_index, slot_id.",
+    "slot_schema": "Each slot has exactly slot_id, suite_ordinal, root_ordinal, the nine seed-tuple fields in codec order, derived_seed_uint64, preregistered status, protocol_exclusion_reason. slot_id is SHA-256 canonical JSON of suite_id, run_id, backend_id, root_ordinal, and all nine tuple fields; backend_id incumbent/candidate only for paired measured entries, shared otherwise.",
+    "collision_scan": "Scan complete upper-bound roster, including all preallocated reset tuples and cross-suite reservations; duplicate groups sorted ascending derived seed, members by canonical slot_id UTF-8 bytes, and include derived seed, slot IDs and exact tuples. Only identical measured pair tuple shared by incumbent/candidate is allowed; fail closed otherwise.",
+    "realized_schedule_digest": "After completed workload, SHA-256 canonical JSON with exactly parent_expanded_schedule_digest, realized_slots, realized_tuple_list, episode_outcomes; never mutates expanded schedule."
+  },
+  "registry_lock_lifecycle": {
+    "registry": "Single append-only global registry; zero-based consecutive event_index, genesis prev_event_hash=64 zeroes; canonical event payload has exactly event_index,event_type,event_data,prev_event_hash; strings NFC, sorted compact JSON, no floats; event_hash=SHA-256(payload bytes), not included inside payload.",
+    "pre_lock_benchmark_artifact": "Append only after the exact registered benchmark attempt has a terminal successful remote status. Bind immutable artifact SHA-256, then-current pre_lock_head_hash and final event index (null/-1 for empty prefix), and exact earlier benchmark registration and terminal-attempt event indexes/hashes. The future lock_head_hash MUST NOT be required or inserted into immutable artifact bytes.",
+    "lock_event": "Immediately after the benchmark_artifact event, with no intervening event, pin the pre-lock prefix head (the artifact event hash) and last event index (the artifact event index). Append registration_closed at index pre_lock_final_event_index+1, prev_event_hash=pre_lock_head_hash, and event_data containing exactly the two pinned pre-lock fields. Hash canonical event payload; resulting event_hash is lock_head_hash.",
+    "post_lock_benchmark_attestation": "After lock, append separate benchmark_attestation event per eligible pre-lock artifact, binding unchanged artifact content hash, original prefix head/index, exact benchmark registration and terminal-attempt event indexes/hashes, and resulting lock_head_hash. Do not mutate artifact bytes. No downstream consumer can use pre-lock benchmark artifact until exact attestation validates.",
+    "lock_sequence": "Single ordered lifecycle: freeze the reviewed seed-plan SHA, global schedule digest, schedules/rosters, collision scans, guards and required rejection tests first. Before execution, preflight budgets and append every intended workload registration plus validation/final reservation metadata; each benchmark attempt references its exact prior registration. Only registered benchmark attempts may execute pre-lock. Append each attempt record only after its exact remote version reaches terminal status; unresolved/nonterminal attempts cannot be recorded as complete or produce an artifact. Once eligible benchmark attempts are terminal and a successful result is complete, append immutable benchmark_artifact with content hash, current pre-lock head/index, and exact registration and terminal-attempt event/hash anchors. Append registration_closed immediately next at the next index, with no event interposed; its resulting event hash is lock_head_hash. No benchmark or other workload may execute post-lock. Registered training/imitation/strategic runs may execute only post-lock; validation may execute post-lock only for promotion of registered candidates on frozen validation; final data are accessible only to the final evaluator after candidate freeze. Benchmark artifact attestation is appended separately after lock; the artifact is never rewritten. Workload/evidence artifacts created post-lock pin lock_head_hash.",
+    "post_lock": "No registrations or identity/schedule/bounds/root/roster mutation after lock; only registered run completion/evidence and required benchmark_attestation events may append. Validation can run after lock only for promotion of registered candidates on frozen validation suite. Final suite is inaccessible until candidate freeze and final evaluator; no final data in selection.",
+    "integrity_limit": "Hash chain detects partial/inconsistent edits only if independent anchors are preserved; it is not a signature and does not resist rewriting the complete registry and every anchor."
+  },
+  "phase_a_workload_prerequisite": "No workload may execute until this seed-plan and evidence roster are reviewed and all applicable Phase-B guard/rejection tests pass. After that gate, only pre-registered, budget-checked benchmark attempts may execute before registration_closed; their attempt events require terminal remote status, and the immutable successful benchmark artifact must be followed immediately by registration_closed. Training/imitation/strategic attempts are forbidden before that lock; no benchmark or other workload may execute after it. This is a permanent protocol rule, not a claim about current review status."
+}

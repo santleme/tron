@@ -1,0 +1,53 @@
+{
+  "event_data": {
+    "record": {
+      "benchmark_config_path": "training/configs/g008-principal-benchmark.json",
+      "benchmark_config_sha256": "8a9436d9cdad8f2f1873965bb96bca536e9577b0b9646b148ae6ba55d81b0681",
+      "billing_changes": false,
+      "expected_device": "single Tesla T4; no DDP",
+      "final_evidence_reserve_gpu_seconds": 7200,
+      "gpu_seconds_hard_cap": 7200,
+      "kernel_id": "pascalcoimbra/circuit-ai",
+      "paid_services": false,
+      "plan_sha256": "e313676a42dee85579a703734d66443626d76e18d049f0e793087a9105f5237f",
+      "quota_snapshot_from": ".omx/evidence/g008-stage0-audit.md",
+      "quota_snapshot_gpu_seconds_remaining": 99972,
+      "repeat_count": 5,
+      "run_id": "g008-principal-baseline-20261020-r1",
+      "run_ids": {
+        "pair-00": "763ae3cc-e459-5636-83f9-b3287fc47642",
+        "pair-01": "ee8cebb8-4148-5bd6-89f9-34e5382344ee",
+        "pair-02": "78b551b8-6a72-57be-a3ad-132479b2e3d7",
+        "pair-03": "64f2281d-3252-5de5-a362-2c9725fde9c0",
+        "pair-04": "ce20fe7f-92e1-567e-844e-62005d6c5cf3",
+        "warmup-low-risk-candidate-00": "7bd1990c-0dac-5870-981c-9d3a416921ca",
+        "warmup-low-risk-candidate-01": "b4b679f6-f0a2-50fa-8f19-9e875e036b27",
+        "warmup-low-risk-incumbent-00": "5746d9f7-853c-5c80-aaa3-8d195bbd46d1",
+        "warmup-low-risk-incumbent-01": "f40f15f4-a7d4-5482-ae62-d01d8f343ab4",
+        "warmup-numba-candidate-candidate-00": "e5c9f67c-28b2-5b27-812b-9f7f28d4c92e",
+        "warmup-numba-candidate-candidate-01": "18556743-a639-5a13-b194-a8813d12438c",
+        "warmup-numba-candidate-incumbent-00": "c1e2c3f3-4a98-57ab-8c9d-e66760f816d0",
+        "warmup-numba-candidate-incumbent-01": "9feedc26-b4d5-5d8d-b081-75a7b1f3c51a",
+        "warmup-numpy-control-candidate-00": "ac38c498-163b-5b70-bc16-98b6ce3bc4ca",
+        "warmup-numpy-control-candidate-01": "9b12ad73-6ae6-5369-8ce8-9085ffd066ff",
+        "warmup-numpy-control-incumbent-00": "562975ef-d8c3-56ca-bbfd-ed2d474fd499",
+        "warmup-numpy-control-incumbent-01": "3ee7425c-f5e9-5e79-9845-d76351ec34e4",
+        "warmup-python-oracle-candidate-00": "e25db07f-5a57-5f6a-994c-aa2aa98f43ad",
+        "warmup-python-oracle-candidate-01": "747b4826-b67f-5a5f-8344-70982efd0780",
+        "warmup-python-oracle-incumbent-00": "204853de-17a3-510d-baf5-0560185194ce",
+        "warmup-python-oracle-incumbent-01": "5b84594b-02e6-5966-8ac6-d1cb22b3994c"
+      },
+      "seed_plan_path": "training/configs/g008-split-seed-plan.json",
+      "seed_plan_sha256": "0173875c2f13fc3ffe5dbae76c2b6d6e46bc8398da7f8a748988a51b345d4b24",
+      "total_campaign_gpu_seconds_cap": 28800,
+      "updates_per_repeat": 3,
+      "warmup_count": 2,
+      "warmup_updates_each": 1,
+      "workload": "G008 frozen principal baseline benchmark only"
+    },
+    "registration_id": "g008-principal-baseline-20261020-r1",
+    "registration_kind": "benchmark"
+  },
+  "event_hash": "b43fa87fed0593dddeef6e60e0e36bc039158f34e9a3f12c47119a1392b1080b",
+  "event_index": 0
+}

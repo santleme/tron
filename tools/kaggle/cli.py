@@ -158,6 +158,42 @@ def package_tree_sha256(source: Path) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def _write_source_manifest(stage: Path, repo: Path, source_revision: str,
+                           entrypoint_template: str) -> str:
+    """Record staged source, package-builder, and runner-template identities."""
+    roots = (stage / "training", stage / "schemas")
+    if any(not root.is_dir() for root in roots):
+        raise KaggleError("Prepared package is missing training or schemas source.")
+    source_paths = [path for root in roots for path in root.rglob("*") if path.is_file()]
+    source_paths.extend((stage / "run-config.json", stage / "training/requirements-kaggle.txt",
+                         stage / "kernel-metadata.json", stage / ".arena-source-revision"))
+    files = [{"path": path.relative_to(stage).as_posix(), "sha256": file_sha256(path)}
+             for path in sorted(source_paths, key=lambda item: item.relative_to(stage).as_posix())]
+    try:
+        commit = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"],
+                                check=True, capture_output=True, text=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "-C", str(repo), "status", "--porcelain"],
+                                    check=True, capture_output=True, text=True).stdout)
+    except (OSError, subprocess.CalledProcessError):
+        commit, dirty = None, None
+    payload = {
+        "format": "circuit-ai-source-manifest/1",
+        "source_revision": source_revision,
+        "git_commit": commit,
+        "git_worktree_dirty": dirty,
+        "package_builder": {"path": "tools/kaggle/cli.py", "sha256": file_sha256(Path(__file__))},
+        "runner_template_sha256": hashlib.sha256(entrypoint_template.encode("utf-8")).hexdigest(),
+        "files": files,
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False).encode("utf-8")
+    digest = hashlib.sha256(canonical).hexdigest()
+    (stage / "source-manifest.json").write_text(
+        json.dumps({**payload, "source_manifest_sha256": digest}, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8")
+    return digest
+
+
 def _kernel_list_contains(output: str, kernel_id: str) -> bool:
     """Parse Kaggle's table-only kernels list conservatively; malformed output is not absence."""
     lines = [line.strip() for line in output.splitlines() if line.strip()]
@@ -622,6 +658,9 @@ def main():
         "visible_cuda_device_count": len(device_names),
         "training_device": device_names[0] if device_names else None,
         "training_device_index": 0, "training_cuda_device_count": 1,
+        "source_manifest_sha256": json.loads(
+            (ROOT / "source-manifest.json").read_text(encoding="utf-8")
+        )["source_manifest_sha256"],
     }
     if "train_config" in settings:
         settings["train_config"]["device"] = "cuda"
@@ -645,6 +684,7 @@ def main():
             "visible_cuda_device_count": len(device_names),
             "training_device": device_names[0] if device_names else None,
             "training_device_index": 0, "training_cuda_device_count": 1,
+            "source_manifest_sha256": runtime_evidence["source_manifest_sha256"],
             "benchmark_report_sha256": file_sha256(report_path),
             "benchmark_report": report,
         }
@@ -747,13 +787,14 @@ def main():
 if __name__ == "__main__":
     main()
 '''
+        _write_source_manifest(stage, repo, source_revision, entrypoint)
         # Kaggle script kernels execute the selected code file under /kaggle/src;
         # sibling package files are not guaranteed to be mounted beside it.
         # Embed the exact run config, trainer, schemas and support requirements
         # so the generated entrypoint is genuinely self-contained.
         source_buffer = io.BytesIO()
         with zipfile.ZipFile(source_buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for relative in ("run-config.json", "training", "schemas"):
+            for relative in ("run-config.json", "source-manifest.json", "training", "schemas"):
                 source_path = stage / relative
                 if source_path.is_file():
                     archive.write(source_path, relative)
@@ -2504,7 +2545,8 @@ def run_recovery_workload(registry, registration_event_index: int, source_dir: P
         except (ImportError, AttributeError) as exc:
             raise KaggleError("Pinned Kaggle CLI SDK is not installed/configured.") from exc
 
-    registry_path = getattr(registry, "path", Path.cwd() / ".omx/evidence/g008-experiment-registry.jsonl")
+    registry_path = getattr(
+        registry, "path", Path.cwd() / "artifacts/circuit-ai/registry/g008-experiment-registry.jsonl")
     with _recovery_kernel_lock(Path(registry_path), kernel_id) as lock_id:
         observed_package_sha256 = package_tree_sha256(Path(source_dir))
         if observed_package_sha256 != hashes["package_sha256"]:

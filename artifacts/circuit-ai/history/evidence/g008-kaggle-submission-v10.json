@@ -1,0 +1,169 @@
+{
+  "event_data": {
+    "record": {
+      "additional_gpu_seconds_reserved": 0,
+      "billing_changes": false,
+      "experiment_registration_id": "g008-principal-observation-batch-20261020-r1",
+      "kernel_id": "pascalcoimbra/circuit-ai",
+      "kernel_version": 10,
+      "machine_shape": "NvidiaTeslaT4",
+      "original_six_submission_cap_exceeded": true,
+      "package_files": [
+        {
+          "path": ".arena-source-revision",
+          "sha256": "51bc20f29453eeabeb3b4150d90621c929abad73a17685601eba5a644b2ad542"
+        },
+        {
+          "path": "kernel-metadata.json",
+          "sha256": "8cf559b42c3380ab41eca0fb2319c85c69ef6cd8dadcffdffc6c5a4ef85593da"
+        },
+        {
+          "path": "run-config.json",
+          "sha256": "7e9dd8dad7a6bef102b3bd91d9a10466379a2ad1df09b051cb1908f92287b03d"
+        },
+        {
+          "path": "run_kaggle.py",
+          "sha256": "31781eb0d26074e4922df4131d1fc1568c1e76b325bee2194af66cc7b82cfe9b"
+        },
+        {
+          "path": "schemas/README.md",
+          "sha256": "016f3d0d062c2a0a3e47501e46d20504c73720d2f175b54f5b225a2704aefce9"
+        },
+        {
+          "path": "schemas/checkpoint-metadata-1.schema.json",
+          "sha256": "e5ad17fa042291b96c0f90dab55f92efdfc97e375faca5f24d24674f99e0654c"
+        },
+        {
+          "path": "schemas/collision-transitions-1.schema.json",
+          "sha256": "262db8c19d003459b6bc34ada5571f4cec45eee82bdb44cd556c8dab2c53c859"
+        },
+        {
+          "path": "schemas/contract-versions.json",
+          "sha256": "74d4811fc1bf4dd91c2764442d4e525b29ac8ba8d71f5d67084dc6eefb1621a3"
+        },
+        {
+          "path": "schemas/lc-eval-1.schema.json",
+          "sha256": "b21222a2ad3245915839a3be39460c89394a3edc450159b9716bc461e819ff34"
+        },
+        {
+          "path": "schemas/lc-replay-1.schema.json",
+          "sha256": "6d1fef999b22a5c51375dd47bd88517878e306269ceab88ae0aad7b1b28560f7"
+        },
+        {
+          "path": "schemas/lc-run-1.schema.json",
+          "sha256": "deadaffe54d74ab18a03c83a8ab7750516267067cc5902a258f7729262359afa"
+        },
+        {
+          "path": "schemas/lc-split-manifest-1.schema.json",
+          "sha256": "da15141d6dab284569f32ef310ce6a4ab10cf9d77bada705f334add4111bde4a"
+        },
+        {
+          "path": "schemas/lc-split-manifest-2.schema.json",
+          "sha256": "b816188f3fc1037e6bd95fedd89d0e127e4b58b288536f13fe8634ec6a28986c"
+        },
+        {
+          "path": "schemas/lc-split-manifest-3.schema.json",
+          "sha256": "8e91b4a75384b35206ff584aadaf02f3a16b0093abdb623a5ae9fa181d668c72"
+        },
+        {
+          "path": "training/README.md",
+          "sha256": "d6e3aa53f2be0e83509d3373f91f127b664d8e329a8d84d1e04d417ef9685166"
+        },
+        {
+          "path": "training/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "training/arena/README.md",
+          "sha256": "367e5bdffcd24c3bb396fa3250d840e21116c4f39f22e747b778351114b09754"
+        },
+        {
+          "path": "training/arena/__init__.py",
+          "sha256": "6dfaa706c704fa574ee8dd9cfe10b18450588057e051af1c6d680d59063bf922"
+        },
+        {
+          "path": "training/arena/engine.py",
+          "sha256": "a93dc0c8001325dbb55bb90da5cd9ae4e262948de9b27be01a195299fd8be25b"
+        },
+        {
+          "path": "training/arena/seeds.py",
+          "sha256": "3b0af5e78dc4d88aa1911f2764b6dff1f17b082611ad84ebb9c2c650ad048885"
+        },
+        {
+          "path": "training/arena/vector.py",
+          "sha256": "c9f9fd4799b24404ef30be517290fef6051d163ccc0cb87a796fa42ff97cdd40"
+        },
+        {
+          "path": "training/configs/g008-principal-benchmark.json",
+          "sha256": "8a9436d9cdad8f2f1873965bb96bca536e9577b0b9646b148ae6ba55d81b0681"
+        },
+        {
+          "path": "training/configs/g008-split-seed-plan.json",
+          "sha256": "0173875c2f13fc3ffe5dbae76c2b6d6e46bc8398da7f8a748988a51b345d4b24"
+        },
+        {
+          "path": "training/eval/__init__.py",
+          "sha256": "1751eb10a0510628798e67b64d9dfb1528499179a3adf3d98dbcbca1d69608b2"
+        },
+        {
+          "path": "training/eval/g008_manifest.py",
+          "sha256": "aa47212a4f089f7ec1a745fe06c0ff85c6a2deab8018d876c0f98cb62b4bcbbb"
+        },
+        {
+          "path": "training/eval/lc_eval.py",
+          "sha256": "303852ef4011694c7ce8a965d3b6d2d03080c2090168c9023b9ab79c340e735c"
+        },
+        {
+          "path": "training/eval/provenance.py",
+          "sha256": "bc081b237388dfd9a1ea5ec0e309945e07bc55c980267c672b2e129ec9a1c67f"
+        },
+        {
+          "path": "training/eval/registry.py",
+          "sha256": "2e4613a6caed1a9aaf22a5d7ed8ecc5c65795b706d6928bf8be0adc3736598b7"
+        },
+        {
+          "path": "training/kaggle-run-config.example.json",
+          "sha256": "2dbe8eefb41b8a930a9a3cf599fa85f3de642029c83981ef079cce77da7681ef"
+        },
+        {
+          "path": "training/ppo/__init__.py",
+          "sha256": "6fe0a565f099de834394b07cbb6d82c1e6d90b1317cdb2da3a73b0fec50e93fc"
+        },
+        {
+          "path": "training/ppo/benchmark.py",
+          "sha256": "3294b6518ad7f672c3a9f6f67cf37c7350c2daf4b89fc82b1f6bb2bd0fb784c8"
+        },
+        {
+          "path": "training/ppo/g008_benchmark.py",
+          "sha256": "0c010dc0278546f88352e99767c32a4faf679ddd99282787a8de030a5c66ec75"
+        },
+        {
+          "path": "training/ppo/protocol.py",
+          "sha256": "a4ee059e7938542a54f1f91fbad6493de5bbcc049173aa7929581307782184c7"
+        },
+        {
+          "path": "training/ppo/train.py",
+          "sha256": "d77914bea35475ad4074a5968ba9a48890c2c3cee271e59dfc8d7c31eb9463f1"
+        },
+        {
+          "path": "training/requirements-kaggle.txt",
+          "sha256": "4c87102d2243e1fffab97a0d9b40d172078a7732aae651aa2edc7567a1968508"
+        },
+        {
+          "path": "training/requirements.txt",
+          "sha256": "96a401dbf43130236f4b88d260916c13433bdb729636d640b13485a0822ec573"
+        }
+      ],
+      "package_path": "artifacts/circuit-ai/g008/kernel-v10",
+      "package_tree_sha256": "6369dbeb82d3afb10324e7a6322eb9af430b0796908e92fb68cb3ecea1fdbbc6",
+      "paid_services": false,
+      "run_id": "g008-principal-observation-batch-20261020-r1",
+      "source_revision": "g008-r6-contiguous-observations-20261020",
+      "submission_state": "prepared_pending_push"
+    },
+    "registration_id": "g008-principal-observation-batch-20261020-r1-kaggle-version-10",
+    "registration_kind": "benchmark"
+  },
+  "event_hash": "0208abba4954ffd08b01d5069c674e8bc3f5d1817c95ddb0b0bb4eedd41f3fd7",
+  "event_index": 12
+}

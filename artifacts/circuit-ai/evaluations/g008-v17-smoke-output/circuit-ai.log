@@ -1,0 +1,80 @@
+[{"stream_name":"stdout","time":9.798665157,"data":"Preinstalled PyTorch=2.11.0+cu128 CUDA=12.8 available=True visible_cuda_devices=['Tesla T4', 'Tesla T4']; training_device=Tesla T4\n"}
+,{"stream_name":"stdout","time":12.289062269,"data":"Requirement already satisfied: onnx\u003c2,\u003e=1.18 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-qp2f7l70/training/requirements-kaggle.txt (line 4)) (1.22.0)\n"}
+,{"stream_name":"stdout","time":12.696465936,"data":"Collecting onnxscript\u003c1,\u003e=0.5 (from -r /tmp/circuit-ai-source-qp2f7l70/training/requirements-kaggle.txt (line 5))\n"}
+,{"stream_name":"stdout","time":12.827725261,"data":"  Downloading onnxscript-0.7.2-py3-none-any.whl.metadata (13 kB)\n"}
+,{"stream_name":"stdout","time":12.886884755,"data":"Collecting onnx-ir\u003c2,\u003e=0.1.16 (from -r /tmp/circuit-ai-source-qp2f7l70/training/requirements-kaggle.txt (line 6))\n"}
+,{"stream_name":"stdout","time":12.925933984,"data":"  Downloading onnx_ir-1.1.0-py3-none-any.whl.metadata (3.3 kB)\n"}
+,{"stream_name":"stdout","time":12.941127319,"data":"Requirement already satisfied: ml_dtypes\u003e=0.5 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-qp2f7l70/training/requirements-kaggle.txt (line 7)) (0.6.0)\n"}
+,{"stream_name":"stdout","time":12.942406405,"data":"Requirement already satisfied: packaging\u003e=24 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-qp2f7l70/training/requirements-kaggle.txt (line 8)) (26.3)\n"}
+,{"stream_name":"stdout","time":12.94359621,"data":"Requirement already satisfied: typing_extensions\u003e=4.10 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-qp2f7l70/training/requirements-kaggle.txt (line 9)) (4.16.0)\n"}
+,{"stream_name":"stdout","time":12.945139171,"data":"Requirement already satisfied: jsonschema\u003c5,\u003e=4.18 in /usr/local/lib/python3.13/dist-packages (from -r /tmp/circuit-ai-source-qp2f7l70/training/requirements-kaggle.txt (line 10)) (4.26.0)\n"}
+,{"stream_name":"stdout","time":12.987309101,"data":"Downloading onnxscript-0.7.2-py3-none-any.whl (754 kB)\n"}
+,{"stream_name":"stdout","time":13.294626041,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 754.2/754.2 kB 2.5 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":13.340036684,"data":"Downloading onnx_ir-1.1.0-py3-none-any.whl (192 kB)\n"}
+,{"stream_name":"stdout","time":13.410528785,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 192.2/192.2 kB 2.8 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":13.42760514,"data":"Installing collected packages: onnxscript, onnx-ir\n"}
+,{"stream_name":"stdout","time":14.163255103000001,"data":"Successfully installed onnx-ir-1.1.0 onnxscript-0.7.2\n"}
+,{"stream_name":"stderr","time":24.6847286,"data":"/tmp/circuit-ai-source-qp2f7l70/training/ppo/train.py:498: UserWarning: # 'dynamic_axes' is not recommended when dynamo=True, and may lead to 'torch._dynamo.exc.UserError: Constraints violated.' Supply the 'dynamic_shapes' argument instead if export is unsuccessful.\n"}
+,{"stream_name":"stderr","time":24.684765794,"data":"  torch.onnx.export(model, sample, str(onnx_path), input_names=[\"observation\"], output_names=[\"logits\", \"value\"],\n"}
+,{"stream_name":"stderr","time":24.685713164,"data":"W1021 01:29:42.115000 7 torch/onnx/_internal/exporter/_compat.py:133] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version \u003e=18 to leverage latest ONNX features\n"}
+,{"stream_name":"stdout","time":25.587093793,"data":"[torch.onnx] Obtain model graph for `ActorCritic([...]` with `torch.export.export(..., strict=False)`...\n"}
+,{"stream_name":"stdout","time":27.783334021,"data":"[torch.onnx] Obtain model graph for `ActorCritic([...]` with `torch.export.export(..., strict=False)`... ✅\n"}
+,{"stream_name":"stdout","time":27.783362009,"data":"[torch.onnx] Run decompositions...\n"}
+,{"stream_name":"stderr","time":28.503531137,"data":"/usr/lib/python3.13/copyreg.py:99: FutureWarning: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.\n"}
+,{"stream_name":"stderr","time":28.503560099,"data":"  return cls.__new__(cls, *args)\n"}
+,{"stream_name":"stdout","time":28.531290769,"data":"[torch.onnx] Run decompositions... ✅\n"}
+,{"stream_name":"stdout","time":28.531318973,"data":"[torch.onnx] Translate the graph into ONNX...\n"}
+,{"stream_name":"stdout","time":28.549376259,"data":"[torch.onnx] Translate the graph into ONNX... ✅\n"}
+,{"stream_name":"stderr","time":28.550073555,"data":"The model version conversion is not supported by the onnxscript version converter and fallback is enabled. The model will be converted using the onnx C API (target version: 17).\n"}
+,{"stream_name":"stdout","time":28.570824769,"data":"[torch.onnx] Optimize the ONNX graph...\n"}
+,{"stream_name":"stdout","time":28.621621154,"data":"[torch.onnx] Optimize the ONNX graph... ✅\n"}
+,{"stream_name":"stderr","time":30.500522229,"data":"/tmp/circuit-ai-source-qp2f7l70/training/ppo/train.py:498: UserWarning: # 'dynamic_axes' is not recommended when dynamo=True, and may lead to 'torch._dynamo.exc.UserError: Constraints violated.' Supply the 'dynamic_shapes' argument instead if export is unsuccessful.\n"}
+,{"stream_name":"stderr","time":30.500551182,"data":"  torch.onnx.export(model, sample, str(onnx_path), input_names=[\"observation\"], output_names=[\"logits\", \"value\"],\n"}
+,{"stream_name":"stderr","time":30.500709434,"data":"W1021 01:29:47.930000 7 torch/onnx/_internal/exporter/_compat.py:133] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version \u003e=18 to leverage latest ONNX features\n"}
+,{"stream_name":"stdout","time":31.145798916,"data":"[torch.onnx] Obtain model graph for `ActorCritic([...]` with `torch.export.export(..., strict=False)`...\n"}
+,{"stream_name":"stdout","time":31.285259178,"data":"[torch.onnx] Obtain model graph for `ActorCritic([...]` with `torch.export.export(..., strict=False)`... ✅\n"}
+,{"stream_name":"stdout","time":31.285293243,"data":"[torch.onnx] Run decompositions...\n"}
+,{"stream_name":"stderr","time":31.657317735,"data":"/usr/lib/python3.13/copyreg.py:99: FutureWarning: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.\n"}
+,{"stream_name":"stderr","time":31.65735265,"data":"  return cls.__new__(cls, *args)\n"}
+,{"stream_name":"stdout","time":31.684688674,"data":"[torch.onnx] Run decompositions... ✅\n"}
+,{"stream_name":"stdout","time":31.684718694,"data":"[torch.onnx] Translate the graph into ONNX...\n"}
+,{"stream_name":"stdout","time":31.700222283,"data":"[torch.onnx] Translate the graph into ONNX... ✅\n"}
+,{"stream_name":"stderr","time":31.700791692,"data":"The model version conversion is not supported by the onnxscript version converter and fallback is enabled. The model will be converted using the onnx C API (target version: 17).\n"}
+,{"stream_name":"stdout","time":31.717912657,"data":"[torch.onnx] Optimize the ONNX graph...\n"}
+,{"stream_name":"stdout","time":31.7590089,"data":"[torch.onnx] Optimize the ONNX graph... ✅\n"}
+,{"stream_name":"stderr","time":31.987205504,"data":"/tmp/circuit-ai-source-qp2f7l70/training/ppo/train.py:498: UserWarning: # 'dynamic_axes' is not recommended when dynamo=True, and may lead to 'torch._dynamo.exc.UserError: Constraints violated.' Supply the 'dynamic_shapes' argument instead if export is unsuccessful.\n"}
+,{"stream_name":"stderr","time":31.987230896,"data":"  torch.onnx.export(model, sample, str(onnx_path), input_names=[\"observation\"], output_names=[\"logits\", \"value\"],\n"}
+,{"stream_name":"stderr","time":31.987358779,"data":"W1021 01:29:49.417000 7 torch/onnx/_internal/exporter/_compat.py:133] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version \u003e=18 to leverage latest ONNX features\n"}
+,{"stream_name":"stdout","time":32.585161398,"data":"[torch.onnx] Obtain model graph for `ActorCritic([...]` with `torch.export.export(..., strict=False)`...\n"}
+,{"stream_name":"stdout","time":32.739655948,"data":"[torch.onnx] Obtain model graph for `ActorCritic([...]` with `torch.export.export(..., strict=False)`... ✅\n"}
+,{"stream_name":"stdout","time":32.739689415,"data":"[torch.onnx] Run decompositions...\n"}
+,{"stream_name":"stderr","time":33.117555842,"data":"/usr/lib/python3.13/copyreg.py:99: FutureWarning: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.\n"}
+,{"stream_name":"stderr","time":33.11758821,"data":"  return cls.__new__(cls, *args)\n"}
+,{"stream_name":"stdout","time":33.145006833,"data":"[torch.onnx] Run decompositions... ✅\n"}
+,{"stream_name":"stdout","time":33.145052541,"data":"[torch.onnx] Translate the graph into ONNX...\n"}
+,{"stream_name":"stdout","time":33.160665422,"data":"[torch.onnx] Translate the graph into ONNX... ✅\n"}
+,{"stream_name":"stderr","time":33.161191533,"data":"The model version conversion is not supported by the onnxscript version converter and fallback is enabled. The model will be converted using the onnx C API (target version: 17).\n"}
+,{"stream_name":"stdout","time":33.176127442,"data":"[torch.onnx] Optimize the ONNX graph...\n"}
+,{"stream_name":"stdout","time":33.218220146,"data":"[torch.onnx] Optimize the ONNX graph... ✅\n"}
+,{"stream_name":"stderr","time":33.450717279,"data":"/tmp/circuit-ai-source-qp2f7l70/training/ppo/train.py:498: UserWarning: # 'dynamic_axes' is not recommended when dynamo=True, and may lead to 'torch._dynamo.exc.UserError: Constraints violated.' Supply the 'dynamic_shapes' argument instead if export is unsuccessful.\n"}
+,{"stream_name":"stderr","time":33.450745778,"data":"  torch.onnx.export(model, sample, str(onnx_path), input_names=[\"observation\"], output_names=[\"logits\", \"value\"],\n"}
+,{"stream_name":"stderr","time":33.450927124,"data":"W1021 01:29:50.881000 7 torch/onnx/_internal/exporter/_compat.py:133] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version \u003e=18 to leverage latest ONNX features\n"}
+,{"stream_name":"stdout","time":34.080209524,"data":"[torch.onnx] Obtain model graph for `ActorCritic([...]` with `torch.export.export(..., strict=False)`...\n"}
+,{"stream_name":"stdout","time":34.219479532,"data":"[torch.onnx] Obtain model graph for `ActorCritic([...]` with `torch.export.export(..., strict=False)`... ✅\n"}
+,{"stream_name":"stdout","time":34.219514789,"data":"[torch.onnx] Run decompositions...\n"}
+,{"stream_name":"stderr","time":34.59878503,"data":"/usr/lib/python3.13/copyreg.py:99: FutureWarning: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.\n"}
+,{"stream_name":"stderr","time":34.598830816,"data":"  return cls.__new__(cls, *args)\n"}
+,{"stream_name":"stdout","time":34.626101745,"data":"[torch.onnx] Run decompositions... ✅\n"}
+,{"stream_name":"stdout","time":34.626147691,"data":"[torch.onnx] Translate the graph into ONNX...\n"}
+,{"stream_name":"stdout","time":34.640882625,"data":"[torch.onnx] Translate the graph into ONNX... ✅\n"}
+,{"stream_name":"stderr","time":34.641365528,"data":"The model version conversion is not supported by the onnxscript version converter and fallback is enabled. The model will be converted using the onnx C API (target version: 17).\n"}
+,{"stream_name":"stdout","time":34.656093909,"data":"[torch.onnx] Optimize the ONNX graph...\n"}
+,{"stream_name":"stdout","time":34.698092775,"data":"[torch.onnx] Optimize the ONNX graph... ✅\n"}
+,{"stream_name":"stdout","time":34.729876392,"data":"Completed G008 train-only workload 717c2069-6773-43e6-9509-a0dff6e77fbe; artifacts: /kaggle/working/arena-output/717c2069-6773-43e6-9509-a0dff6e77fbe\n"}
+,{"stream_name":"stderr","time":41.150781346,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":41.150818262,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":41.462028232,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":41.462059321,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":42.245116285,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":43.37423954,"data":"[NbConvertApp] Writing 458557 bytes to __results__.html\n"}
+]

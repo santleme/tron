@@ -1,0 +1,21 @@
+{
+  "g008_evaluation": {
+    "campaign_id": "g008-competitive-20261021-v2",
+    "candidate_checkpoint_path": "/kaggle/input/g008-frozen-candidate/candidate.pt",
+    "candidate_dataset_source": "pascalcoimbra/g008-frozen-candidate",
+    "game_count": 512,
+    "mode": "final",
+    "opponent_code_sha256": "9e5103176218ca092206ba50899a35c43ad488ce825a95af487e76798ce60123",
+    "opponent_id": "open-space",
+    "registration_kind": "final",
+    "roster_sha256": "0fa20d714149054782dd5a83ab9ae99ebca6582b6c5702bdcc206bf7e3b61c27",
+    "run_uuid": "ad85c762-fabc-51e8-a838-dd6d007d7c77",
+    "seat_order": [
+      0,
+      1
+    ],
+    "seed_plan_sha256": "c6b16733a045e94e7310183e8be8a62cf4327b5d2bdc3eed40bb9d552ce17593"
+  },
+  "run_id": "ad85c762-fabc-51e8-a838-dd6d007d7c77",
+  "train_config": {}
+}

@@ -1,0 +1,44 @@
+{
+  "cuda_device": "Tesla T4",
+  "cuda_optimizer_updates_total": 60,
+  "ddp": false,
+  "execution_evidence_sha256": "badf39c78be5c997bbd218cd2a94f90b24f21923b6f0d850fa5d3e500e9784c9",
+  "joint_transitions_each": 12288,
+  "kernel_id": "pascalcoimbra/circuit-ai",
+  "measured_repeats": 5,
+  "optimizer_seconds": {
+    "iqr": "0.001607883500042817",
+    "max": "0.05168847100003404",
+    "median": "0.05107362599994758",
+    "min": "0.049626455999941754"
+  },
+  "optimizer_updates_total": 60,
+  "original_six_submission_cap_exceeded": true,
+  "quota_raw": "resource  used   remaining  total   refreshAt            \n--------  -----  ---------  ------  -------------------  \nGPU       2.34h  27.66h     30.00h  2026-10-24T00:00:00  \nTPU       0.00h  20.00h     20.00h  2026-10-24T00:00:00",
+  "report_path": "artifacts/circuit-ai/g008/download-v9/g008-principal-benchmark.json",
+  "report_sha256": "e315d38af4a86ef054e5e6d72ffd5f7791c912e7b543c1cb1477420a3e11dbd6",
+  "rollout_seconds": {
+    "iqr": "0.17385725849993605",
+    "max": "9.635345377999954",
+    "median": "9.596057206999944",
+    "min": "9.29940448299999"
+  },
+  "run_id": "g008-principal-baseline-20261020-r1",
+  "source_revision": "g008-r5-update-cuda-counter-20261020",
+  "status": "pascalcoimbra/circuit-ai/9 has status \"KernelWorkerStatus.COMPLETE\"",
+  "update_only_joint_transitions_per_second": {
+    "iqr": "23.420700898278938",
+    "max": "1316.5119390173052",
+    "median": "1276.1053949253464",
+    "min": "1270.8011440242115"
+  },
+  "used_gpu_count": 1,
+  "version": 9,
+  "visible_gpu_count": 2,
+  "wall_inclusive_joint_transitions_per_second": {
+    "iqr": "23.4376076971987",
+    "max": "1311.8035060391644",
+    "median": "1271.6927192390244",
+    "min": "1266.3611945617454"
+  }
+}

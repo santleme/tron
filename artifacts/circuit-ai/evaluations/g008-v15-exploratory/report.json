@@ -1,0 +1,4117 @@
+{
+  "candidate_checkpoint_id": "step-3",
+  "candidate_checkpoint_path": "/kaggle/input/circuit-ai/arena-output/b9941b1a-de48-4274-bafa-0d750ca40520/checkpoints/step-3.pt",
+  "episodes": [
+    {
+      "derived_seed_uint64": 16411293730010878731,
+      "result": "seat1_win",
+      "root_seed": 1000000,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 7716906774426936108,
+      "result": "seat0_win",
+      "root_seed": 1000000,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 12687687065341346086,
+      "result": "draw",
+      "root_seed": 1000001,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 15919352410971850604,
+      "result": "seat0_win",
+      "root_seed": 1000001,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 9343546605996918652,
+      "result": "seat1_win",
+      "root_seed": 1000002,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 3189194872714192250,
+      "result": "seat0_win",
+      "root_seed": 1000002,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 4990934795200571246,
+      "result": "seat1_win",
+      "root_seed": 1000003,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 1437178170493063180,
+      "result": "seat0_win",
+      "root_seed": 1000003,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 2376088939903289047,
+      "result": "seat1_win",
+      "root_seed": 1000004,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 9314930898120940587,
+      "result": "seat1_win",
+      "root_seed": 1000004,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 12256547899179446775,
+      "result": "seat1_win",
+      "root_seed": 1000005,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 8752969784886715581,
+      "result": "seat0_win",
+      "root_seed": 1000005,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 8499885553437479217,
+      "result": "seat1_win",
+      "root_seed": 1000006,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 10259674469973324939,
+      "result": "seat0_win",
+      "root_seed": 1000006,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 8934062446308407693,
+      "result": "seat1_win",
+      "root_seed": 1000007,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 16653145867107911889,
+      "result": "seat0_win",
+      "root_seed": 1000007,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 16378079874306414709,
+      "result": "seat1_win",
+      "root_seed": 1000008,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 1645872593452381990,
+      "result": "seat0_win",
+      "root_seed": 1000008,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 4826718035202908342,
+      "result": "seat1_win",
+      "root_seed": 1000009,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 890035237039747465,
+      "result": "seat0_win",
+      "root_seed": 1000009,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 247959276194805179,
+      "result": "seat1_win",
+      "root_seed": 1000010,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 15725768855931080523,
+      "result": "seat1_win",
+      "root_seed": 1000010,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 16489701584516785313,
+      "result": "seat1_win",
+      "root_seed": 1000011,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 558088011544184585,
+      "result": "seat0_win",
+      "root_seed": 1000011,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 17675309543550051313,
+      "result": "seat1_win",
+      "root_seed": 1000012,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 12243514030172987474,
+      "result": "seat0_win",
+      "root_seed": 1000012,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 4738067957277930363,
+      "result": "seat1_win",
+      "root_seed": 1000013,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 590021565928981754,
+      "result": "seat0_win",
+      "root_seed": 1000013,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 12873044696233036633,
+      "result": "seat1_win",
+      "root_seed": 1000014,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 12340640301863260756,
+      "result": "seat0_win",
+      "root_seed": 1000014,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 14987350933815784050,
+      "result": "seat1_win",
+      "root_seed": 1000015,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 11485882807770517112,
+      "result": "seat0_win",
+      "root_seed": 1000015,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 4879178327513817315,
+      "result": "seat1_win",
+      "root_seed": 1000016,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 6981604573928396114,
+      "result": "seat0_win",
+      "root_seed": 1000016,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 16122061169340666694,
+      "result": "seat1_win",
+      "root_seed": 1000017,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 17043012896473277866,
+      "result": "seat0_win",
+      "root_seed": 1000017,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 9383161408000343260,
+      "result": "seat1_win",
+      "root_seed": 1000018,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 15786046398185004773,
+      "result": "seat0_win",
+      "root_seed": 1000018,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 4314270379585409340,
+      "result": "seat1_win",
+      "root_seed": 1000019,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 10058497382898543124,
+      "result": "seat0_win",
+      "root_seed": 1000019,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 3336078684032163923,
+      "result": "seat1_win",
+      "root_seed": 1000020,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 235364071251049242,
+      "result": "seat0_win",
+      "root_seed": 1000020,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 15676639763497515145,
+      "result": "seat1_win",
+      "root_seed": 1000021,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 3195741473774405289,
+      "result": "seat0_win",
+      "root_seed": 1000021,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 2407569347900468866,
+      "result": "seat1_win",
+      "root_seed": 1000022,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 9934528800919099591,
+      "result": "seat0_win",
+      "root_seed": 1000022,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 6376589402930533502,
+      "result": "seat1_win",
+      "root_seed": 1000023,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 11335695315587938028,
+      "result": "seat0_win",
+      "root_seed": 1000023,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 14497031124326405316,
+      "result": "seat1_win",
+      "root_seed": 1000024,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 15441545776743887586,
+      "result": "seat0_win",
+      "root_seed": 1000024,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 15654698069041432616,
+      "result": "seat1_win",
+      "root_seed": 1000025,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 14387580444157712010,
+      "result": "seat0_win",
+      "root_seed": 1000025,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 8871083104858750476,
+      "result": "seat1_win",
+      "root_seed": 1000026,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 9055814259775987480,
+      "result": "seat0_win",
+      "root_seed": 1000026,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 11931436196171343269,
+      "result": "seat1_win",
+      "root_seed": 1000027,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 1403999671781142055,
+      "result": "seat0_win",
+      "root_seed": 1000027,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 13491953980291636930,
+      "result": "seat1_win",
+      "root_seed": 1000028,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 1483722650847802241,
+      "result": "draw",
+      "root_seed": 1000028,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 7544858856122941633,
+      "result": "seat1_win",
+      "root_seed": 1000029,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 147173882892434826,
+      "result": "seat0_win",
+      "root_seed": 1000029,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 16655309223229621715,
+      "result": "seat1_win",
+      "root_seed": 1000030,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 6646492047780765425,
+      "result": "seat0_win",
+      "root_seed": 1000030,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 963569982799071062,
+      "result": "seat1_win",
+      "root_seed": 1000031,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 14367815070216338587,
+      "result": "seat0_win",
+      "root_seed": 1000031,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 4485079131479659360,
+      "result": "seat1_win",
+      "root_seed": 1000032,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 12514561650807917193,
+      "result": "seat0_win",
+      "root_seed": 1000032,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 9847105824534778621,
+      "result": "draw",
+      "root_seed": 1000033,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 4319570764707314253,
+      "result": "seat0_win",
+      "root_seed": 1000033,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 12177073471460049894,
+      "result": "seat1_win",
+      "root_seed": 1000034,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 16064640403093949448,
+      "result": "seat0_win",
+      "root_seed": 1000034,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 2220721956664936061,
+      "result": "seat1_win",
+      "root_seed": 1000035,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 8873535460771119827,
+      "result": "seat0_win",
+      "root_seed": 1000035,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 16201753525564216678,
+      "result": "seat1_win",
+      "root_seed": 1000036,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 9874857228078938270,
+      "result": "seat0_win",
+      "root_seed": 1000036,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 11414396874433881070,
+      "result": "seat1_win",
+      "root_seed": 1000037,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 15366428882060717067,
+      "result": "seat0_win",
+      "root_seed": 1000037,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 5978384836796721096,
+      "result": "seat1_win",
+      "root_seed": 1000038,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 304007959660731467,
+      "result": "seat0_win",
+      "root_seed": 1000038,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 15497452552147969860,
+      "result": "seat1_win",
+      "root_seed": 1000039,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 7624733144144132708,
+      "result": "seat0_win",
+      "root_seed": 1000039,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 555144647675230182,
+      "result": "seat1_win",
+      "root_seed": 1000040,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 6743866901304533045,
+      "result": "seat0_win",
+      "root_seed": 1000040,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 13847316522049801072,
+      "result": "seat1_win",
+      "root_seed": 1000041,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 3714292174658518495,
+      "result": "seat1_win",
+      "root_seed": 1000041,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 12593337881876861396,
+      "result": "seat1_win",
+      "root_seed": 1000042,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 463823291064111600,
+      "result": "seat0_win",
+      "root_seed": 1000042,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 11268516553210161663,
+      "result": "seat1_win",
+      "root_seed": 1000043,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 11703871387484042197,
+      "result": "seat0_win",
+      "root_seed": 1000043,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 15222131069573532897,
+      "result": "seat1_win",
+      "root_seed": 1000044,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 9809916972492917914,
+      "result": "seat0_win",
+      "root_seed": 1000044,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 11194328648163483980,
+      "result": "seat1_win",
+      "root_seed": 1000045,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 94022868947783191,
+      "result": "seat0_win",
+      "root_seed": 1000045,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 11666815419245879811,
+      "result": "seat1_win",
+      "root_seed": 1000046,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 941697481986627499,
+      "result": "seat0_win",
+      "root_seed": 1000046,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 9490735521879028290,
+      "result": "seat1_win",
+      "root_seed": 1000047,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 7599285783708533000,
+      "result": "seat0_win",
+      "root_seed": 1000047,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 2674342411694766669,
+      "result": "seat1_win",
+      "root_seed": 1000048,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 16041188988241921157,
+      "result": "seat0_win",
+      "root_seed": 1000048,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 2860838263579758461,
+      "result": "seat1_win",
+      "root_seed": 1000049,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 7104362905444660319,
+      "result": "seat0_win",
+      "root_seed": 1000049,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 15936157141915201241,
+      "result": "seat0_win",
+      "root_seed": 1000050,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 14218373485191106901,
+      "result": "seat0_win",
+      "root_seed": 1000050,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 14479637965413810934,
+      "result": "draw",
+      "root_seed": 1000051,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 14275969281683118127,
+      "result": "seat0_win",
+      "root_seed": 1000051,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 16527423978062509516,
+      "result": "seat1_win",
+      "root_seed": 1000052,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 11914777177666068920,
+      "result": "seat0_win",
+      "root_seed": 1000052,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 9205551117469068954,
+      "result": "seat1_win",
+      "root_seed": 1000053,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 6893755645050895275,
+      "result": "seat0_win",
+      "root_seed": 1000053,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 14255071335322387011,
+      "result": "seat1_win",
+      "root_seed": 1000054,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 17047875062784889696,
+      "result": "seat0_win",
+      "root_seed": 1000054,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 12107645287852995961,
+      "result": "seat1_win",
+      "root_seed": 1000055,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 16212319908247992709,
+      "result": "seat0_win",
+      "root_seed": 1000055,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 10948053609815147771,
+      "result": "seat1_win",
+      "root_seed": 1000056,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 7665659115648085894,
+      "result": "seat0_win",
+      "root_seed": 1000056,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 8138986215605994517,
+      "result": "seat1_win",
+      "root_seed": 1000057,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 7165739960870711741,
+      "result": "seat0_win",
+      "root_seed": 1000057,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 4866577471734467083,
+      "result": "seat1_win",
+      "root_seed": 1000058,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 15681416127830200079,
+      "result": "seat0_win",
+      "root_seed": 1000058,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 11084665343401773330,
+      "result": "seat1_win",
+      "root_seed": 1000059,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 6946835613883075392,
+      "result": "seat1_win",
+      "root_seed": 1000059,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 15980177239534321879,
+      "result": "seat1_win",
+      "root_seed": 1000060,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 1437788922433292389,
+      "result": "seat1_win",
+      "root_seed": 1000060,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 1541421397585294864,
+      "result": "seat1_win",
+      "root_seed": 1000061,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 14851290734107789639,
+      "result": "seat0_win",
+      "root_seed": 1000061,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 2487486111585841185,
+      "result": "seat1_win",
+      "root_seed": 1000062,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 11683835942856792195,
+      "result": "seat0_win",
+      "root_seed": 1000062,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 1532642157494408002,
+      "result": "seat1_win",
+      "root_seed": 1000063,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 6276179060873367817,
+      "result": "seat0_win",
+      "root_seed": 1000063,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 1759147362106524536,
+      "result": "seat1_win",
+      "root_seed": 1000064,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 10469440596430662649,
+      "result": "seat0_win",
+      "root_seed": 1000064,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 4317896412093469798,
+      "result": "seat1_win",
+      "root_seed": 1000065,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 8733752309349384280,
+      "result": "seat0_win",
+      "root_seed": 1000065,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 239308419243732536,
+      "result": "seat1_win",
+      "root_seed": 1000066,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 13823146963654777208,
+      "result": "seat0_win",
+      "root_seed": 1000066,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 1691303523155069230,
+      "result": "seat1_win",
+      "root_seed": 1000067,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 8782667046981480494,
+      "result": "draw",
+      "root_seed": 1000067,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 10913319866502323603,
+      "result": "seat1_win",
+      "root_seed": 1000068,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 13660018174142921820,
+      "result": "seat0_win",
+      "root_seed": 1000068,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 3300422517611183975,
+      "result": "seat1_win",
+      "root_seed": 1000069,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 9184159156721598426,
+      "result": "seat0_win",
+      "root_seed": 1000069,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 14195078844820322945,
+      "result": "seat1_win",
+      "root_seed": 1000070,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 63239643118811394,
+      "result": "seat0_win",
+      "root_seed": 1000070,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 4406115468230542289,
+      "result": "seat1_win",
+      "root_seed": 1000071,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 1695519411588846645,
+      "result": "seat0_win",
+      "root_seed": 1000071,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 7342864725929065755,
+      "result": "seat1_win",
+      "root_seed": 1000072,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 12000349887282551382,
+      "result": "seat0_win",
+      "root_seed": 1000072,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 4826514248438114764,
+      "result": "seat1_win",
+      "root_seed": 1000073,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 4823396268597737972,
+      "result": "seat0_win",
+      "root_seed": 1000073,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 14795714002059267457,
+      "result": "seat1_win",
+      "root_seed": 1000074,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 14514688831113662166,
+      "result": "seat0_win",
+      "root_seed": 1000074,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 174320793506872466,
+      "result": "seat1_win",
+      "root_seed": 1000075,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 7598146887774453259,
+      "result": "seat0_win",
+      "root_seed": 1000075,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 7198983458753732433,
+      "result": "seat1_win",
+      "root_seed": 1000076,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 14605071081059803497,
+      "result": "seat0_win",
+      "root_seed": 1000076,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 7374678191557596244,
+      "result": "seat1_win",
+      "root_seed": 1000077,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 11175022860999355845,
+      "result": "seat0_win",
+      "root_seed": 1000077,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 6780919789980449774,
+      "result": "seat1_win",
+      "root_seed": 1000078,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 6215752100978487301,
+      "result": "seat0_win",
+      "root_seed": 1000078,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 8104651597774442195,
+      "result": "draw",
+      "root_seed": 1000079,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 16636710785643842637,
+      "result": "draw",
+      "root_seed": 1000079,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 8570326379761171290,
+      "result": "seat1_win",
+      "root_seed": 1000080,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 4938216343441960759,
+      "result": "seat0_win",
+      "root_seed": 1000080,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 3809604622484571236,
+      "result": "seat1_win",
+      "root_seed": 1000081,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 14005649587828055766,
+      "result": "seat0_win",
+      "root_seed": 1000081,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 1588283788569177510,
+      "result": "seat1_win",
+      "root_seed": 1000082,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 15878215816783868050,
+      "result": "seat0_win",
+      "root_seed": 1000082,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 10990332535050030055,
+      "result": "seat1_win",
+      "root_seed": 1000083,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 11056670982258585037,
+      "result": "seat0_win",
+      "root_seed": 1000083,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 10084723625227571879,
+      "result": "seat1_win",
+      "root_seed": 1000084,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 12776070184136527011,
+      "result": "seat0_win",
+      "root_seed": 1000084,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 15693346531131552467,
+      "result": "seat1_win",
+      "root_seed": 1000085,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 15090691566063916837,
+      "result": "seat0_win",
+      "root_seed": 1000085,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 12819437726761152349,
+      "result": "seat1_win",
+      "root_seed": 1000086,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 2472571433617217018,
+      "result": "seat1_win",
+      "root_seed": 1000086,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 3449736589536386292,
+      "result": "seat1_win",
+      "root_seed": 1000087,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 15905261971298844822,
+      "result": "seat0_win",
+      "root_seed": 1000087,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 17402926195928276922,
+      "result": "seat1_win",
+      "root_seed": 1000088,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 5901096827954336378,
+      "result": "seat0_win",
+      "root_seed": 1000088,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 1186887750941434869,
+      "result": "seat1_win",
+      "root_seed": 1000089,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 15562600396657399540,
+      "result": "seat0_win",
+      "root_seed": 1000089,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 14456566972137633356,
+      "result": "seat1_win",
+      "root_seed": 1000090,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 9117532685578497191,
+      "result": "seat0_win",
+      "root_seed": 1000090,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 14087680487904121525,
+      "result": "seat1_win",
+      "root_seed": 1000091,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 8250438560814450979,
+      "result": "seat0_win",
+      "root_seed": 1000091,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 9326291782513568889,
+      "result": "seat1_win",
+      "root_seed": 1000092,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 13751116908491806702,
+      "result": "seat0_win",
+      "root_seed": 1000092,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 12437353871843757404,
+      "result": "seat0_win",
+      "root_seed": 1000093,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 12132386641912662642,
+      "result": "seat0_win",
+      "root_seed": 1000093,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 8608319701200380784,
+      "result": "seat1_win",
+      "root_seed": 1000094,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 13608509166398431225,
+      "result": "seat0_win",
+      "root_seed": 1000094,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 5517809415088002661,
+      "result": "seat1_win",
+      "root_seed": 1000095,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 18332506022820129823,
+      "result": "seat0_win",
+      "root_seed": 1000095,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 1864547823283132412,
+      "result": "seat1_win",
+      "root_seed": 1000096,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 14707766736732390545,
+      "result": "seat0_win",
+      "root_seed": 1000096,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 9691439470209444929,
+      "result": "seat1_win",
+      "root_seed": 1000097,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 6483526183327951902,
+      "result": "seat0_win",
+      "root_seed": 1000097,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 14404259666853943134,
+      "result": "seat1_win",
+      "root_seed": 1000098,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 11356148987470742839,
+      "result": "seat0_win",
+      "root_seed": 1000098,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 3717322380748045109,
+      "result": "seat1_win",
+      "root_seed": 1000099,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 10143137277372268063,
+      "result": "seat0_win",
+      "root_seed": 1000099,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 6901529723351016463,
+      "result": "seat1_win",
+      "root_seed": 1000100,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 14487312876629461040,
+      "result": "seat0_win",
+      "root_seed": 1000100,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 8415515239915593052,
+      "result": "seat1_win",
+      "root_seed": 1000101,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 10853307822563612780,
+      "result": "seat0_win",
+      "root_seed": 1000101,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 6129432441611877791,
+      "result": "seat1_win",
+      "root_seed": 1000102,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 17395883244613620554,
+      "result": "seat0_win",
+      "root_seed": 1000102,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 2278590723795411652,
+      "result": "seat1_win",
+      "root_seed": 1000103,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 8062658078317236732,
+      "result": "seat0_win",
+      "root_seed": 1000103,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 1308077982596868052,
+      "result": "seat1_win",
+      "root_seed": 1000104,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 2703736298351063400,
+      "result": "seat0_win",
+      "root_seed": 1000104,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 13382968844528612678,
+      "result": "seat1_win",
+      "root_seed": 1000105,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 1287085162970288900,
+      "result": "seat1_win",
+      "root_seed": 1000105,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 7448773306193089332,
+      "result": "seat0_win",
+      "root_seed": 1000106,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 16536077892576006857,
+      "result": "seat0_win",
+      "root_seed": 1000106,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 14791915997589208144,
+      "result": "seat1_win",
+      "root_seed": 1000107,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 4277182508109306290,
+      "result": "seat0_win",
+      "root_seed": 1000107,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 3988490242811149678,
+      "result": "draw",
+      "root_seed": 1000108,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 4614290719542278800,
+      "result": "seat0_win",
+      "root_seed": 1000108,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 15237999819296594974,
+      "result": "seat1_win",
+      "root_seed": 1000109,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 15345616382809466022,
+      "result": "seat0_win",
+      "root_seed": 1000109,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 7861856618133186789,
+      "result": "seat1_win",
+      "root_seed": 1000110,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 6464562144408315079,
+      "result": "seat0_win",
+      "root_seed": 1000110,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 10627347481535690365,
+      "result": "seat1_win",
+      "root_seed": 1000111,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 1441410179337022096,
+      "result": "seat1_win",
+      "root_seed": 1000111,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 13230504257830576048,
+      "result": "seat1_win",
+      "root_seed": 1000112,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 14276225645787465891,
+      "result": "seat1_win",
+      "root_seed": 1000112,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 3519638604022958790,
+      "result": "seat1_win",
+      "root_seed": 1000113,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 841335303017426467,
+      "result": "seat0_win",
+      "root_seed": 1000113,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 11840740954713300646,
+      "result": "seat1_win",
+      "root_seed": 1000114,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 6143928255131280365,
+      "result": "seat0_win",
+      "root_seed": 1000114,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 5678774269747454319,
+      "result": "seat1_win",
+      "root_seed": 1000115,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 2293942837171297878,
+      "result": "seat0_win",
+      "root_seed": 1000115,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 14758311090273094804,
+      "result": "seat1_win",
+      "root_seed": 1000116,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 9418276898900408003,
+      "result": "seat1_win",
+      "root_seed": 1000116,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 9025883239408229321,
+      "result": "seat1_win",
+      "root_seed": 1000117,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 1171096106386537248,
+      "result": "seat0_win",
+      "root_seed": 1000117,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 1550830794433546019,
+      "result": "seat1_win",
+      "root_seed": 1000118,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 11017615502327726023,
+      "result": "seat0_win",
+      "root_seed": 1000118,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 12115123203809532599,
+      "result": "seat1_win",
+      "root_seed": 1000119,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 3464998322952211822,
+      "result": "seat0_win",
+      "root_seed": 1000119,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 8592185949858855580,
+      "result": "seat1_win",
+      "root_seed": 1000120,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 14422617208619574299,
+      "result": "seat0_win",
+      "root_seed": 1000120,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 15616833242823299880,
+      "result": "seat1_win",
+      "root_seed": 1000121,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 17631946426667977369,
+      "result": "seat0_win",
+      "root_seed": 1000121,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 10950571501409236448,
+      "result": "seat1_win",
+      "root_seed": 1000122,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 436854009440232168,
+      "result": "seat0_win",
+      "root_seed": 1000122,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 3651819953847571445,
+      "result": "seat1_win",
+      "root_seed": 1000123,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 7968372466400428884,
+      "result": "seat0_win",
+      "root_seed": 1000123,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 2540266463470611448,
+      "result": "seat1_win",
+      "root_seed": 1000124,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 11960164057059028089,
+      "result": "seat0_win",
+      "root_seed": 1000124,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 7764722456741510679,
+      "result": "seat1_win",
+      "root_seed": 1000125,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 2315856329304829634,
+      "result": "seat0_win",
+      "root_seed": 1000125,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 16137438198376113620,
+      "result": "seat1_win",
+      "root_seed": 1000126,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 2280145320112775509,
+      "result": "seat0_win",
+      "root_seed": 1000126,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 1432351259156654874,
+      "result": "seat1_win",
+      "root_seed": 1000127,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 7965679971994137121,
+      "result": "seat0_win",
+      "root_seed": 1000127,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 8242129438655325712,
+      "result": "seat0_win",
+      "root_seed": 1000128,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 13447487252664410459,
+      "result": "seat0_win",
+      "root_seed": 1000128,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 9275894616993836163,
+      "result": "draw",
+      "root_seed": 1000129,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 15387063951986994406,
+      "result": "seat1_win",
+      "root_seed": 1000129,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 4218271256789199080,
+      "result": "seat1_win",
+      "root_seed": 1000130,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 1008372540320803294,
+      "result": "seat0_win",
+      "root_seed": 1000130,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 13635025072205650978,
+      "result": "seat1_win",
+      "root_seed": 1000131,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 3689716631885205977,
+      "result": "seat0_win",
+      "root_seed": 1000131,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 12823551786876487619,
+      "result": "seat1_win",
+      "root_seed": 1000132,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 5851923996579998662,
+      "result": "seat0_win",
+      "root_seed": 1000132,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 2965715784371808030,
+      "result": "seat1_win",
+      "root_seed": 1000133,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 13263184436645538530,
+      "result": "seat0_win",
+      "root_seed": 1000133,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 16538182946152443202,
+      "result": "seat1_win",
+      "root_seed": 1000134,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 6133676043943552670,
+      "result": "seat0_win",
+      "root_seed": 1000134,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 10641492380740999776,
+      "result": "seat1_win",
+      "root_seed": 1000135,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 8005513084212151303,
+      "result": "seat1_win",
+      "root_seed": 1000135,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 15658591378553590313,
+      "result": "seat1_win",
+      "root_seed": 1000136,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 13782746510392599581,
+      "result": "seat0_win",
+      "root_seed": 1000136,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 12296849450599911226,
+      "result": "seat1_win",
+      "root_seed": 1000137,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 14315204284439456679,
+      "result": "seat0_win",
+      "root_seed": 1000137,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 489443938826985786,
+      "result": "seat1_win",
+      "root_seed": 1000138,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 9343139828171144377,
+      "result": "seat0_win",
+      "root_seed": 1000138,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 8673980846816203151,
+      "result": "seat1_win",
+      "root_seed": 1000139,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 9250755384014686828,
+      "result": "seat0_win",
+      "root_seed": 1000139,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 10510566946805094834,
+      "result": "seat1_win",
+      "root_seed": 1000140,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 17380339395346073161,
+      "result": "seat0_win",
+      "root_seed": 1000140,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 8747402477275685791,
+      "result": "seat0_win",
+      "root_seed": 1000141,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 3605119738021771870,
+      "result": "seat0_win",
+      "root_seed": 1000141,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 4622945526933919211,
+      "result": "seat1_win",
+      "root_seed": 1000142,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 1334518788025123060,
+      "result": "seat0_win",
+      "root_seed": 1000142,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 17936937344510745631,
+      "result": "seat1_win",
+      "root_seed": 1000143,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 5197681177466809009,
+      "result": "seat0_win",
+      "root_seed": 1000143,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 13155684309853442479,
+      "result": "seat1_win",
+      "root_seed": 1000144,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 13236713679777653620,
+      "result": "seat0_win",
+      "root_seed": 1000144,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 992356247827294437,
+      "result": "seat1_win",
+      "root_seed": 1000145,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 14807776978409212259,
+      "result": "seat0_win",
+      "root_seed": 1000145,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 2474344955987169766,
+      "result": "seat1_win",
+      "root_seed": 1000146,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 15387097814058303740,
+      "result": "seat0_win",
+      "root_seed": 1000146,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 11665677348269804036,
+      "result": "seat1_win",
+      "root_seed": 1000147,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 4180157976298629063,
+      "result": "draw",
+      "root_seed": 1000147,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 6096564766408355306,
+      "result": "seat1_win",
+      "root_seed": 1000148,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 15180740125105567034,
+      "result": "seat0_win",
+      "root_seed": 1000148,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 17170901564513424212,
+      "result": "seat1_win",
+      "root_seed": 1000149,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 13770718597348008868,
+      "result": "seat0_win",
+      "root_seed": 1000149,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 13370153920078282115,
+      "result": "seat1_win",
+      "root_seed": 1000150,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 14604463144668468176,
+      "result": "seat0_win",
+      "root_seed": 1000150,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 6921158890977328009,
+      "result": "draw",
+      "root_seed": 1000151,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 10516793521220090529,
+      "result": "seat1_win",
+      "root_seed": 1000151,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 3048641676871316091,
+      "result": "seat1_win",
+      "root_seed": 1000152,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 9831656851597728410,
+      "result": "seat0_win",
+      "root_seed": 1000152,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 8205625497060471862,
+      "result": "seat1_win",
+      "root_seed": 1000153,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 9323029247204617269,
+      "result": "seat0_win",
+      "root_seed": 1000153,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 1035920792744088449,
+      "result": "seat1_win",
+      "root_seed": 1000154,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 4164195033438688926,
+      "result": "seat0_win",
+      "root_seed": 1000154,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 17207280690932021504,
+      "result": "seat1_win",
+      "root_seed": 1000155,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 179774535000168979,
+      "result": "seat0_win",
+      "root_seed": 1000155,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 12122706605114641515,
+      "result": "seat1_win",
+      "root_seed": 1000156,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 5032203289682899091,
+      "result": "seat0_win",
+      "root_seed": 1000156,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 6700331869188370569,
+      "result": "seat1_win",
+      "root_seed": 1000157,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 10559092665667143260,
+      "result": "seat0_win",
+      "root_seed": 1000157,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 14922358770842351810,
+      "result": "seat1_win",
+      "root_seed": 1000158,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 7116157175417253155,
+      "result": "seat0_win",
+      "root_seed": 1000158,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 2169086569122160716,
+      "result": "seat1_win",
+      "root_seed": 1000159,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 14265286783631467862,
+      "result": "seat1_win",
+      "root_seed": 1000159,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 18100039898460971357,
+      "result": "seat1_win",
+      "root_seed": 1000160,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 14704954566784634587,
+      "result": "seat0_win",
+      "root_seed": 1000160,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 12437821875770335644,
+      "result": "seat1_win",
+      "root_seed": 1000161,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 12363375437594803036,
+      "result": "seat0_win",
+      "root_seed": 1000161,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 3083373746632693439,
+      "result": "seat1_win",
+      "root_seed": 1000162,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 4613841075119984206,
+      "result": "seat0_win",
+      "root_seed": 1000162,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 18054099443587228533,
+      "result": "seat1_win",
+      "root_seed": 1000163,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 4944723823996764401,
+      "result": "seat0_win",
+      "root_seed": 1000163,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 15959812714095957379,
+      "result": "seat1_win",
+      "root_seed": 1000164,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 13784875382114096438,
+      "result": "seat0_win",
+      "root_seed": 1000164,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 10992603535175517535,
+      "result": "seat1_win",
+      "root_seed": 1000165,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 12934149492442064100,
+      "result": "seat1_win",
+      "root_seed": 1000165,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 14485300507385852096,
+      "result": "seat1_win",
+      "root_seed": 1000166,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 13839153174420219853,
+      "result": "seat0_win",
+      "root_seed": 1000166,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 18340379969373305844,
+      "result": "seat1_win",
+      "root_seed": 1000167,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 7693697077926767006,
+      "result": "seat0_win",
+      "root_seed": 1000167,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 1063135715451455317,
+      "result": "seat1_win",
+      "root_seed": 1000168,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 10265286489633416038,
+      "result": "seat0_win",
+      "root_seed": 1000168,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 3860243025686299816,
+      "result": "seat1_win",
+      "root_seed": 1000169,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 2657443498317437037,
+      "result": "seat0_win",
+      "root_seed": 1000169,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 15203485977600763402,
+      "result": "seat1_win",
+      "root_seed": 1000170,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 5639716720125143977,
+      "result": "seat0_win",
+      "root_seed": 1000170,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 4394031087777860881,
+      "result": "seat1_win",
+      "root_seed": 1000171,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 14938806060082576106,
+      "result": "seat1_win",
+      "root_seed": 1000171,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 4836837657680148451,
+      "result": "seat1_win",
+      "root_seed": 1000172,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 14575807864355292211,
+      "result": "seat0_win",
+      "root_seed": 1000172,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 5149878436328805848,
+      "result": "seat1_win",
+      "root_seed": 1000173,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 18109244354612640118,
+      "result": "seat0_win",
+      "root_seed": 1000173,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 3474682371029469186,
+      "result": "seat0_win",
+      "root_seed": 1000174,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 9817518970759311802,
+      "result": "seat0_win",
+      "root_seed": 1000174,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 10712112834874604169,
+      "result": "seat1_win",
+      "root_seed": 1000175,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 10332435307521214280,
+      "result": "seat0_win",
+      "root_seed": 1000175,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 7761051816561402906,
+      "result": "seat0_win",
+      "root_seed": 1000176,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 7205015350623188390,
+      "result": "seat0_win",
+      "root_seed": 1000176,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 12207724452507430183,
+      "result": "seat1_win",
+      "root_seed": 1000177,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 14761505173408433949,
+      "result": "seat0_win",
+      "root_seed": 1000177,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 8363083454799830231,
+      "result": "seat1_win",
+      "root_seed": 1000178,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 6308341035916873741,
+      "result": "seat0_win",
+      "root_seed": 1000178,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 2103396505101588848,
+      "result": "seat1_win",
+      "root_seed": 1000179,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 16205826380167537783,
+      "result": "seat0_win",
+      "root_seed": 1000179,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 9211853767791202842,
+      "result": "seat1_win",
+      "root_seed": 1000180,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 2719888135547235634,
+      "result": "seat0_win",
+      "root_seed": 1000180,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 13008752791519024074,
+      "result": "seat1_win",
+      "root_seed": 1000181,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 1328364988083681109,
+      "result": "seat0_win",
+      "root_seed": 1000181,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 13647110725252447745,
+      "result": "seat1_win",
+      "root_seed": 1000182,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 12665649320008538976,
+      "result": "seat0_win",
+      "root_seed": 1000182,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 17025918163452635197,
+      "result": "seat1_win",
+      "root_seed": 1000183,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 840506295097558975,
+      "result": "seat0_win",
+      "root_seed": 1000183,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 17568648623835344600,
+      "result": "draw",
+      "root_seed": 1000184,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 14932152269046576889,
+      "result": "seat0_win",
+      "root_seed": 1000184,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 17299078282340748022,
+      "result": "seat1_win",
+      "root_seed": 1000185,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 184464294437650409,
+      "result": "seat0_win",
+      "root_seed": 1000185,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 11710959853771953112,
+      "result": "seat1_win",
+      "root_seed": 1000186,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 6498645685153231491,
+      "result": "seat0_win",
+      "root_seed": 1000186,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 7369936548759367968,
+      "result": "seat1_win",
+      "root_seed": 1000187,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 5046754934974045239,
+      "result": "seat0_win",
+      "root_seed": 1000187,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 17933004866941045378,
+      "result": "seat1_win",
+      "root_seed": 1000188,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 2599662636906873428,
+      "result": "seat0_win",
+      "root_seed": 1000188,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 1926091849166995745,
+      "result": "seat0_win",
+      "root_seed": 1000189,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 10215553035429363944,
+      "result": "seat1_win",
+      "root_seed": 1000189,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 17387864829611940219,
+      "result": "seat1_win",
+      "root_seed": 1000190,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 8289357965302692413,
+      "result": "seat0_win",
+      "root_seed": 1000190,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 13867467335278677284,
+      "result": "seat1_win",
+      "root_seed": 1000191,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 5500979609704736684,
+      "result": "seat0_win",
+      "root_seed": 1000191,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 8674705377698610287,
+      "result": "seat1_win",
+      "root_seed": 1000192,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 7814054808299311978,
+      "result": "seat0_win",
+      "root_seed": 1000192,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 9379045337445875543,
+      "result": "seat1_win",
+      "root_seed": 1000193,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 11224640526625952991,
+      "result": "seat0_win",
+      "root_seed": 1000193,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 10367258570356728320,
+      "result": "seat1_win",
+      "root_seed": 1000194,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 2376474968915853027,
+      "result": "seat0_win",
+      "root_seed": 1000194,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 3293931803245972288,
+      "result": "seat1_win",
+      "root_seed": 1000195,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 1409500934934540347,
+      "result": "seat0_win",
+      "root_seed": 1000195,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 2467405099804430374,
+      "result": "seat1_win",
+      "root_seed": 1000196,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 9344490169991096873,
+      "result": "seat0_win",
+      "root_seed": 1000196,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 4498256563946890776,
+      "result": "seat1_win",
+      "root_seed": 1000197,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 4150710082075396716,
+      "result": "seat1_win",
+      "root_seed": 1000197,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 16898793474389158094,
+      "result": "seat1_win",
+      "root_seed": 1000198,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 16000962291252658869,
+      "result": "seat0_win",
+      "root_seed": 1000198,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 8242387852264641956,
+      "result": "seat1_win",
+      "root_seed": 1000199,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 11975792410729293698,
+      "result": "seat1_win",
+      "root_seed": 1000199,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 15592751522235892841,
+      "result": "seat1_win",
+      "root_seed": 1000200,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 13022660605376796536,
+      "result": "seat0_win",
+      "root_seed": 1000200,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 10625374734041311515,
+      "result": "draw",
+      "root_seed": 1000201,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 16117380787778598209,
+      "result": "seat0_win",
+      "root_seed": 1000201,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 247232465706387132,
+      "result": "draw",
+      "root_seed": 1000202,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 3225359454389398404,
+      "result": "seat0_win",
+      "root_seed": 1000202,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 9323377034006686829,
+      "result": "seat1_win",
+      "root_seed": 1000203,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 17734744670846736251,
+      "result": "seat0_win",
+      "root_seed": 1000203,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 3074241097588558662,
+      "result": "seat1_win",
+      "root_seed": 1000204,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 1371442497457889055,
+      "result": "seat0_win",
+      "root_seed": 1000204,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 14324364775805282251,
+      "result": "seat1_win",
+      "root_seed": 1000205,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 9220417013491712909,
+      "result": "seat0_win",
+      "root_seed": 1000205,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 14601368254586501953,
+      "result": "seat1_win",
+      "root_seed": 1000206,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 3182616421674705625,
+      "result": "seat0_win",
+      "root_seed": 1000206,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 10100349971881102576,
+      "result": "seat1_win",
+      "root_seed": 1000207,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 3333152116966538779,
+      "result": "seat0_win",
+      "root_seed": 1000207,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 5302618229727141536,
+      "result": "seat1_win",
+      "root_seed": 1000208,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 6110910642780791693,
+      "result": "seat0_win",
+      "root_seed": 1000208,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 8357103912290630640,
+      "result": "seat1_win",
+      "root_seed": 1000209,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 4114216764386557892,
+      "result": "seat0_win",
+      "root_seed": 1000209,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 3555229717759507805,
+      "result": "seat1_win",
+      "root_seed": 1000210,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 6016288883124421673,
+      "result": "seat0_win",
+      "root_seed": 1000210,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 16042467013256321923,
+      "result": "seat1_win",
+      "root_seed": 1000211,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 5901216158339212684,
+      "result": "seat0_win",
+      "root_seed": 1000211,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 3545182421395358570,
+      "result": "seat1_win",
+      "root_seed": 1000212,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 8724343404241779722,
+      "result": "seat0_win",
+      "root_seed": 1000212,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 10055332108509920715,
+      "result": "seat1_win",
+      "root_seed": 1000213,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 9840430180059080073,
+      "result": "seat0_win",
+      "root_seed": 1000213,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 9305242729240507546,
+      "result": "seat1_win",
+      "root_seed": 1000214,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 6206745035681677180,
+      "result": "seat0_win",
+      "root_seed": 1000214,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 8406493987874647312,
+      "result": "seat1_win",
+      "root_seed": 1000215,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 7357883670211550553,
+      "result": "seat0_win",
+      "root_seed": 1000215,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 16769103245206228216,
+      "result": "seat1_win",
+      "root_seed": 1000216,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 5118529003148649771,
+      "result": "seat0_win",
+      "root_seed": 1000216,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 10490827582121218129,
+      "result": "seat1_win",
+      "root_seed": 1000217,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 9093509018546836174,
+      "result": "seat0_win",
+      "root_seed": 1000217,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 8370913047233026112,
+      "result": "seat1_win",
+      "root_seed": 1000218,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 13395847695903483757,
+      "result": "seat0_win",
+      "root_seed": 1000218,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 1003528850793538177,
+      "result": "seat1_win",
+      "root_seed": 1000219,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 8731047590785680584,
+      "result": "seat0_win",
+      "root_seed": 1000219,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 15685055221767495577,
+      "result": "seat1_win",
+      "root_seed": 1000220,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 6996497963153114471,
+      "result": "seat0_win",
+      "root_seed": 1000220,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 18048442184682658735,
+      "result": "seat1_win",
+      "root_seed": 1000221,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 14005146788542888778,
+      "result": "seat0_win",
+      "root_seed": 1000221,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 5466606909617195322,
+      "result": "seat1_win",
+      "root_seed": 1000222,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 13870856558458241615,
+      "result": "seat0_win",
+      "root_seed": 1000222,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 17372522131776537561,
+      "result": "seat1_win",
+      "root_seed": 1000223,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 12145477367275900680,
+      "result": "seat0_win",
+      "root_seed": 1000223,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 17057850433364674662,
+      "result": "seat1_win",
+      "root_seed": 1000224,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 8319692745955515229,
+      "result": "seat0_win",
+      "root_seed": 1000224,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 10134501681170197270,
+      "result": "seat1_win",
+      "root_seed": 1000225,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 7699210048559144475,
+      "result": "seat0_win",
+      "root_seed": 1000225,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 7309119168136186165,
+      "result": "seat1_win",
+      "root_seed": 1000226,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 16217989106962179770,
+      "result": "seat1_win",
+      "root_seed": 1000226,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 14324546136999006685,
+      "result": "seat1_win",
+      "root_seed": 1000227,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 17802378057593685689,
+      "result": "seat0_win",
+      "root_seed": 1000227,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 15263037878256005237,
+      "result": "seat1_win",
+      "root_seed": 1000228,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 6841568017168207840,
+      "result": "seat0_win",
+      "root_seed": 1000228,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 7974233087514714307,
+      "result": "seat1_win",
+      "root_seed": 1000229,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 8969411154952369481,
+      "result": "draw",
+      "root_seed": 1000229,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 12579233449180430451,
+      "result": "seat1_win",
+      "root_seed": 1000230,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 14607891900674046742,
+      "result": "seat0_win",
+      "root_seed": 1000230,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 9079256756344051651,
+      "result": "seat1_win",
+      "root_seed": 1000231,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 2387630994401192292,
+      "result": "seat0_win",
+      "root_seed": 1000231,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 14818674017083766412,
+      "result": "seat1_win",
+      "root_seed": 1000232,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 3300937708991184134,
+      "result": "seat0_win",
+      "root_seed": 1000232,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 8737968992303775481,
+      "result": "seat1_win",
+      "root_seed": 1000233,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 8618006401029753161,
+      "result": "seat0_win",
+      "root_seed": 1000233,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 6901512014732430649,
+      "result": "seat1_win",
+      "root_seed": 1000234,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 13278956195256095336,
+      "result": "seat0_win",
+      "root_seed": 1000234,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 7890245319357800907,
+      "result": "seat1_win",
+      "root_seed": 1000235,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 16722947450978479345,
+      "result": "seat0_win",
+      "root_seed": 1000235,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 908932517758522829,
+      "result": "seat1_win",
+      "root_seed": 1000236,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 1883442738183398319,
+      "result": "seat0_win",
+      "root_seed": 1000236,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 2900152115875032244,
+      "result": "seat1_win",
+      "root_seed": 1000237,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 3471183253999032835,
+      "result": "seat0_win",
+      "root_seed": 1000237,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 15606425282810637169,
+      "result": "seat1_win",
+      "root_seed": 1000238,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 15874840786005271346,
+      "result": "seat0_win",
+      "root_seed": 1000238,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 6404495894467556293,
+      "result": "seat1_win",
+      "root_seed": 1000239,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 3
+    },
+    {
+      "derived_seed_uint64": 14689121963607727240,
+      "result": "seat1_win",
+      "root_seed": 1000239,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 11629186033827317548,
+      "result": "seat1_win",
+      "root_seed": 1000240,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 8216459321197793066,
+      "result": "seat0_win",
+      "root_seed": 1000240,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 5397668508294292520,
+      "result": "seat1_win",
+      "root_seed": 1000241,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 13311064045739585357,
+      "result": "seat0_win",
+      "root_seed": 1000241,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 3117749454299911857,
+      "result": "seat1_win",
+      "root_seed": 1000242,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 5
+    },
+    {
+      "derived_seed_uint64": 1811001144255397714,
+      "result": "seat0_win",
+      "root_seed": 1000242,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 2679903308587383025,
+      "result": "seat1_win",
+      "root_seed": 1000243,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 10
+    },
+    {
+      "derived_seed_uint64": 15859631348300961179,
+      "result": "seat0_win",
+      "root_seed": 1000243,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 2338625508194969987,
+      "result": "seat1_win",
+      "root_seed": 1000244,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 4540586410473963171,
+      "result": "seat0_win",
+      "root_seed": 1000244,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 2082953790501287738,
+      "result": "seat1_win",
+      "root_seed": 1000245,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 15954006832504591678,
+      "result": "draw",
+      "root_seed": 1000245,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 1672573296971711593,
+      "result": "seat1_win",
+      "root_seed": 1000246,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 7197303622578840345,
+      "result": "seat0_win",
+      "root_seed": 1000246,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 11242450190317480252,
+      "result": "seat1_win",
+      "root_seed": 1000247,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 17242006888295289566,
+      "result": "seat0_win",
+      "root_seed": 1000247,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 12
+    },
+    {
+      "derived_seed_uint64": 17369875702851852952,
+      "result": "seat1_win",
+      "root_seed": 1000248,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 8620759271017696556,
+      "result": "draw",
+      "root_seed": 1000248,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 3555542234186959514,
+      "result": "seat1_win",
+      "root_seed": 1000249,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 1743470048942884615,
+      "result": "seat0_win",
+      "root_seed": 1000249,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 7
+    },
+    {
+      "derived_seed_uint64": 18071122394531022665,
+      "result": "seat0_win",
+      "root_seed": 1000250,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 1830755845475685268,
+      "result": "seat1_win",
+      "root_seed": 1000250,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 5347808713259124439,
+      "result": "seat1_win",
+      "root_seed": 1000251,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 13647057035342517577,
+      "result": "seat0_win",
+      "root_seed": 1000251,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 9
+    },
+    {
+      "derived_seed_uint64": 8519338554867308945,
+      "result": "seat0_win",
+      "root_seed": 1000252,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    },
+    {
+      "derived_seed_uint64": 2715317002659003417,
+      "result": "seat0_win",
+      "root_seed": 1000252,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 6379366675491841661,
+      "result": "seat1_win",
+      "root_seed": 1000253,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 6
+    },
+    {
+      "derived_seed_uint64": 6706578748290565270,
+      "result": "seat0_win",
+      "root_seed": 1000253,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 11
+    },
+    {
+      "derived_seed_uint64": 12068655721267769898,
+      "result": "seat1_win",
+      "root_seed": 1000254,
+      "target_seat": 0,
+      "terminal_reason": "wall",
+      "ticks_completed": 1
+    },
+    {
+      "derived_seed_uint64": 551156329886142213,
+      "result": "seat0_win",
+      "root_seed": 1000254,
+      "target_seat": 1,
+      "terminal_reason": "wall",
+      "ticks_completed": 8
+    },
+    {
+      "derived_seed_uint64": 13825054494061522993,
+      "result": "seat0_win",
+      "root_seed": 1000255,
+      "target_seat": 0,
+      "terminal_reason": "collision",
+      "ticks_completed": 4
+    },
+    {
+      "derived_seed_uint64": 7129621863344849608,
+      "result": "draw",
+      "root_seed": 1000255,
+      "target_seat": 1,
+      "terminal_reason": "collision",
+      "ticks_completed": 2
+    }
+  ],
+  "format": "g008-exploratory-validation/1",
+  "games": 512,
+  "opponent_checkpoint_id": "step-300",
+  "opponent_id": "g007-step-300",
+  "promotion_eligible": false,
+  "run_id": "g008-v15-exploratory",
+  "run_key": "validation-suite-v1",
+  "status": "exploratory_unregistered",
+  "suite_id": "g008-validation-exploratory",
+  "summary": {
+    "draws": 18,
+    "losses": 461,
+    "win_rate": 0.064453125,
+    "wins": 33
+  }
+}

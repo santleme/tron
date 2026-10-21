@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://light-cycles.local/schemas/g008-split-seed-plan-3.schema.json",
+  "title": "Frozen G008 split seed plan v3",
+  "type": "object",
+  "required": [
+    "format",
+    "protocol",
+    "model_ppo_seed",
+    "seed_roles",
+    "historical_exclusions",
+    "partitions",
+    "opponent_assignment",
+    "open_space_fingerprint",
+    "seed_semantics",
+    "environment_seed_codec",
+    "schedule",
+    "frozen_evaluation_opponents",
+    "schedule_digest_contract",
+    "registry_lock_lifecycle",
+    "phase_a_workload_prerequisite"
+  ],
+  "properties": {
+    "format": {"const": "circuit-ai-g008-split-seed-plan/3"},
+    "protocol": {"type": "string", "minLength": 1},
+    "model_ppo_seed": {"type": "integer", "minimum": 0},
+    "seed_roles": {"type": "object", "minProperties": 1},
+    "historical_exclusions": {
+      "type": "object",
+      "required": ["source", "protocol", "seeds_inclusive", "excluded_from"],
+      "properties": {
+        "source": {"type": "string", "minLength": 1},
+        "protocol": {"type": "string", "minLength": 1},
+        "seeds_inclusive": {"$ref": "#/$defs/integerPair"},
+        "excluded_from": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      }
+    },
+    "partitions": {
+      "type": "object",
+      "required": ["train", "imitation_demo", "benchmark", "validation", "final"],
+      "properties": {
+        "train": {"$ref": "#/$defs/partition"},
+        "imitation_demo": {"$ref": "#/$defs/partition"},
+        "benchmark": {
+          "allOf": [
+            {"$ref": "#/$defs/partition"},
+            {"type": "object", "required": ["warmup_assignments"]}
+          ]
+        },
+        "validation": {"$ref": "#/$defs/partition"},
+        "final": {"$ref": "#/$defs/partition"}
+      }
+    },
+    "opponent_assignment": {"type": "object", "minProperties": 1},
+    "open_space_fingerprint": {
+      "type": "object",
+      "required": ["function", "config"],
+      "properties": {
+        "function": {"type": "object", "required": ["sha256_inspect_getsource_utf8"]},
+        "config": {"type": "object", "required": ["sha256"]}
+      }
+    },
+    "seed_semantics": {"type": "object", "minProperties": 1},
+    "environment_seed_codec": {
+      "type": "object",
+      "required": ["version", "prefix_hex", "fields_in_order", "domain_labels", "split_domain_mapping"],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "prefix_hex": {"type": "string", "pattern": "^[a-f0-9]+$"},
+        "fields_in_order": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "domain_labels": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "split_domain_mapping": {"type": "object", "minProperties": 1}
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "required": ["suite_order", "measured", "warmup"],
+      "properties": {
+        "suite_order": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "measured": {"type": "object", "minProperties": 1},
+        "warmup": {"type": "object", "minProperties": 1}
+      }
+    },
+    "frozen_evaluation_opponents": {"type": "object", "minProperties": 1},
+    "schedule_digest_contract": {"type": "object", "minProperties": 1},
+    "registry_lock_lifecycle": {"type": "object", "minProperties": 1},
+    "phase_a_workload_prerequisite": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "integerPair": {
+      "type": "array",
+      "prefixItems": [{"type": "integer", "minimum": 0}, {"type": "integer", "minimum": 0}],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "partition": {
+      "type": "object",
+      "required": ["root_seed_range_inclusive"],
+      "properties": {
+        "root_seed_range_inclusive": {"$ref": "#/$defs/integerPair"}
+      }
+    }
+  }
+}

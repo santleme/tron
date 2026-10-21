@@ -26,7 +26,9 @@ from training.ppo.train import TrainConfig, g008_campaign_schedule_descriptor
 CAMPAIGN_ID = "g008-competitive-20261021-v2"
 CYCLE_ID = "g008-competitive-campaign-v2"
 KERNEL_ID = "pascalcoimbra/circuit-ai"
-REGISTRY_PATH = Path(".omx/evidence/g008-experiment-registry.jsonl")
+# The v2 bootstrap is a frozen historical helper. The append-only registry is
+# now versioned independently of any agent/runtime tooling.
+REGISTRY_PATH = Path("artifacts/circuit-ai/registry/g008-experiment-registry.jsonl")
 MIN_QUOTA_SECONDS = 18_600
 _ROLES = ("baseline", "mixed")
 _PAIR_SEEDS = {"seed-pair-1": (3301, 2_100_001),

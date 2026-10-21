@@ -1,0 +1,114 @@
+{
+  "action_schema": "lc-action/1",
+  "agents": [
+    {
+      "agent_id": "candidate",
+      "checkpoint_id": "step-236"
+    },
+    {
+      "agent_id": "g007-step-300",
+      "checkpoint_id": "step-300"
+    }
+  ],
+  "arena_index": 0,
+  "derived_streams": [
+    {
+      "initseq": "5930146448122300366",
+      "initstate": "236049295863026437",
+      "label": "episode"
+    },
+    {
+      "initseq": "17513012002539078084",
+      "initstate": "14026513400569500436",
+      "label": "agent/0"
+    },
+    {
+      "initseq": "9023493893038511342",
+      "initstate": "5232142139717090245",
+      "label": "agent/1"
+    }
+  ],
+  "engine_version": "lc-engine/1",
+  "format": "lc-replay/1",
+  "initial_state": {
+    "headings": [
+      "LEFT",
+      "RIGHT"
+    ],
+    "height": 12,
+    "positions": [
+      {
+        "x": 9,
+        "y": 5
+      },
+      {
+        "x": 6,
+        "y": 4
+      }
+    ],
+    "trails": [
+      [
+        {
+          "x": 9,
+          "y": 5
+        }
+      ],
+      [
+        {
+          "x": 6,
+          "y": 4
+        }
+      ]
+    ],
+    "width": 12
+  },
+  "master_seed": "2467405099804430374",
+  "match_id": "loss-2467405099804430374-0",
+  "observation_schema": "lc-observation/1",
+  "replay_sha256": "3263cdf8939f5050afe06e0f74fc7b435d9e5cc87a67c2d613f8387bd56a01ed",
+  "result": "agent_1_win",
+  "run_id": "g008-v15-continuation-236",
+  "tick_count": 3,
+  "ticks": [
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 0
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 1
+    },
+    {
+      "collision_causes": [
+        [
+          "occupied_trail"
+        ],
+        []
+      ],
+      "joint_actions": [
+        3,
+        3
+      ],
+      "terminal_causes": [
+        "agent_0_dead"
+      ],
+      "tick": 2
+    }
+  ]
+}

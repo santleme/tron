@@ -1,0 +1,150 @@
+{
+  "action_schema": "lc-action/1",
+  "agents": [
+    {
+      "agent_id": "g007-step-300",
+      "checkpoint_id": "step-300"
+    },
+    {
+      "agent_id": "candidate",
+      "checkpoint_id": "step-236"
+    }
+  ],
+  "arena_index": 0,
+  "derived_streams": [
+    {
+      "initseq": "15654798020514939749",
+      "initstate": "8434088011060803747",
+      "label": "episode"
+    },
+    {
+      "initseq": "2331489181723693224",
+      "initstate": "1667017779483797276",
+      "label": "agent/0"
+    },
+    {
+      "initseq": "12623681807109411203",
+      "initstate": "17644178466757292609",
+      "label": "agent/1"
+    }
+  ],
+  "engine_version": "lc-engine/1",
+  "format": "lc-replay/1",
+  "initial_state": {
+    "headings": [
+      "LEFT",
+      "RIGHT"
+    ],
+    "height": 12,
+    "positions": [
+      {
+        "x": 4,
+        "y": 8
+      },
+      {
+        "x": 3,
+        "y": 1
+      }
+    ],
+    "trails": [
+      [
+        {
+          "x": 4,
+          "y": 8
+        }
+      ],
+      [
+        {
+          "x": 3,
+          "y": 1
+        }
+      ]
+    ],
+    "width": 12
+  },
+  "master_seed": "13647057035342517577",
+  "match_id": "loss-13647057035342517577-1",
+  "observation_schema": "lc-observation/1",
+  "replay_sha256": "966373bfcabdbcb50dec3df499f4a2dc2e614d2328648f183901a089f7b0882e",
+  "result": "agent_0_win",
+  "run_id": "g008-v15-continuation-236",
+  "tick_count": 6,
+  "ticks": [
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 0
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        1
+      ],
+      "terminal_causes": [],
+      "tick": 1
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        1
+      ],
+      "terminal_causes": [],
+      "tick": 2
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        1,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 3
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        1,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 4
+    },
+    {
+      "collision_causes": [
+        [],
+        [
+          "occupied_trail"
+        ]
+      ],
+      "joint_actions": [
+        1,
+        2
+      ],
+      "terminal_causes": [
+        "agent_1_dead"
+      ],
+      "tick": 5
+    }
+  ]
+}
