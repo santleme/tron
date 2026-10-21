@@ -672,6 +672,7 @@ def main():
     output = output_root / run_id
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite existing Kaggle output: {output}")
+    output.mkdir(parents=True)
     g008_settings = settings.get("g008_principal_benchmark")
     if g008_settings is not None:
         from training.ppo.g008_benchmark import run_principal_benchmark
