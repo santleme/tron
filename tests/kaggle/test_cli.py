@@ -3588,7 +3588,7 @@ def test_kaggle_runner_runs_bounded_cuda_sweep_and_hashes_report_in_manifest(tmp
     training_module.TrainConfig = TrainConfig
     def fake_train(config, output, export_onnx):
         assert config.device == "cuda" and export_onnx is True
-        output.mkdir(parents=True)
+        output.mkdir(parents=True, exist_ok=True)
         manifest = {"files": [], "benchmark_records": []}
         manifest["manifest_sha256"] = digest_json(manifest, "manifest_sha256")
         (output / "manifest.json").write_text(json.dumps(manifest))
@@ -3651,7 +3651,7 @@ def test_kaggle_runner_executes_g008_benchmark_only_and_records_cuda_evidence(tm
     g008_module = types.ModuleType("training.ppo.g008_benchmark")
     def fake_benchmark(output, run_ids):
         called.append((str(output), run_ids))
-        Path(output).mkdir(parents=True)
+        Path(output).mkdir(parents=True, exist_ok=True)
         report = {"format": "test-report", "device": {"device": "cuda"}}
         (Path(output) / "g008-principal-benchmark.json").write_text(json.dumps(report))
         return report
