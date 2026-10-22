@@ -37,6 +37,33 @@ export function chooseAction(logits: readonly number[]): Action {
   return best;
 }
 
+export function chooseLegalAction(logits: readonly number[], heading: Action): Action {
+  if (logits.length !== 4 || logits.some(v => !Number.isFinite(v))) throw new TypeError("policy must return four finite action scores");
+  let best: Action | null = null;
+  for (let action = 0; action < 4; action += 1) {
+    if (((action + 2) % 4) === heading) continue;
+    if (best === null || logits[action] > logits[best]) best = action as Action;
+  }
+  if (best === null) throw new Error("no non-reverse action is available");
+  return best;
+}
+
+export function chooseImmediatelySafeAction(logits: readonly number[], state: ArenaState, seat: 0 | 1): Action {
+  if (logits.length !== 4 || logits.some(v => !Number.isFinite(v))) throw new TypeError("policy must return four finite action scores");
+  const agent = state.agents[seat];
+  const occupied = new Set(state.agents.flatMap(a => a.trail.map(key)));
+  const safe = ([0, 1, 2, 3] as Action[]).filter(action => {
+    if (((action + 2) % 4) === agent.heading) return false;
+    const delta = DELTAS[action];
+    const destination = { x: agent.position.x + delta.x, y: agent.position.y + delta.y };
+    return inside(destination, state) && !occupied.has(key(destination));
+  });
+  if (safe.length === 0) return chooseLegalAction(logits, agent.heading);
+  let best = safe[0];
+  for (const action of safe.slice(1)) if (logits[action] > logits[best]) best = action;
+  return best;
+}
+
 function hasCause(causes: CollisionCause[], cause: CollisionCause): void { if (!causes.includes(cause)) causes.push(cause); }
 function inside(p: Position, s: ArenaState): boolean { return p.x >= 0 && p.x < s.width && p.y >= 0 && p.y < s.height; }
 function resultFor(causes: [CollisionCause[], CollisionCause[]]): ArenaState["result"] {

@@ -4,8 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/build-search-wasm.mjs",
     "dev": "vite --host 127.0.0.1",
+    "prebuild": "node scripts/build-search-wasm.mjs",
     "build": "vite build",
+    "bench:search-wasm": "node scripts/search-wasm-benchmark.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit"
