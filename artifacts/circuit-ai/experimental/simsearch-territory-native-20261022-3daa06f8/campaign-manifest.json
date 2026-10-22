@@ -1,0 +1,44 @@
+{
+  "baseline_run_id": "simsearch-throughput-calibration-20261022-c8834c21-w4",
+  "campaign_kind": "EXPERIMENTAL CPU native-kernel calibration",
+  "comparison_file": "native-comparison.json",
+  "config_sha256": "ada225257a695bd7f18d29590f88e16b7a0c139eb0d479971bd741c8c2d59e65",
+  "evaluation_policy": {
+    "official_registry_modified": false,
+    "open_space_used": false,
+    "reserved_final_sets_used": false,
+    "same_development_seeds": true,
+    "seat_alternation": true,
+    "spatial_checkpoint_used": false
+  },
+  "experiment_id": "simsearch-territory-native-20261022-3daa06f8",
+  "games_completed": 96,
+  "kaggle_version": 1,
+  "kernel_id": "pascalcoimbra/simsearch-territory-native-20261022-3daa06f8",
+  "last_observed_kaggle_state": "KernelWorkerStatus.COMPLETE",
+  "native_enabled_and_loaded": true,
+  "native_run_id": "simsearch-territory-native-20261022-3daa06f8",
+  "package_dir": "package",
+  "package_tree_sha256": "7d3f245a0946a2b7b8ced2ac58717b8770703c3a34245b7f2c1023f4778d1657",
+  "planned_games": 96,
+  "resource_policy": {
+    "gpu": false,
+    "internet": false,
+    "paid_services": false,
+    "workers": 4
+  },
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 105.979,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "wall_seconds": 31.431,
+    "workers": 4
+  },
+  "source_manifest_sha256": "20ff90fe679355e9812c14f9e455efa94932be89f31635f5918787240121ebef",
+  "state": "downloaded-validated-analysis-complete"
+}

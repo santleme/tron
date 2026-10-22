@@ -1,0 +1,33 @@
+{
+  "campaign_kind": "EXPERIMENTAL CPU throughput calibration",
+  "base_experiment_id": "simsearch-throughput-calibration-20261022-c8834c21",
+  "kernel_id": "pascalcoimbra/simsearch-throughput-calibration-20261022-c8834c21",
+  "same_seed_workload": true,
+  "worker_counts": [
+    1,
+    4
+  ],
+  "games_per_condition": 96,
+  "seeds": [
+    6383936850315420,
+    8729350399975536,
+    6919802936982250,
+    7425362967690185,
+    1266392182844725,
+    4310897086472868,
+    3832050303010107,
+    8544247546591378,
+    8688246269105596,
+    1623208723574312,
+    5047591732253079,
+    8322668395100355,
+    5133857124678607,
+    599537401621173,
+    4295774407951245,
+    1273622845655359
+  ],
+  "official_registry_modified": false,
+  "reserved_final_sets_used": false,
+  "gpu_enabled": false,
+  "internet_enabled": false
+}

@@ -1,0 +1,17 @@
+{
+  "experiment_id": "simsearch-fused-eval-python-20261022-9f3c72a1",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "fe6d24d65f96aed39ebe35a3b0e0364bf1b7391b6dc74def44b200c177ed409f"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "86c09c6477547a3365bc37ac433db5f966984a10128e15c05f733ea5e04158fc"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "a5419aaa460944438e13cf8266fd0fe99a9f94760fa7b2113e9db4c93977d032",
+  "run_id": "simsearch-fused-eval-python-20261022-9f3c72a1",
+  "source_manifest_sha256": "b0c134605d2f5c33c140508a0c44516c918c253e7827c0e92d7e707887e3b9b9"
+}

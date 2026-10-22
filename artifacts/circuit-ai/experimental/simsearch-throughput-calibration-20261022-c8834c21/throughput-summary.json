@@ -1,0 +1,37 @@
+{
+  "format": "circuit-ai-simultaneous-search-throughput/1",
+  "campaign_id": "simsearch-throughput-calibration-20261022-c8834c21",
+  "games_per_condition": 96,
+  "same_seed_set": true,
+  "replays_identical_across_worker_counts": true,
+  "conditions": [
+    {
+      "workers": 1,
+      "wall_seconds": 119.561,
+      "cpu_process_seconds": 119.425,
+      "cpu_count_reported": 4,
+      "games_completed": 96
+    },
+    {
+      "workers": 4,
+      "wall_seconds": 65.041,
+      "cpu_process_seconds": 222.119,
+      "cpu_count_reported": 4,
+      "games_completed": 96
+    },
+    {
+      "workers": 2,
+      "wall_seconds": 69.481,
+      "cpu_process_seconds": 124.236,
+      "cpu_count_reported": 4,
+      "games_completed": 96
+    }
+  ],
+  "speedup_vs_serial": {
+    "1": 1.0,
+    "4": 1.838,
+    "2": 1.721
+  },
+  "speedup_4_vs_2": 1.068,
+  "interpretation": "Four processes are fastest in wall time, but improve only 6.8% over two while consuming 79% more aggregate CPU time. Treat throughput as CPU/memory-contended; test a compiled search kernel before scaling up."
+}

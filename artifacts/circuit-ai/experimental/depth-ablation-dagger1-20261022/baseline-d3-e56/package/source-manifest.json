@@ -1,0 +1,134 @@
+{
+  "files": [
+    {
+      "path": ".arena-source-revision",
+      "sha256": "a507c1484901fae90df2a4bc34d402d826a738de2415e8d7f1fcd043ef3e9fd5"
+    },
+    {
+      "path": "kernel-metadata.json",
+      "sha256": "9dfb1f832a996ca9a692d8fe1af707cbb5cfc7405aa493e1422463f8f4a82df2"
+    },
+    {
+      "path": "run-config.json",
+      "sha256": "92a3b80e76be820baf4e5b536172052647728f76cd9d0f0f0d05d1194c001183"
+    },
+    {
+      "path": "training/arena/README.md",
+      "sha256": "367e5bdffcd24c3bb396fa3250d840e21116c4f39f22e747b778351114b09754"
+    },
+    {
+      "path": "training/arena/__init__.py",
+      "sha256": "6dfaa706c704fa574ee8dd9cfe10b18450588057e051af1c6d680d59063bf922"
+    },
+    {
+      "path": "training/arena/engine.py",
+      "sha256": "cfd6fe1817e06e5e892306f1fac2b5eef3cdeb4e68da2e83b26c8f4f23a6c7d0"
+    },
+    {
+      "path": "training/arena/heuristics.py",
+      "sha256": "0c6d1b7d9600f5f976b6f0ce4ecc88fe3f44d3c725c1bf534d21ebca0eb0c8f5"
+    },
+    {
+      "path": "training/arena/seeds.py",
+      "sha256": "3b0af5e78dc4d88aa1911f2764b6dff1f17b082611ad84ebb9c2c650ad048885"
+    },
+    {
+      "path": "training/arena/vector.py",
+      "sha256": "c9f9fd4799b24404ef30be517290fef6051d163ccc0cb87a796fa42ff97cdd40"
+    },
+    {
+      "path": "training/search/README.md",
+      "sha256": "31200fd174631a88f284ebae81b72891f1974a0f5f5282b8185935da9e0bb267"
+    },
+    {
+      "path": "training/search/__init__.py",
+      "sha256": "93b4ee56d65b27654b3680b9c22fc351b789269ee12fa3cb4f20f6c828fc9b4e"
+    },
+    {
+      "path": "training/search/analysis.py",
+      "sha256": "38b3eb2988d398219fe36a8d6bbe6232079cac329f00dc76c6b833c65d8fe18a"
+    },
+    {
+      "path": "training/search/assets/dagger1-selected-20261021/model.pt",
+      "sha256": "f01978c5ba9edd4f7d544a91115f3739d22c543731d90d3cdc4ea0d96f9a96af"
+    },
+    {
+      "path": "training/search/bitboard.py",
+      "sha256": "1bfb866eda1a50baa8563a44cf0c7ab1f76c24830f2a82dbe639dd3261bb6835"
+    },
+    {
+      "path": "training/search/create_independent_eval_config.py",
+      "sha256": "3400782c0084b722e320e744f2264e1cd93ed89d9caae287f6899fe5604c4cd6"
+    },
+    {
+      "path": "training/search/distill.py",
+      "sha256": "03f43bf49436f75fa347fb18b7128360cde0100208ead41d89e73cb0f83f38ee"
+    },
+    {
+      "path": "training/search/frozen_opponent.py",
+      "sha256": "3e2f47fdd4f8cb2522cc85d79ffa445318a64dc87d8825d4a969960db9d52bf8"
+    },
+    {
+      "path": "training/search/independent_open_space.py",
+      "sha256": "1e8d30f59ef5e324cdb1c0759b0a195891d4ffe6631840186be6bf5fbdd88440"
+    },
+    {
+      "path": "training/search/matrix.py",
+      "sha256": "1c1ad195ab12b4918131738111bc51e16aae9851bdba3e425a7e0bd119402d40"
+    },
+    {
+      "path": "training/search/native/fixed_depth.rs",
+      "sha256": "4ebf0b4c8518bb05e76e74180d42ccae00e4c1ae19e542908af9ad1e8f6b13b2"
+    },
+    {
+      "path": "training/search/native/libcircuit_planner.so",
+      "sha256": "7cd8656b8d81be9cd678865f368dece4e69ab4bbbde060483e8c41158e4178b5"
+    },
+    {
+      "path": "training/search/native/territory.py",
+      "sha256": "3dfef2bbf3b4378c3289418acdcd7ad8cd5ec45af2672a415381a9115055c369"
+    },
+    {
+      "path": "training/search/native/territory.rs",
+      "sha256": "2e657dee67c0de939e737a6f9ee549dec74c4382c28cbe292c5b8aa61b193b76"
+    },
+    {
+      "path": "training/search/native_planner.py",
+      "sha256": "43d1905f2867fa03f1c41a37fe936d81f620b7f9a66da92abc77342738809f4a"
+    },
+    {
+      "path": "training/search/planners.py",
+      "sha256": "877afd2ce9cf1bd049d63cae3c24b02569a1e4ef95d7cbdf8c40aa22ecfabe41"
+    },
+    {
+      "path": "training/search/policy_value.py",
+      "sha256": "c160d8dacc6d2bcd0e69ffd401ecb8c8ead87a2c8a8f00f811f17a064d6d423f"
+    },
+    {
+      "path": "training/search/spatial_policy.py",
+      "sha256": "5424f2768db6316e0c1d376db09cf53b19a69b166b81afd205ae4c569108bd09"
+    },
+    {
+      "path": "training/search/territory.py",
+      "sha256": "a4cb30a5940fde7914df9e35974ea8a6ccd246545e09b177da58ffe758298000"
+    },
+    {
+      "path": "training/search/tournament.py",
+      "sha256": "54fb97f85c192bd39052aea9caabbd94de3470df6940bf0a0d8a6364c303fa59"
+    },
+    {
+      "path": "training/search/train_policy_value.py",
+      "sha256": "e71961fd8a570dad81734af87f35e1da2c449c86c8942fd3bdcf7477f0b2788e"
+    }
+  ],
+  "format": "circuit-ai-source-manifest/1",
+  "git_commit": "4b960c543dad5dab9bf35535987898456d9e7858",
+  "git_worktree_dirty": true,
+  "package_builder": {
+    "path": "tools/kaggle/cli.py",
+    "sha256": "983af70f6323ea32441b1b15eff44cda520a8387dcdda76416558d80fd19eb48"
+  },
+  "runner_template_sha256": "2c5b3f06feed492208b00355400ee08da2d00fbb5c9b2d087cad1ca061c13665",
+  "source_manifest_sha256": "da4b529f44a0d16ef987905f7c88c0ac0adbdcc93a9c3539ac77091ead08efa2",
+  "source_revision": "depth-ablation-baseline-d3-e56-81341571"
+}

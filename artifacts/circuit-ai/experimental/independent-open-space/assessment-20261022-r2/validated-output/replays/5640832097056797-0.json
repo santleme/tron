@@ -1,0 +1,306 @@
+{
+  "action_schema": "lc-action/1",
+  "agents": [
+    {
+      "agent_id": "fixed-depth-rust",
+      "checkpoint_id": "fixed-depth-rust-wasm-20261022"
+    },
+    {
+      "agent_id": "open-space",
+      "checkpoint_id": "open-space"
+    }
+  ],
+  "arena_index": 5640832097056797,
+  "derived_streams": [
+    {
+      "initseq": "3118485147134352003",
+      "initstate": "12845836302442586232",
+      "label": "episode"
+    },
+    {
+      "initseq": "11744480099337275203",
+      "initstate": "2991501629864412795",
+      "label": "agent/0"
+    },
+    {
+      "initseq": "3881806459353228425",
+      "initstate": "9662771158916771009",
+      "label": "agent/1"
+    }
+  ],
+  "engine_version": "lc-engine/1",
+  "format": "lc-replay/1",
+  "initial_state": {
+    "headings": [
+      "UP",
+      "DOWN"
+    ],
+    "height": 12,
+    "positions": [
+      {
+        "x": 11,
+        "y": 8
+      },
+      {
+        "x": 5,
+        "y": 7
+      }
+    ],
+    "trails": [
+      [
+        {
+          "x": 11,
+          "y": 8
+        }
+      ],
+      [
+        {
+          "x": 5,
+          "y": 7
+        }
+      ]
+    ],
+    "width": 12
+  },
+  "master_seed": "5640832097056797",
+  "match_id": "ind-open-space-d69feb58a3564faea462-5640832097056797-0",
+  "observation_schema": "lc-observation/1",
+  "replay_sha256": "64c0fd3b2b7dbdc218731a3f5a545dd3d96d6b18da4d390bd59decef35c61e84",
+  "result": "agent_0_win",
+  "run_id": "ind-open-space-d69feb58a3564faea462",
+  "tick_count": 19,
+  "ticks": [
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        1
+      ],
+      "terminal_causes": [],
+      "tick": 0
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 1
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 2
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 3
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 4
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 5
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 6
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 7
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        3
+      ],
+      "terminal_causes": [],
+      "tick": 8
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 9
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 10
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 11
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 12
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        1,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 13
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        2
+      ],
+      "terminal_causes": [],
+      "tick": 14
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        3
+      ],
+      "terminal_causes": [],
+      "tick": 15
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 16
+    },
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        3,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 17
+    },
+    {
+      "collision_causes": [
+        [],
+        [
+          "invalid_action"
+        ]
+      ],
+      "joint_actions": [
+        3,
+        "INVALID"
+      ],
+      "terminal_causes": [
+        "agent_1_dead"
+      ],
+      "tick": 18
+    }
+  ]
+}

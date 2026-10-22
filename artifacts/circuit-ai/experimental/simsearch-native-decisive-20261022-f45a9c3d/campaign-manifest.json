@@ -1,0 +1,130 @@
+{
+  "experiment_id": "simsearch-native-decisive-20261022-f45a9c3d",
+  "campaign_kind": "EXPERIMENTAL fused-Rust cost-normalized planner comparison",
+  "state": "downloaded-validated-analyzed",
+  "run_config": "run-config.json",
+  "config_sha256": "e96592290639c17fdca372fe50d5ebd44a19ec29e352f052ca8481d4a4bf8531",
+  "seed_list_sha256": "15743aa649e9b3a9897f8f7be86f5cf616b91db1efc0f14ad2d38ec8101d782e",
+  "seed_count": 256,
+  "planned_games": 1536,
+  "matchups": [
+    "fixed-depth-vs-ducb1-tuned",
+    "fixed-depth-vs-regret-matching",
+    "ducb1-tuned-vs-regret-matching"
+  ],
+  "edge_budgets": {
+    "fixed-depth": 56,
+    "ducb1-tuned": 32,
+    "regret-matching": 32
+  },
+  "max_depth": 3,
+  "native_territory": true,
+  "seat_alternation": true,
+  "seed_policy": "sha256(run_id:index) 53-bit development seeds; checked against all previous experimental run-config seeds and G008 reserved roots/ranges",
+  "reserved_final_sets_used": false,
+  "official_registry_modified": false,
+  "resources": {
+    "gpu": false,
+    "internet": false,
+    "paid_services": false,
+    "workers": 4
+  },
+  "decision_rule": "Compare FD at estimated matched budget 56 against DUCB/RM 32; record realized mean and p95 latency. If FD mean >10% above either MCTS, treat it as cost-mismatched and report; do not tune on these seeds.",
+  "created_utc": "2026-10-22T03:46:14Z",
+  "kernel_id": "pascalcoimbra/simsearch-native-decisive-20261022-f45a9c3d",
+  "kaggle_version": 1,
+  "source_revision": "simsearch-native-decisive-20261022-f45a9c3d-r1",
+  "package_dir": "package",
+  "source_manifest_sha256": "f90e2c59ff853ce4b8da5bc29a517ebf76ff4278e4de9722fcc4df95f929007c",
+  "package_tree_sha256": null,
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 906.384,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "wall_seconds": 267.34,
+    "workers": 4
+  },
+  "report_sha256": "b43085c4f77bb0b583b79312e2ea70359b5e792fa87f3197c90985d81d4b5df8",
+  "analysis_sha256": "421f613ef357c28fb82b77d1b385a67493566d7b4f8fd5e456fa445a3e08ac36",
+  "results": {
+    "fixed-depth-vs-ducb1-tuned": {
+      "wins": 455,
+      "draws": 44,
+      "losses": 13,
+      "observed_win_rate": 0.888671875,
+      "score_rate_draw_half": 0.931640625,
+      "seed_cluster_score_ci95": [
+        0.9140625,
+        0.9482421875
+      ],
+      "decision_ns_mean": {
+        "left": 10869566,
+        "right": 10567178
+      },
+      "decision_ns_p95": {
+        "left": 17498017,
+        "right": 15876653
+      },
+      "avoidable_deaths": {
+        "left": 41,
+        "right": 37
+      }
+    },
+    "fixed-depth-vs-regret-matching": {
+      "wins": 430,
+      "draws": 61,
+      "losses": 21,
+      "observed_win_rate": 0.83984375,
+      "score_rate_draw_half": 0.8994140625,
+      "seed_cluster_score_ci95": [
+        0.87890625,
+        0.919921875
+      ],
+      "decision_ns_mean": {
+        "left": 10724007,
+        "right": 10540242
+      },
+      "decision_ns_p95": {
+        "left": 17712397,
+        "right": 16317401
+      },
+      "avoidable_deaths": {
+        "left": 57,
+        "right": 53
+      }
+    },
+    "ducb1-tuned-vs-regret-matching": {
+      "wins": 120,
+      "draws": 99,
+      "losses": 293,
+      "observed_win_rate": 0.234375,
+      "score_rate_draw_half": 0.3310546875,
+      "seed_cluster_score_ci95": [
+        0.296875,
+        0.3642578125
+      ],
+      "decision_ns_mean": {
+        "left": 10470066,
+        "right": 10369438
+      },
+      "decision_ns_p95": {
+        "left": 15381971,
+        "right": 15382733
+      },
+      "avoidable_deaths": {
+        "left": 82,
+        "right": 77
+      }
+    }
+  },
+  "invalid_action_audit": {
+    "invalid_actions_replayed": 1356,
+    "invalid_with_any_legal_move": 0,
+    "interpretation": "All invalid action causes in canonical replay occurred when that agent had no legal actions; forced terminal moves."
+  }
+}

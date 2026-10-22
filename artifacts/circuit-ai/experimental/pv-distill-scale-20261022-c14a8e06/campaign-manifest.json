@@ -1,0 +1,37 @@
+{
+  "campaign_kind": "EXPERIMENTAL 256-seed fixed-depth teacher-data generation on Kaggle CPU",
+  "configuration": {
+    "edge_budget": 56,
+    "experiment_id": "pv-distill-scale-20261022-c14a8e06",
+    "height": 12,
+    "heuristic_styles": [
+      "cruise",
+      "local-mobility",
+      "interceptor"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 3600,
+    "width": 12,
+    "workers": 4
+  },
+  "experiment_id": "pv-distill-scale-20261022-c14a8e06",
+  "manifest_sha256": "4061da1cd4c4ef4a24c65c3cca37a8d9eb78baa80387513f9f0578cba190a93c",
+  "protocol": "development-only seeds; reserved/final G008 evaluations unused",
+  "result": {
+    "dataset_manifest_sha256": "281c7c623a4eb8d9678f2af6e297226b3f13b09f1aea1f7f04acd617039a5092",
+    "dataset_sha256": "301af3a2304e05939e4b61d6655f5a608d297fcb85357196969e52552b7bd01e",
+    "elapsed_generation_seconds": 200.711,
+    "examples_per_second": 69.069,
+    "gpu_enabled": false,
+    "kernel_version": 1,
+    "sample_cap": 50000,
+    "samples": 13863,
+    "seed_count": 256,
+    "status": "success",
+    "workers": 4
+  },
+  "seed_count": 256,
+  "seed_overlap_with_prior_experiments": false,
+  "seeds_sha256": "9d3e17299faddd0a4106de7c4ae41e27afc5e632fbb76c70c0e9a5f080b0bcd3",
+  "source_revision": "t3code/tron-simultaneous-neural-search"
+}

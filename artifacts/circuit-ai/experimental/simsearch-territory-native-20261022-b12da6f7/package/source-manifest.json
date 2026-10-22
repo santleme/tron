@@ -1,0 +1,94 @@
+{
+  "files": [
+    {
+      "path": ".arena-source-revision",
+      "sha256": "f41dd7ef3a585bb03d2194e0e33eeab3f6397e74253c6fe2990fd9e80448cc8d"
+    },
+    {
+      "path": "kernel-metadata.json",
+      "sha256": "f8a593e2f07f3a967983254b97ef03256dc5dbc73890af6d0dd95496687e5311"
+    },
+    {
+      "path": "run-config.json",
+      "sha256": "ce6a76f2bfac20d05e5a9517861b62830e2e7cdccff9c5a9584cd0e7d35ca391"
+    },
+    {
+      "path": "training/arena/README.md",
+      "sha256": "367e5bdffcd24c3bb396fa3250d840e21116c4f39f22e747b778351114b09754"
+    },
+    {
+      "path": "training/arena/__init__.py",
+      "sha256": "6dfaa706c704fa574ee8dd9cfe10b18450588057e051af1c6d680d59063bf922"
+    },
+    {
+      "path": "training/arena/engine.py",
+      "sha256": "cfd6fe1817e06e5e892306f1fac2b5eef3cdeb4e68da2e83b26c8f4f23a6c7d0"
+    },
+    {
+      "path": "training/arena/heuristics.py",
+      "sha256": "0c6d1b7d9600f5f976b6f0ce4ecc88fe3f44d3c725c1bf534d21ebca0eb0c8f5"
+    },
+    {
+      "path": "training/arena/seeds.py",
+      "sha256": "3b0af5e78dc4d88aa1911f2764b6dff1f17b082611ad84ebb9c2c650ad048885"
+    },
+    {
+      "path": "training/arena/vector.py",
+      "sha256": "c9f9fd4799b24404ef30be517290fef6051d163ccc0cb87a796fa42ff97cdd40"
+    },
+    {
+      "path": "training/search/README.md",
+      "sha256": "4c6dbf81997d1fac30b4d72a05e9230e217200a9e3167522f08f82293dfe7fde"
+    },
+    {
+      "path": "training/search/__init__.py",
+      "sha256": "d2655756eeb5648ffab820ef7f41752d09336fc4f405336e73619ddc7bc9bee0"
+    },
+    {
+      "path": "training/search/analysis.py",
+      "sha256": "38b3eb2988d398219fe36a8d6bbe6232079cac329f00dc76c6b833c65d8fe18a"
+    },
+    {
+      "path": "training/search/bitboard.py",
+      "sha256": "1bfb866eda1a50baa8563a44cf0c7ab1f76c24830f2a82dbe639dd3261bb6835"
+    },
+    {
+      "path": "training/search/matrix.py",
+      "sha256": "1c1ad195ab12b4918131738111bc51e16aae9851bdba3e425a7e0bd119402d40"
+    },
+    {
+      "path": "training/search/native/libcircuit_territory.so",
+      "sha256": "d14b1eb549aa3e6141333a3c26fa47e7984cd73c517baee90e834a350e4b1d31"
+    },
+    {
+      "path": "training/search/native/territory.py",
+      "sha256": "30f9211ea8312d364894fc842b9319bfe1d8037d6f7d193640e316d25da7f033"
+    },
+    {
+      "path": "training/search/native/territory.rs",
+      "sha256": "01be8394a37e68f2c246e598e0d5ffe5e6f1bf0fe4d04b889a88ea04fdd9ba51"
+    },
+    {
+      "path": "training/search/planners.py",
+      "sha256": "ae6db14f804fac83802516bc5e989902276c0652cb8305dee7e459bcd40cec6b"
+    },
+    {
+      "path": "training/search/territory.py",
+      "sha256": "4b92114bc3f17497334df958ab43a448480bfc734abeab3177cf022b83126ec8"
+    },
+    {
+      "path": "training/search/tournament.py",
+      "sha256": "35d057e1fa7101c5fd9ecc61338133d46ef32f398426f6eeb57d87f15489f17b"
+    }
+  ],
+  "format": "circuit-ai-source-manifest/1",
+  "git_commit": "4b960c543dad5dab9bf35535987898456d9e7858",
+  "git_worktree_dirty": true,
+  "package_builder": {
+    "path": "tools/kaggle/cli.py",
+    "sha256": "955466e366f3162ad8fc0c42e19f0078ab6a8e1e4cf7de83035c87a3ada3ecb1"
+  },
+  "runner_template_sha256": "bee82126a5b2eb041117b7bcab88e75b019e617b7e2b7d83293a3b59c57f83e9",
+  "source_manifest_sha256": "aca7ca822df62316e97e985b5eca83cc87882a12c186455404a88715280e9e8b",
+  "source_revision": "simsearch-territory-native-20261022-b12da6f7"
+}

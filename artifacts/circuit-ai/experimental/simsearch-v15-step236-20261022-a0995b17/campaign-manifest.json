@@ -1,0 +1,138 @@
+{
+  "analysis_sha256": "572937d7af3e57e4bbfa95e7487e8d1df265a585a9db8295da8e29b2838e198f",
+  "budgets": {
+    "fixed-depth": 32,
+    "max_depth": 3
+  },
+  "campaign_kind": "EXPERIMENTAL fixed-depth search versus protocol-permitted frozen v15-step236 checkpoint",
+  "config_sha256": "d8eb0c036a276735c4afc36ad89132383c039f111d48df6823a1c28a404ff952",
+  "dataset": {
+    "checkpoint_id": "step-236",
+    "checkpoint_sha256": "a21a9e00d7e6eb9ad9366502d64b0eebe0cd2e46b191dcee45bf8394a5b5f450",
+    "id": "pascalcoimbra/circuit-ai-v15-step236-experimental",
+    "private": true,
+    "status": "ready",
+    "version": 1
+  },
+  "evaluation_policy": {
+    "checkpoint_use_permitted": true,
+    "official_registry_modified": false,
+    "open_space_used": false,
+    "reserved_final_sets_used": false,
+    "seat_alternation": true
+  },
+  "experiment_id": "simsearch-v15-step236-20261022-a0995b17",
+  "frozen_opponent": {
+    "checkpoint_id": "step-236",
+    "id": "v15-step236",
+    "sha256": "a21a9e00d7e6eb9ad9366502d64b0eebe0cd2e46b191dcee45bf8394a5b5f450"
+  },
+  "games_per_matchup": 512,
+  "kernel_id": "pascalcoimbra/simsearch-v15-step236-20261022-a0995b17",
+  "matchups": [
+    "fixed-depth-vs-v15-step236"
+  ],
+  "package_dir": "package-provenance-fix-r3",
+  "package_tree_sha256": "77136630f9cedaa3e955c64cd7e5af29317e38c5c92ec4c9a6f65520a53a7d18",
+  "planned_seeds": 256,
+  "report_sha256": "3229977a96f4a17212e46ab21db39842bc115b8142767b05761106eb7f55dc76",
+  "resource_policy": {
+    "gpu": false,
+    "internet": false,
+    "max_wall_seconds": 3600,
+    "paid_services": false,
+    "workers": 4
+  },
+  "results": {
+    "collision_metrics_recorded": true,
+    "draws": 20,
+    "games": 512,
+    "games_with_territorial_separation": 151,
+    "left_agent": "fixed-depth",
+    "left_avoidable_deaths": 20,
+    "left_death_causes": {
+      "invalid_action": 1,
+      "same_destination": 20
+    },
+    "left_decision_ns_mean": 29017997,
+    "left_decision_ns_p95": 41356275,
+    "losses": 1,
+    "matchup_id": "fixed-depth-vs-v15-step236",
+    "mean_ticks_after_territorial_separation": 1.974609375,
+    "observed_win_rate": 0.958984375,
+    "process_cpu_seconds": 252.927,
+    "right_agent": "v15-step236",
+    "right_avoidable_deaths": 500,
+    "right_death_causes": {
+      "occupied_head": 98,
+      "occupied_trail": 360,
+      "out_of_bounds": 33,
+      "same_destination": 20
+    },
+    "right_decision_ns_mean": 4337545,
+    "right_decision_ns_p95": 1353956,
+    "score_rate_draw_half": 0.978515625,
+    "seat_results": {
+      "0": {
+        "draws": 11,
+        "games": 256,
+        "losses": 0,
+        "wins": 245
+      },
+      "1": {
+        "draws": 9,
+        "games": 256,
+        "losses": 1,
+        "wins": 246
+      }
+    },
+    "seed_cluster_score_ci95": [
+      0.9677734375,
+      0.98828125
+    ],
+    "seed_cluster_score_ci95_hoeffding": [
+      0.8936342802662113,
+      1.0
+    ],
+    "seed_clusters": 256,
+    "wins": 491
+  },
+  "run_id": "simsearch-v15-step236-20261022-a0995b17",
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 252.927,
+    "gpu_enabled": false,
+    "host_os": "Ubuntu 24.04.5 LTS",
+    "internet_enabled": false,
+    "kaggle_kernel_run_type": "Batch",
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "torch_cuda_build": null,
+    "torch_version": "2.11.0+cpu",
+    "wall_seconds": 77.403,
+    "workers": 4
+  },
+  "seed_list_sha256": "db83f31c67a80e6656e1c67dae184b5203d7961646c029fe5bc3820aeccc2654",
+  "seed_source": "SHA-256 derived fresh development seeds; disjoint from prior experimental configs and canonical reserved seed plan",
+  "source_manifest_sha256": "df90b65eeb3e3aa32dbfccd372064408616ba99b410493fd7b162fab20d23a3c",
+  "source_revision": "simsearch-v15-step236-20261022-a0995b17-provenance-fix-r3",
+  "state": "downloaded-validated-analyzed",
+  "submission_attempts": [
+    {
+      "kernel_version": 1,
+      "log": "failed-output/simsearch-v15-step236-20261022-a0995b17.log",
+      "reason": "NameError: undefined opponent while writing frozen_opponents provenance",
+      "source_revision": "simsearch-v15-step236-20261022-a0995b17-dataset-r2",
+      "status": "error"
+    },
+    {
+      "kernel_version": 2,
+      "package_dir": "package-provenance-fix-r3",
+      "source_manifest_sha256": "df90b65eeb3e3aa32dbfccd372064408616ba99b410493fd7b162fab20d23a3c",
+      "source_revision": "simsearch-v15-step236-20261022-a0995b17-provenance-fix-r3",
+      "status": "complete"
+    }
+  ]
+}

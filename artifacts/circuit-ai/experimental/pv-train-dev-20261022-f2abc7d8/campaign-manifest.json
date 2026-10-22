@@ -1,0 +1,64 @@
+{
+  "attempts": [
+    {
+      "cause": "pinned canonical embedded manifest digest instead of SHA-256 over manifest.json bytes",
+      "recovery": "set the file-byte SHA-256; local and remote dataset bytes match",
+      "status": "error",
+      "version": 1
+    },
+    {
+      "cause": "runner rejected the configured mount path before training",
+      "recovery": "allow symlinked read-only mounts and verify resolved files remain inside the mount",
+      "status": "error",
+      "version": 2
+    },
+    {
+      "cause": "dataset slug was not present directly under /kaggle/input",
+      "recovery": "search supported Kaggle mount layouts and report visible input entries on mismatch",
+      "status": "error",
+      "version": 3
+    },
+    {
+      "cause": "dataset mounting and hash validation passed; training exposed a batch-shape error in the legal-action mask model forward pass",
+      "recovery": "squeezed head channel before computing x/y coordinates; added focused model output/mask test",
+      "status": "error",
+      "version": 4
+    },
+    {
+      "checkpoint_id": "pv-train-dev-20261022-f2abc7d8-policy-value",
+      "device": "Tesla T4",
+      "onnx_sha256": "831afb177dd9f1d68bef51a9ac02512d5c0f5744b601d8fd562c49769873ec8a",
+      "policy_loss": 1.9068033695220947,
+      "reported_elapsed_seconds": 26.550414839,
+      "status": "success",
+      "torch": "2.11.0+cu128",
+      "validation_loss": 2.3122763633728027,
+      "value_mse": 0.4054730534553528,
+      "version": 5
+    }
+  ],
+  "campaign_kind": "EXPERIMENTAL Policy-Value supervised training on Kaggle T4",
+  "config": {
+    "batch_size": 256,
+    "epochs": 60,
+    "hidden_size": 128,
+    "learning_rate": 0.0003,
+    "seed": 20261022,
+    "validation_fraction": 0.1,
+    "value_weight": 1.0
+  },
+  "dataset_experiment_id": "pv-distill-dev-20261022-f2abc7d8",
+  "dataset_manifest_file_sha256": "12e43c1c646977098dab1398688f53c114a05908f91f5cb3bb1667f216544a52",
+  "dataset_manifest_sha256": "8d8e95d39d2190f43a687f7f8346906babbf3b435a35b707ca8277794c3943f5",
+  "dataset_sha256": "8f81c53c027716aeb31c8d3f60583c132be6eba6989ceabaf7fa1accce24787b",
+  "dataset_source": "pascalcoimbra/circuit-ai-pv-distill-dev-20261022-f2abc7d8",
+  "dataset_version": 1,
+  "experiment_id": "pv-train-dev-20261022-f2abc7d8",
+  "manifest_sha256": "4b5ae08a845f91505962e0fe0b057d1011721a8b87465af54cc52abdf455fa1f",
+  "protocol": "development-only; dataset hash pinned; no official/final evaluation data used",
+  "result": {
+    "elapsed_scope": "full training body incl. support dependency install and ONNX export; from Kaggle log completion event",
+    "reported_elapsed_seconds": 26.550414839
+  },
+  "source_revision": "t3code/tron-simultaneous-neural-search-r5"
+}

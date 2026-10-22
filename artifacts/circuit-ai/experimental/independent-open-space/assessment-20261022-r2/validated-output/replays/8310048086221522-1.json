@@ -1,0 +1,105 @@
+{
+  "action_schema": "lc-action/1",
+  "agents": [
+    {
+      "agent_id": "open-space",
+      "checkpoint_id": "open-space"
+    },
+    {
+      "agent_id": "fixed-depth-rust",
+      "checkpoint_id": "fixed-depth-rust-wasm-20261022"
+    }
+  ],
+  "arena_index": 8310048086221522,
+  "derived_streams": [
+    {
+      "initseq": "12555615018986332925",
+      "initstate": "538634128081958592",
+      "label": "episode"
+    },
+    {
+      "initseq": "9675431766883192691",
+      "initstate": "10721161353613989791",
+      "label": "agent/0"
+    },
+    {
+      "initseq": "9322890226570651425",
+      "initstate": "4467846992084218905",
+      "label": "agent/1"
+    }
+  ],
+  "engine_version": "lc-engine/1",
+  "format": "lc-replay/1",
+  "initial_state": {
+    "headings": [
+      "LEFT",
+      "UP"
+    ],
+    "height": 12,
+    "positions": [
+      {
+        "x": 7,
+        "y": 5
+      },
+      {
+        "x": 6,
+        "y": 2
+      }
+    ],
+    "trails": [
+      [
+        {
+          "x": 7,
+          "y": 5
+        }
+      ],
+      [
+        {
+          "x": 6,
+          "y": 2
+        }
+      ]
+    ],
+    "width": 12
+  },
+  "master_seed": "8310048086221522",
+  "match_id": "ind-open-space-d69feb58a3564faea462-8310048086221522-1",
+  "observation_schema": "lc-observation/1",
+  "replay_sha256": "c88aa999f3463cf283ca59bb6b066a9cfa0b604da0eee8b4f256eddf83a70ab3",
+  "result": "draw",
+  "run_id": "ind-open-space-d69feb58a3564faea462",
+  "tick_count": 2,
+  "ticks": [
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        1
+      ],
+      "terminal_causes": [],
+      "tick": 0
+    },
+    {
+      "collision_causes": [
+        [
+          "same_destination"
+        ],
+        [
+          "same_destination"
+        ]
+      ],
+      "joint_actions": [
+        0,
+        2
+      ],
+      "terminal_causes": [
+        "agent_0_dead",
+        "agent_1_dead"
+      ],
+      "tick": 1
+    }
+  ]
+}

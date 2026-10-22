@@ -1,0 +1,49 @@
+{
+  "analysis_file": "analysis.json",
+  "checkpoint_sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7",
+  "config_sha256": "254ff588bde3e8d5dda848b1aa864dc12d4d62046b9cc389ad7b4159431683d5",
+  "dataset_source": "pascalcoimbra/circuit-ai-pv-policy-value-scale-20261022",
+  "format": "circuit-ai-experimental-search-campaign/1",
+  "kernel_id": "pascalcoimbra/pv-search-latency-20261022-6400000",
+  "kernel_version": 1,
+  "mode": "CPU-only 512-game follow-up; depth 1, edge budget 12; latency-equivalence not achieved",
+  "output_manifest_sha256": "6aba62d80c6dfd5e0d26697f88ab7fca3899efba06e37e922efa49554f447554",
+  "report_sha256": "18a57aa205bb6de4d2f93491deea7cb0081d9d96c57615626adf19379f5f49e5",
+  "reserved_evaluations_used": false,
+  "resource_limits": {
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "max_wall_seconds": 600,
+    "workers": 4
+  },
+  "result": {
+    "cpu_process_seconds": 31.964,
+    "draws": 52,
+    "games": 512,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "kind": "planner-vs-policy-latency-follow-up",
+    "latency_equivalent": false,
+    "losses": 21,
+    "observed_win_rate": 0.857421875,
+    "policy_decision_ns_mean": 556456,
+    "policy_decision_ns_p95": 676730,
+    "score_ci95_seed_cluster_bootstrap": [
+      0.88671875,
+      0.927734375
+    ],
+    "score_rate": 0.908203125,
+    "search_decision_ns_mean": 902139,
+    "search_decision_ns_p95": 1801979,
+    "status": "complete",
+    "wall_seconds": 16.683,
+    "wins": 439
+  },
+  "result_file": "validated-output/report.json",
+  "run_id": "pv-search-latency-20261022-6400000",
+  "seed_count": 256,
+  "seeds_sha256": "56dcd531b43eb32347084b2ce36678c9f63e85a5c18a2e63959d603ff0f3821b",
+  "source_manifest_sha256": "3586d32a277232dcc4286f12344486d56605e0b0b54a00e5d574f7b9f899601c",
+  "source_revision": "t3code/tron-simultaneous-neural-search-pv-search-latency-20261022-6400000",
+  "status": "downloaded-validated-analyzed"
+}

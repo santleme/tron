@@ -1,0 +1,39 @@
+{
+  "format": "circuit-ai-search-candidate/1",
+  "candidate_id": "fixed-depth-rust-wasm-20261022",
+  "status": "experimental-frozen-unsubmitted",
+  "selection_basis": "512 paired development games against selected DAgger1 and 512 against prior spatial checkpoint; no official/final set used",
+  "planner": {
+    "algorithm": "simultaneous fixed-depth matrix search",
+    "implementation": "Rust compiled to WebAssembly",
+    "max_depth": 3,
+    "edge_budget": 56,
+    "adaptive_behavior": "iterative deepening; stop early at territory separation; retain last complete depth"
+  },
+  "artifacts": {
+    "rust_source": {
+      "path": "artifacts/circuit-ai/experimental/fixed-depth-candidate-20261022/fixed_depth.rs",
+      "sha256": "4ebf0b4c8518bb05e76e74180d42ccae00e4c1ae19e542908af9ad1e8f6b13b2"
+    },
+    "wasm": {
+      "path": "artifacts/circuit-ai/experimental/fixed-depth-candidate-20261022/fixed_depth.wasm",
+      "sha256": "e601cbf991681c747c3b87a6d1fbc683ae3a2d7b9366a2567e5128917da4ce0a",
+      "bytes": 33067
+    }
+  },
+  "viewer": {
+    "default_policy": "fixed-depth",
+    "alternative_policy": "Policy-Value ONNX remains selectable",
+    "canonical_transition_owner": "CIRCUIT AI TypeScript engine"
+  },
+  "evidence": {
+    "report": "artifacts/circuit-ai/experimental/rust-dagger-comparison-20261022.md",
+    "campaign_manifest": "artifacts/circuit-ai/experimental/rust-search-campaigns-20261022/campaign-manifest.json"
+  },
+  "evaluation_boundaries": {
+    "reserved_final_sets_used": false,
+    "open_space_used_for_selection": false,
+    "official_registry_modified": false,
+    "submitted_to_final_evaluation": false
+  }
+}

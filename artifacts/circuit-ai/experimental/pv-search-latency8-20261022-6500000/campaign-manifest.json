@@ -1,0 +1,51 @@
+{
+  "analysis_file": "analysis.json",
+  "checkpoint_sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7",
+  "config_sha256": "c9dd5b2f5c0d44a1b06a18f2c3119bff4b3e35857b141ce5329714afde6eeb2a",
+  "dataset_source": "pascalcoimbra/circuit-ai-pv-policy-value-scale-20261022",
+  "format": "circuit-ai-experimental-search-campaign/1",
+  "kernel_id": "pascalcoimbra/pv-search-latency8-20261022-6500000",
+  "kernel_version": 1,
+  "mode": "CPU-only 512-game decision-latency calibration follow-up; depth 1, edge budget 8",
+  "output_manifest_sha256": "1ab08353065c259c1bd777b3e71dabc9d998ac497185bdfa7ed826177578b2cd",
+  "report_sha256": "3a4b68d2aa672fa4347516276cf2714b1e262475c3f80cc956cb4d00af9e6826",
+  "reserved_evaluations_used": false,
+  "resource_limits": {
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "max_wall_seconds": 600,
+    "workers": 4
+  },
+  "result": {
+    "completed_depth_mean": 0.6581067983307722,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 39.079,
+    "draws": 73,
+    "edge_budget": 8,
+    "games": 512,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "kind": "planner-vs-policy-budget-follow-up",
+    "latency_equivalent": false,
+    "losses": 110,
+    "observed_win_rate": 0.642578125,
+    "policy_decision_ns_mean": 768039,
+    "policy_decision_ns_p95": 921210,
+    "score_ci95_seed_cluster_bootstrap": [
+      0.677734375,
+      0.75
+    ],
+    "score_rate": 0.7138671875,
+    "search_decision_ns_mean": 962089,
+    "search_decision_ns_p95": 1526941,
+    "status": "complete",
+    "wall_seconds": 19.708,
+    "wins": 329
+  },
+  "result_file": "validated-output/report.json",
+  "run_id": "pv-search-latency8-20261022-6500000",
+  "seed_count": 256,
+  "seeds_sha256": "09af923d7c254481d6d0aca7a5534d3ff8bc8e2d7e0bb04f45110908398da193",
+  "source_manifest_sha256": "c078a29ba2b103b4b85a6381f59c8a94d032a3115a58c75a823865a9070a5b3d",
+  "status": "downloaded-validated-analyzed"
+}

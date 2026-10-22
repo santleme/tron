@@ -1,0 +1,66 @@
+{
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 0,
+    "unit": "seed with both seat assignments"
+  },
+  "experiment_id": "pv-search-decisive-20261022-6100000",
+  "format": "circuit-ai-simultaneous-search-analysis/1",
+  "matchups": [
+    {
+      "collision_metrics_recorded": true,
+      "draws": 67,
+      "games": 512,
+      "games_with_territorial_separation": 448,
+      "left_agent": "fixed-depth",
+      "left_avoidable_deaths": 62,
+      "left_death_causes": {
+        "invalid_action": 9,
+        "same_destination": 62
+      },
+      "left_decision_ns_mean": 10209598,
+      "left_decision_ns_p95": 17114382,
+      "losses": 4,
+      "matchup_id": "fixed-depth-vs-pv-scale-20261022",
+      "mean_ticks_after_territorial_separation": 7.34375,
+      "observed_win_rate": 0.861328125,
+      "process_cpu_seconds": 157.416,
+      "right_agent": "pv-scale-20261022",
+      "right_avoidable_deaths": 59,
+      "right_death_causes": {
+        "occupied_head": 11,
+        "occupied_trail": 364,
+        "out_of_bounds": 71,
+        "same_destination": 62
+      },
+      "right_decision_ns_mean": 1080005,
+      "right_decision_ns_p95": 1341088,
+      "score_rate_draw_half": 0.9267578125,
+      "seat_results": {
+        "0": {
+          "draws": 38,
+          "games": 256,
+          "losses": 2,
+          "wins": 216
+        },
+        "1": {
+          "draws": 29,
+          "games": 256,
+          "losses": 2,
+          "wins": 225
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.91015625,
+        0.9423828125
+      ],
+      "seed_cluster_score_ci95_hoeffding": [
+        0.8418764677662113,
+        1.0
+      ],
+      "seed_clusters": 256,
+      "wins": 441
+    }
+  ],
+  "run_id": "pv-search-decisive-20261022-6100000"
+}

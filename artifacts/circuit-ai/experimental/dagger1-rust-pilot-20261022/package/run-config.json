@@ -1,0 +1,39 @@
+{
+  "run_id": "dagger1-rust-pilot-20261022",
+  "simultaneous_search": {
+    "edge_budget": 56,
+    "experiment_id": "dagger1-rust-pilot-20261022",
+    "height": 12,
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "matchups": [
+      "fixed-depth-vs-dagger1-selected-20261021",
+      "native-fixed-depth-vs-dagger1-selected-20261021"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 120,
+    "native_fixed_depth": true,
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "run_id": "dagger1-rust-pilot-20261022",
+    "seeds": [
+      8100000000000001,
+      8100000000000002,
+      8100000000000003,
+      8100000000000004,
+      8100000000000005,
+      8100000000000006,
+      8100000000000007,
+      8100000000000008
+    ],
+    "spatial_policy_checkpoint": "dagger1-selected-20261021",
+    "width": 12,
+    "workers": 4
+  }
+}

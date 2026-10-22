@@ -1,0 +1,17 @@
+{
+  "experiment_id": "simsearch-throughput-calibration-20261022-c8834c21-w4",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "516d3d7c788dd73716a7b97b713c586380f16da95359719f1df198db7f34e021"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "7095ecdf0a052196db219a90a3f6aa1acf5fc654e599ea219b1ba8c6d9bd01c0"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "9810e5a256c6d14931dd3cd2758589a8ad8ca0138952540ba18213d721b3fd69",
+  "run_id": "simsearch-throughput-calibration-20261022-c8834c21-w4",
+  "source_manifest_sha256": "6e0d7044556877b0f60d684e1eb0967e3a2fc097dd854285aa32c5900e3797f0"
+}

@@ -1,0 +1,17 @@
+{
+  "experiment_id": "dagger1-rust-decisive-20261022",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "ee929f9a0d861ded887121666551098129844494def107268c2dade1a38aeb9d"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "85df430f3c6241a5183cfce3bc5888bf0d39d45672575593aaea7498328f48ee"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "1bcfacb6ce83a04b74d47c345856d6e56be7836f1b82fc023ad20775855a1f49",
+  "run_id": "dagger1-rust-decisive-20261022",
+  "source_manifest_sha256": "994ce8a82f18c35384ca49592ccd656c7abd86fd605e078b59dfea3c83cef396"
+}

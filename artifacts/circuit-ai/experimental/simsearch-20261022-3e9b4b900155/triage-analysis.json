@@ -1,0 +1,432 @@
+{
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 0,
+    "unit": "seed with both seat assignments"
+  },
+  "experiment_id": "simsearch-20261022-3e9b4b900155",
+  "format": "circuit-ai-simultaneous-search-analysis/1",
+  "matchups": [
+    {
+      "draws": 0,
+      "games": 12,
+      "left_agent": "fixed-depth",
+      "left_decision_ns_mean": 30251906,
+      "left_decision_ns_p95": 56239080,
+      "losses": 0,
+      "matchup_id": "fixed-depth-vs-ducb1-tuned",
+      "observed_win_rate": 1.0,
+      "process_cpu_seconds": 14.988,
+      "right_agent": "ducb1-tuned",
+      "right_decision_ns_mean": 15024771,
+      "right_decision_ns_p95": 23489069,
+      "score_rate_draw_half": 1.0,
+      "seat_results": {
+        "0": {
+          "draws": 0,
+          "games": 6,
+          "losses": 0,
+          "wins": 6
+        },
+        "1": {
+          "draws": 0,
+          "games": 6,
+          "losses": 0,
+          "wins": 6
+        }
+      },
+      "seed_cluster_score_ci95": [
+        1.0,
+        1.0
+      ],
+      "seed_clusters": 6,
+      "wins": 12
+    },
+    {
+      "draws": 2,
+      "games": 12,
+      "left_agent": "fixed-depth",
+      "left_decision_ns_mean": 29243777,
+      "left_decision_ns_p95": 55245490,
+      "losses": 2,
+      "matchup_id": "fixed-depth-vs-regret-matching",
+      "observed_win_rate": 0.6666666666666666,
+      "process_cpu_seconds": 14.454,
+      "right_agent": "regret-matching",
+      "right_decision_ns_mean": 14797873,
+      "right_decision_ns_p95": 23010206,
+      "score_rate_draw_half": 0.75,
+      "seat_results": {
+        "0": {
+          "draws": 2,
+          "games": 6,
+          "losses": 0,
+          "wins": 4
+        },
+        "1": {
+          "draws": 0,
+          "games": 6,
+          "losses": 2,
+          "wins": 4
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.5833333333333334,
+        0.9166666666666666
+      ],
+      "seed_clusters": 6,
+      "wins": 8
+    },
+    {
+      "draws": 4,
+      "games": 12,
+      "left_agent": "ducb1-tuned",
+      "left_decision_ns_mean": 15146820,
+      "left_decision_ns_p95": 23501584,
+      "losses": 6,
+      "matchup_id": "ducb1-tuned-vs-regret-matching",
+      "observed_win_rate": 0.16666666666666666,
+      "process_cpu_seconds": 12.749,
+      "right_agent": "regret-matching",
+      "right_decision_ns_mean": 15182084,
+      "right_decision_ns_p95": 23097358,
+      "score_rate_draw_half": 0.3333333333333333,
+      "seat_results": {
+        "0": {
+          "draws": 2,
+          "games": 6,
+          "losses": 3,
+          "wins": 1
+        },
+        "1": {
+          "draws": 2,
+          "games": 6,
+          "losses": 3,
+          "wins": 1
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.08333333333333333,
+        0.625
+      ],
+      "seed_clusters": 6,
+      "wins": 2
+    },
+    {
+      "draws": 0,
+      "games": 12,
+      "left_agent": "fixed-depth",
+      "left_decision_ns_mean": 30052618,
+      "left_decision_ns_p95": 55257290,
+      "losses": 0,
+      "matchup_id": "fixed-depth-vs-heuristic:cruise",
+      "observed_win_rate": 1.0,
+      "process_cpu_seconds": 11.285,
+      "right_agent": "heuristic:cruise",
+      "right_decision_ns_mean": 13430,
+      "right_decision_ns_p95": 17762,
+      "score_rate_draw_half": 1.0,
+      "seat_results": {
+        "0": {
+          "draws": 0,
+          "games": 6,
+          "losses": 0,
+          "wins": 6
+        },
+        "1": {
+          "draws": 0,
+          "games": 6,
+          "losses": 0,
+          "wins": 6
+        }
+      },
+      "seed_cluster_score_ci95": [
+        1.0,
+        1.0
+      ],
+      "seed_clusters": 6,
+      "wins": 12
+    },
+    {
+      "draws": 0,
+      "games": 12,
+      "left_agent": "fixed-depth",
+      "left_decision_ns_mean": 32254815,
+      "left_decision_ns_p95": 56009885,
+      "losses": 0,
+      "matchup_id": "fixed-depth-vs-heuristic:local-mobility",
+      "observed_win_rate": 1.0,
+      "process_cpu_seconds": 12.565,
+      "right_agent": "heuristic:local-mobility",
+      "right_decision_ns_mean": 20819,
+      "right_decision_ns_p95": 29487,
+      "score_rate_draw_half": 1.0,
+      "seat_results": {
+        "0": {
+          "draws": 0,
+          "games": 6,
+          "losses": 0,
+          "wins": 6
+        },
+        "1": {
+          "draws": 0,
+          "games": 6,
+          "losses": 0,
+          "wins": 6
+        }
+      },
+      "seed_cluster_score_ci95": [
+        1.0,
+        1.0
+      ],
+      "seed_clusters": 6,
+      "wins": 12
+    },
+    {
+      "draws": 0,
+      "games": 12,
+      "left_agent": "fixed-depth",
+      "left_decision_ns_mean": 25135642,
+      "left_decision_ns_p95": 55332116,
+      "losses": 0,
+      "matchup_id": "fixed-depth-vs-heuristic:interceptor",
+      "observed_win_rate": 1.0,
+      "process_cpu_seconds": 7.828,
+      "right_agent": "heuristic:interceptor",
+      "right_decision_ns_mean": 13596,
+      "right_decision_ns_p95": 18860,
+      "score_rate_draw_half": 1.0,
+      "seat_results": {
+        "0": {
+          "draws": 0,
+          "games": 6,
+          "losses": 0,
+          "wins": 6
+        },
+        "1": {
+          "draws": 0,
+          "games": 6,
+          "losses": 0,
+          "wins": 6
+        }
+      },
+      "seed_cluster_score_ci95": [
+        1.0,
+        1.0
+      ],
+      "seed_clusters": 6,
+      "wins": 12
+    },
+    {
+      "draws": 4,
+      "games": 12,
+      "left_agent": "ducb1-tuned",
+      "left_decision_ns_mean": 15477453,
+      "left_decision_ns_p95": 23817840,
+      "losses": 2,
+      "matchup_id": "ducb1-tuned-vs-heuristic:cruise",
+      "observed_win_rate": 0.5,
+      "process_cpu_seconds": 6.335,
+      "right_agent": "heuristic:cruise",
+      "right_decision_ns_mean": 14850,
+      "right_decision_ns_p95": 21497,
+      "score_rate_draw_half": 0.6666666666666666,
+      "seat_results": {
+        "0": {
+          "draws": 3,
+          "games": 6,
+          "losses": 2,
+          "wins": 1
+        },
+        "1": {
+          "draws": 1,
+          "games": 6,
+          "losses": 0,
+          "wins": 5
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.5833333333333334,
+        0.75
+      ],
+      "seed_clusters": 6,
+      "wins": 6
+    },
+    {
+      "draws": 2,
+      "games": 12,
+      "left_agent": "ducb1-tuned",
+      "left_decision_ns_mean": 17872564,
+      "left_decision_ns_p95": 24404133,
+      "losses": 2,
+      "matchup_id": "ducb1-tuned-vs-heuristic:local-mobility",
+      "observed_win_rate": 0.6666666666666666,
+      "process_cpu_seconds": 6.187,
+      "right_agent": "heuristic:local-mobility",
+      "right_decision_ns_mean": 22531,
+      "right_decision_ns_p95": 30880,
+      "score_rate_draw_half": 0.75,
+      "seat_results": {
+        "0": {
+          "draws": 1,
+          "games": 6,
+          "losses": 1,
+          "wins": 4
+        },
+        "1": {
+          "draws": 1,
+          "games": 6,
+          "losses": 1,
+          "wins": 4
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.5,
+        0.9583333333333334
+      ],
+      "seed_clusters": 6,
+      "wins": 8
+    },
+    {
+      "draws": 5,
+      "games": 12,
+      "left_agent": "ducb1-tuned",
+      "left_decision_ns_mean": 18643912,
+      "left_decision_ns_p95": 23848167,
+      "losses": 2,
+      "matchup_id": "ducb1-tuned-vs-heuristic:interceptor",
+      "observed_win_rate": 0.4166666666666667,
+      "process_cpu_seconds": 3.645,
+      "right_agent": "heuristic:interceptor",
+      "right_decision_ns_mean": 13884,
+      "right_decision_ns_p95": 18479,
+      "score_rate_draw_half": 0.625,
+      "seat_results": {
+        "0": {
+          "draws": 3,
+          "games": 6,
+          "losses": 1,
+          "wins": 2
+        },
+        "1": {
+          "draws": 2,
+          "games": 6,
+          "losses": 1,
+          "wins": 3
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.4166666666666667,
+        0.8333333333333334
+      ],
+      "seed_clusters": 6,
+      "wins": 5
+    },
+    {
+      "draws": 1,
+      "games": 12,
+      "left_agent": "regret-matching",
+      "left_decision_ns_mean": 15013140,
+      "left_decision_ns_p95": 23012001,
+      "losses": 3,
+      "matchup_id": "regret-matching-vs-heuristic:cruise",
+      "observed_win_rate": 0.6666666666666666,
+      "process_cpu_seconds": 7.383,
+      "right_agent": "heuristic:cruise",
+      "right_decision_ns_mean": 15070,
+      "right_decision_ns_p95": 22242,
+      "score_rate_draw_half": 0.7083333333333334,
+      "seat_results": {
+        "0": {
+          "draws": 1,
+          "games": 6,
+          "losses": 2,
+          "wins": 3
+        },
+        "1": {
+          "draws": 0,
+          "games": 6,
+          "losses": 1,
+          "wins": 5
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.5416666666666666,
+        0.875
+      ],
+      "seed_clusters": 6,
+      "wins": 8
+    },
+    {
+      "draws": 1,
+      "games": 12,
+      "left_agent": "regret-matching",
+      "left_decision_ns_mean": 17421746,
+      "left_decision_ns_p95": 26491145,
+      "losses": 3,
+      "matchup_id": "regret-matching-vs-heuristic:local-mobility",
+      "observed_win_rate": 0.6666666666666666,
+      "process_cpu_seconds": 6.573,
+      "right_agent": "heuristic:local-mobility",
+      "right_decision_ns_mean": 21846,
+      "right_decision_ns_p95": 30163,
+      "score_rate_draw_half": 0.7083333333333334,
+      "seat_results": {
+        "0": {
+          "draws": 1,
+          "games": 6,
+          "losses": 1,
+          "wins": 4
+        },
+        "1": {
+          "draws": 0,
+          "games": 6,
+          "losses": 2,
+          "wins": 4
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.4583333333333333,
+        0.9166666666666666
+      ],
+      "seed_clusters": 6,
+      "wins": 8
+    },
+    {
+      "draws": 7,
+      "games": 12,
+      "left_agent": "regret-matching",
+      "left_decision_ns_mean": 18697452,
+      "left_decision_ns_p95": 23554318,
+      "losses": 0,
+      "matchup_id": "regret-matching-vs-heuristic:interceptor",
+      "observed_win_rate": 0.4166666666666667,
+      "process_cpu_seconds": 2.738,
+      "right_agent": "heuristic:interceptor",
+      "right_decision_ns_mean": 13480,
+      "right_decision_ns_p95": 17682,
+      "score_rate_draw_half": 0.7083333333333334,
+      "seat_results": {
+        "0": {
+          "draws": 4,
+          "games": 6,
+          "losses": 0,
+          "wins": 2
+        },
+        "1": {
+          "draws": 3,
+          "games": 6,
+          "losses": 0,
+          "wins": 3
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.5416666666666666,
+        0.875
+      ],
+      "seed_clusters": 6,
+      "wins": 5
+    }
+  ],
+  "run_id": "simsearch-20261022-3e9b4b900155"
+}

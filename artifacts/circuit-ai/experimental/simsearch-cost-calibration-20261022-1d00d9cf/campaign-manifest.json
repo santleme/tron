@@ -1,0 +1,95 @@
+{
+  "analysis_file": "analysis.json",
+  "budget_calibration": {
+    "decision_latency_tolerance": 0.1,
+    "ducb1-tuned": 42,
+    "fixed-depth": 32,
+    "max_depth": 3,
+    "native_territory": true,
+    "observed_mean_ms": {
+      "ducb1-tuned": 21.974,
+      "fixed-depth": 23.242,
+      "regret-matching": 21.99
+    },
+    "regret-matching": 42,
+    "within_tolerance": true,
+    "workers": 4
+  },
+  "campaign_kind": "EXPERIMENTAL cost-normalization calibration",
+  "config_sha256": "9b189e2ca996dbad9d818289f72cd66e36dfc659d75def12ef079a669d75391a",
+  "evaluation_policy": {
+    "official_registry_modified": false,
+    "open_space_used": false,
+    "reserved_final_sets_used": false,
+    "seat_alternation": true,
+    "spatial_checkpoint_used": false
+  },
+  "experiment_id": "simsearch-cost-calibration-20261022-1d00d9cf",
+  "kaggle_version": 1,
+  "kernel_id": "pascalcoimbra/simsearch-cost-calibration-20261022-1d00d9cf",
+  "last_observed_kaggle_state": "KernelWorkerStatus.COMPLETE",
+  "package_dir": "package",
+  "package_tree_sha256": "73c364bd72bb7df2101c2b667cfdd00ec339b3a0a80cccec08d6dbdab1699a27",
+  "planned_games": 288,
+  "planned_seeds": 48,
+  "resource_policy": {
+    "gpu": false,
+    "internet": false,
+    "max_wall_seconds": 600,
+    "paid_services": false,
+    "workers": 4
+  },
+  "result_file": "validated-output/report.json",
+  "result_summary": {
+    "ducb1-tuned-vs-regret-matching": {
+      "draws": 23,
+      "games": 96,
+      "losses": 44,
+      "score_rate_draw_half": 0.421875,
+      "seed_cluster_score_ci95": [
+        0.3333333333333333,
+        0.5052083333333334
+      ],
+      "wins": 29
+    },
+    "fixed-depth-vs-ducb1-tuned": {
+      "draws": 8,
+      "games": 96,
+      "losses": 0,
+      "score_rate_draw_half": 0.9583333333333334,
+      "seed_cluster_score_ci95": [
+        0.9322916666666666,
+        0.984375
+      ],
+      "wins": 88
+    },
+    "fixed-depth-vs-regret-matching": {
+      "draws": 12,
+      "games": 96,
+      "losses": 5,
+      "score_rate_draw_half": 0.8854166666666666,
+      "seed_cluster_score_ci95": [
+        0.8385416666666666,
+        0.9322916666666666
+      ],
+      "wins": 79
+    }
+  },
+  "run_id": "simsearch-cost-calibration-20261022-1d00d9cf",
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 347.816,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "wall_seconds": 103.146,
+    "workers": 4
+  },
+  "seed_list_sha256": "754e9ffcf332c0d8a714ae85b3f34f6ce1d8c35be766682b5d1e3b53a3f5a0bb",
+  "seed_source": "SHA-256 derived, fresh development seeds disjoint from prior experimental manifests/configs",
+  "source_manifest_sha256": "e28945422e3adbe048ff0743c1b45ce7764127231a829b2106f74e3ea4955d1e",
+  "state": "downloaded-validated-analyzed"
+}

@@ -1,6 +1,8 @@
 # Gridline — local arena viewer
 
-A local-only browser spectator for the Light Cycles self-play project. The two agents share the selected ONNX policy but receive seat-relative observations; inference uses ONNX Runtime Web's WASM backend. No Python inference service, hosted account, or remote request is needed. Run `npm install && npm run dev` from this directory and open the printed local URL. `npm run build` creates a static bundle in `dist/`.
+A local-only browser spectator for the Light Cycles self-play project. The fixed-depth simultaneous-search planner compiled to Rust/WASM is selected by default; choose the same uploaded ONNX policy for both agents when you want another checkpoint. No Python inference service, hosted account, or remote request is needed. Run `npm ci && npm run dev` from this directory and open the printed local URL. `npm run build` creates a static bundle in `dist/`.
+
+The viewer builds `search/territory.rs` into a size-optimized WASM module before `dev` and `build`. This requires `rustc` with the `wasm32-unknown-unknown` target. The current search mode uses depth 3 and a 56-edge budget on a 12×12 board; it runs the simultaneous search once per tick and samples each rider's equilibrium policy from the match's derived random stream. It does not require an ONNX file. The policy-value mode continues to require verified ONNX metadata and checkpoint bytes.
 
 ## Loading a trained model
 

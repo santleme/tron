@@ -1,0 +1,139 @@
+{
+  "campaign_kind": "EXPERIMENTAL CPU throughput calibration",
+  "experiment_id": "simsearch-throughput-calibration-20261022-c8834c21",
+  "kernel_id": "pascalcoimbra/simsearch-throughput-calibration-20261022-c8834c21",
+  "created_utc": "2026-10-22T02:32:00Z",
+  "state": "validated-analysis-complete",
+  "planned_games_per_condition": 96,
+  "planned_games_total": 288,
+  "seed_list_sha256": "f58ce6f5d37d4a20a175b33cb57c7afd0bb5d1bc644d3b99893c7a943725830e",
+  "evaluation_policy": {
+    "split": "16 new development seeds; same seeds for paired throughput conditions",
+    "seat_alternation": true,
+    "official_registry_modified": false,
+    "reserved_final_sets_used": false,
+    "open_space_used": false,
+    "spatial_checkpoint_used": false
+  },
+  "resource_policy": {
+    "gpu": false,
+    "internet": false,
+    "paid_services": false,
+    "max_workers": 4,
+    "max_wall_seconds": 600,
+    "worker_counts": [
+      1,
+      2,
+      4
+    ]
+  },
+  "conditions": [
+    {
+      "workers": 1,
+      "run_id": "simsearch-throughput-calibration-20261022-c8834c21-w1",
+      "source_revision": "search-throughput-20261022-c8834c21-w1-optimized",
+      "package_dir": "package-w1-optimized",
+      "package_tree_sha256": "27c8a75dbdd4f1538c2e3ee8d2f926fcfbbf7bccc638969b83b04603589acd0c",
+      "source_manifest_sha256": "3010ffd12283e0f11d492fedbec4c6e0a07c1f3441150e3ed90fae38b1016289",
+      "config_sha256": "a4a1110d64e60de384f0bdf9c53be0ac5b4482cee34b50171ed42979e59868ee",
+      "state": "downloaded-validated",
+      "submitted_utc": "2026-10-22T02:43:48Z",
+      "runtime": {
+        "cpu_count": 4,
+        "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+        "cpu_process_seconds": 119.425,
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+        "python": "3.13.15",
+        "wall_seconds": 119.561,
+        "workers": 1
+      },
+      "games_completed": 96
+    },
+    {
+      "workers": 4,
+      "run_id": "simsearch-throughput-calibration-20261022-c8834c21-w4",
+      "source_revision": "search-throughput-20261022-c8834c21-w4-optimized",
+      "package_dir": "package-w4-optimized",
+      "package_tree_sha256": "cb29154f4bdba1b4c4c4f842185077561a831edc0ebd3b497b609a8653a6ca06",
+      "source_manifest_sha256": "6e0d7044556877b0f60d684e1eb0967e3a2fc097dd854285aa32c5900e3797f0",
+      "config_sha256": "55b63bcbf730537eccbefe7b40e1f36aac949b2a0d5d249a197deeb7acd99302",
+      "state": "downloaded-validated",
+      "submitted_utc": "2026-10-22T02:46:32Z",
+      "runtime": {
+        "cpu_count": 4,
+        "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+        "cpu_process_seconds": 222.119,
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+        "python": "3.13.15",
+        "wall_seconds": 65.041,
+        "workers": 4
+      },
+      "games_completed": 96
+    },
+    {
+      "workers": 2,
+      "run_id": "simsearch-throughput-calibration-20261022-c8834c21-w2",
+      "source_revision": "search-throughput-20261022-c8834c21-w2-optimized",
+      "package_dir": "package-w2-optimized",
+      "package_tree_sha256": "e14a344edbf89c654d13e3f00197300c997f2ab47829f2eccecfcaa61c502245",
+      "source_manifest_sha256": "ea5343c0197d1276426b5e630d8eb7afc4fdbd8a3d53ba6d13f2f724bafe8bea",
+      "config_sha256": "9382863aa76cafde7fff22422e986a5262312dfaf32f43375cc840706082dd9b",
+      "state": "downloaded-validated",
+      "submitted_utc": "2026-10-22T02:48:55Z",
+      "runtime": {
+        "cpu_count": 4,
+        "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+        "cpu_process_seconds": 124.236,
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+        "python": "3.13.15",
+        "wall_seconds": 69.481,
+        "workers": 2
+      },
+      "games_completed": 96
+    }
+  ],
+  "kaggle_version": 3,
+  "last_observed_kaggle_state": "KernelWorkerStatus.COMPLETE",
+  "last_status_check_utc": "2026-10-22T02:51:04Z",
+  "runtime": {
+    "1": {
+      "cpu_count": 4,
+      "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+      "cpu_process_seconds": 119.425,
+      "gpu_enabled": false,
+      "internet_enabled": false,
+      "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+      "python": "3.13.15",
+      "wall_seconds": 119.561,
+      "workers": 1
+    },
+    "4": {
+      "cpu_count": 4,
+      "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+      "cpu_process_seconds": 222.119,
+      "gpu_enabled": false,
+      "internet_enabled": false,
+      "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+      "python": "3.13.15",
+      "wall_seconds": 65.041,
+      "workers": 4
+    },
+    "2": {
+      "cpu_count": 4,
+      "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+      "cpu_process_seconds": 124.236,
+      "gpu_enabled": false,
+      "internet_enabled": false,
+      "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+      "python": "3.13.15",
+      "wall_seconds": 69.481,
+      "workers": 2
+    }
+  }
+}

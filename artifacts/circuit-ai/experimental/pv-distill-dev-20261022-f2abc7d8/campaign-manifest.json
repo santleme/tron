@@ -1,0 +1,44 @@
+{
+  "campaign_kind": "EXPERIMENTAL fixed-depth Policy-Value teacher data, CPU/offline",
+  "configuration": {
+    "edge_budget": 56,
+    "height": 12,
+    "heuristic_styles": [
+      "cruise",
+      "local-mobility",
+      "interceptor"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 3600,
+    "width": 12
+  },
+  "experiment_id": "pv-distill-dev-20261022-f2abc7d8",
+  "manifest_sha256": "f7914a2c50b259060c2ffccaae647f626bb299c789d5229ad159e1362111ae8e",
+  "planner": "fixed-depth paired-seat search; one tree per sampled state",
+  "protocol": "development-only seeds; reserved/final G008 evaluation never accessed",
+  "rejected_initial_config_reason": "128 seeds satisfy the explicit 50,000,000 decision-work cap at 12x12 and edge_budget 56",
+  "result": {
+    "created_utc": "2026-10-22T04:11:39.121869+00:00",
+    "dataset_file_sha256": "8f81c53c027716aeb31c8d3f60583c132be6eba6989ceabaf7fa1accce24787b",
+    "dataset_manifest_sha256": "8d8e95d39d2190f43a687f7f8346906babbf3b435a35b707ca8277794c3943f5",
+    "elapsed_kernel_seconds": "not reported by this runner; will be added to the next benchmark manifest",
+    "elapsed_scope": "dataset generation body, CPU/offline; from Kaggle log completion event",
+    "kernel_id": "pascalcoimbra/pv-distill-dev-20261022-f2abc7d8",
+    "kernel_version": 1,
+    "reported_elapsed_seconds": 148.035006023,
+    "runtime": {
+      "config_sha256": "a2a790c2c5434463ce2e7be1f2420a4632bb7fab2e5a27a914924dab3baf80ab",
+      "gpu_enabled": false,
+      "internet_enabled": false,
+      "python_version": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+      "source_manifest_sha256": "e9fe9276a6e063585978f3fc89f4b9895bd37c70ee6afe922a75c9bd57f44a8b"
+    },
+    "sample_count": 7016,
+    "status": "success"
+  },
+  "run_config": "run-config.json",
+  "seed_count": 128,
+  "seeds_overlap_with_existing_experimental_seeds": false,
+  "seeds_sha256": "eef7d9164b3b61fd821e4bb811df6c776ca7159390dd889e3fc23de17f8332d4",
+  "source_revision": "t3code/tron-simultaneous-neural-search"
+}

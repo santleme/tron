@@ -1,0 +1,17 @@
+{
+  "experiment_id": "simsearch-territory-native-20261022-3daa06f8",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "3cb3f3a3b8d0a82f6e4ec1389cdf2509518062a224c918388a948e38327b7858"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "bbd97f3cdce56c19ee326af0daebd43eced47d0bcbcfa16c089d31a3573a0941"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "b0dae73a746bf668b10791d19e19c0333b85a8e84b39de3e2a756767d58dbf14",
+  "run_id": "simsearch-territory-native-20261022-3daa06f8",
+  "source_manifest_sha256": "20ff90fe679355e9812c14f9e455efa94932be89f31635f5918787240121ebef"
+}

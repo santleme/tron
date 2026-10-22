@@ -1,0 +1,39 @@
+{
+  "run_id": "pv-search-triage-20261022-b7d21f4c",
+  "simultaneous_search": {
+    "agent_edge_budgets": {
+      "ducb1-tuned": 32,
+      "fixed-depth": 56,
+      "regret-matching": 32
+    },
+    "edge_budget": 32,
+    "experiment_id": "pv-search-triage-20261022-b7d21f4c",
+    "height": 12,
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "matchups": [
+      "fixed-depth-vs-pv-scale-20261022"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 3600,
+    "native_territory": true,
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "policy_value_checkpoint": "pv-scale-20261022",
+    "run_id": "pv-search-triage-20261022-b7d21f4c",
+    "seeds": [
+      6000000,
+      6000001,
+      6000002,
+      6000003
+    ],
+    "width": 12,
+    "workers": 4
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "checkpoint_id": "step-236",
+  "checkpoint_sha256": "a21a9e00d7e6eb9ad9366502d64b0eebe0cd2e46b191dcee45bf8394a5b5f450",
+  "format": "circuit-ai-frozen-opponent-dataset/1",
+  "opponent_id": "v15-step236",
+  "purpose": "authorized experimental Kaggle inference comparison; no official registry/evaluation mutation",
+  "source_metadata_sha256": "5015c7891de2c5675e477cd437f2ed1d2e0510e310a0cffa143a48f333cc5886"
+}

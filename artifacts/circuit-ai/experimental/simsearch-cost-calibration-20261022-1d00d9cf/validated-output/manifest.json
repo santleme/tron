@@ -1,0 +1,17 @@
+{
+  "experiment_id": "simsearch-cost-calibration-20261022-1d00d9cf",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "b07e65db6a62b5864fdf3c442a8257955183cfd1928b11b819484ed4208c0ff2"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "6af6d5a1509f0a8eb8ccc02fea87d5497543f782d5860693cce812e7ac46ceeb"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "42e36996834ef453c9187b2ec922b4ab98711d7d7c4f0f2fc56d05190757da20",
+  "run_id": "simsearch-cost-calibration-20261022-1d00d9cf",
+  "source_manifest_sha256": "e28945422e3adbe048ff0743c1b45ce7764127231a829b2106f74e3ea4955d1e"
+}

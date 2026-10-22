@@ -4,15 +4,30 @@ import importlib.util
 import sys
 import types
 from dataclasses import fields
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
 
 from tools.kaggle.cli import (KaggleError, _campaign_evaluation_output_root,
-                              _load_run_settings, _sdk_metadata, download, poll_status, prepare, submit)
+                              _load_run_settings, _run, _sdk_metadata, download, poll_status, prepare, submit)
 from training.arena.engine import ACTION_ORDER, initialize_episode, step
 from training.ppo.protocol import digest_json, file_sha256
 from training.ppo.train import TrainConfig
+
+
+def test_kaggle_command_failure_reports_safe_rate_limit_class(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "tools.kaggle.cli.subprocess.run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=1, stdout="", stderr="429 Too Many Requests https://private.example/token"
+        ),
+    )
+    with pytest.raises(KaggleError, match="rate limited") as error:
+        _run(["kaggle", "kernels", "push"])
+    assert "private.example" not in str(error.value)
 
 
 def g008_principal_train_config() -> dict:
@@ -134,15 +149,16 @@ def make_g008_benchmark(root: Path, run_id="g008-run") -> None:
     import uuid
     from training.eval.provenance import (benchmark_run_keys, schedule_spec_digest,
                                           seed_plan_sha256)
-    from training.ppo.g008_benchmark import CONFIG_PATH, load_principal_config, prepare_benchmark_schedules
+    from training.ppo.g008_benchmark import CONFIG_PATH, load_principal_config
 
     root.mkdir(parents=True, exist_ok=True)
     run_keys = benchmark_run_keys()
     run_ids = {key: str(uuid.uuid5(uuid.NAMESPACE_URL, f"{run_id}:{key}")) for key in run_keys}
-    schedules = prepare_benchmark_schedules(run_ids)
+    schedule_digests = dict(_cached_benchmark_schedule_digests(
+        seed_plan_sha256(), schedule_spec_digest(), tuple(run_ids.items())))
     principal_config, config_document = load_principal_config()
     roster = [{"run_key": key, "run_id": run_ids[key],
-               "expanded_schedule_digest": schedules[key]["expanded_schedule_digest"]}
+               "expanded_schedule_digest": schedule_digests[key]}
               for key in run_keys]
     optimizer_updates_per_training_update = 4
 
@@ -190,7 +206,7 @@ def make_g008_benchmark(root: Path, run_id="g008-run") -> None:
                         "update_only_seconds": update_only,
                         "checkpoint_inclusive_update_elapsed_seconds": 3 * (3.0 + index),
                         "checkpoint_seconds": checkpoint, "wall_seconds": wall,
-                        "expanded_schedule_digest": schedules[run_key]["expanded_schedule_digest"],
+                        "expanded_schedule_digest": schedule_digests[run_key],
                         "optimizer_updates": 3 * optimizer_updates_per_training_update,
                         "cuda_optimizer_updates": 3 * optimizer_updates_per_training_update,
                         "training_metrics_sha256": file_sha256(path)})
@@ -203,7 +219,7 @@ def make_g008_benchmark(root: Path, run_id="g008-run") -> None:
         warmup_hashes.append(file_sha256(path))
     warmups = [{"run_key": f"warmup-python-oracle-incumbent-{index:02d}",
                 "run_id": run_ids[f"warmup-python-oracle-incumbent-{index:02d}"],
-                "expanded_schedule_digest": schedules[f"warmup-python-oracle-incumbent-{index:02d}"]["expanded_schedule_digest"],
+                "expanded_schedule_digest": schedule_digests[f"warmup-python-oracle-incumbent-{index:02d}"],
                 "training_metrics_sha256": warmup_hashes[index]}
                for index in range(2)]
     summary_fields = ("update_only_joint_transitions_per_second", "wall_inclusive_joint_transitions_per_second",
@@ -238,6 +254,16 @@ def make_g008_benchmark(root: Path, run_id="g008-run") -> None:
                 "training_device_index": 0, "training_cuda_device_count": 1,
                 "benchmark_report_sha256": file_sha256(report_path), "benchmark_report": report}
     (root / "kaggle-execution-evidence.json").write_text(json.dumps(evidence))
+
+
+@lru_cache(maxsize=8)
+def _cached_benchmark_schedule_digests(seed_plan_hash, spec_digest, run_id_pairs):
+    """Reuse only immutable test digests for the same frozen 191k-slot roster."""
+    from training.ppo.g008_benchmark import prepare_benchmark_schedules
+
+    schedules = prepare_benchmark_schedules(dict(run_id_pairs))
+    return tuple((key, schedules[key]["expanded_schedule_digest"])
+                 for key, _ in run_id_pairs)
 
 
 def _embedded_package_files(package: Path) -> dict[str, bytes]:

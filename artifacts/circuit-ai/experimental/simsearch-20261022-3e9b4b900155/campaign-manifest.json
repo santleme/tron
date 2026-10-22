@@ -1,0 +1,63 @@
+{
+  "analysis_file": "triage-analysis-v2.json",
+  "analysis_sha256": "3ed9b05401010787fba72862dc7fc61830ff721f9d67f1e2790a86af2c1efa5a",
+  "campaign_kind": "EXPERIMENTAL independent simultaneous-search triage",
+  "completed_utc": "2026-10-22T01:27:44Z",
+  "config": {
+    "edge_budget": 32,
+    "experiment_id": "simsearch-20261022-3e9b4b900155",
+    "height": 12,
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 3600,
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "run_id": "simsearch-20261022-3e9b4b900155",
+    "seeds": [
+      7055102989980581,
+      7073394253232575,
+      7032608075356648,
+      7024511006072243,
+      7029035422422987,
+      7058360069951547
+    ],
+    "width": 12
+  },
+  "created_utc": "2026-10-22T01:25:00Z",
+  "evaluation_policy": {
+    "official_registry_modified": false,
+    "open_space_used": false,
+    "reserved_final_sets_used": false,
+    "spatial_checkpoint_used": false,
+    "split": "new development seeds only"
+  },
+  "experiment_id": "simsearch-20261022-3e9b4b900155",
+  "games_completed": 144,
+  "kaggle_version": 1,
+  "kernel_id": "pascalcoimbra/simsearch-20261022-3e9b4b900155",
+  "output_manifest_sha256": "48f157bc1e69fe31f0b95f3f0820c10f6cfd52b26a9198c5bd0af9cf63bd378c",
+  "package_tree_sha256": "bd933d709627b04f9cc75e1a1ed3683e4ade0b136dcd0d04b6ff924d5e799d9d",
+  "resource_policy": {
+    "edge_budget_per_decision": 32,
+    "gpu": false,
+    "internet": false,
+    "max_depth": 3,
+    "max_wall_seconds": 3600,
+    "paid_services": false
+  },
+  "result_file": "triage-result.json",
+  "run_id": "simsearch-20261022-3e9b4b900155",
+  "seed_list_sha256": "b5be3c47bc26bd6682e5f67fe687d44e8c4bffdb5c23d02b5e188ee4e06eebb7",
+  "source_manifest_file": "package/source-manifest.json",
+  "source_manifest_sha256": "d4f739dbdb8f77e365acda5b68faa388abdec4f52239014ddf5344104c677e32",
+  "source_revision": "exp-search-v1-3e9b4b900155",
+  "state": "triage-complete",
+  "submitted_utc": "2026-10-22T01:25:13Z"
+}

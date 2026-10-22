@@ -1,0 +1,168 @@
+{
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 0,
+    "unit": "seed with both seat assignments"
+  },
+  "experiment_id": "rust-robustness-8x8-20261022",
+  "format": "circuit-ai-simultaneous-search-analysis/1",
+  "matchups": [
+    {
+      "collision_metrics_recorded": true,
+      "draws": 7,
+      "games": 128,
+      "games_with_territorial_separation": 121,
+      "left_agent": "native-fixed-depth",
+      "left_avoidable_deaths": 7,
+      "left_death_causes": {
+        "invalid_action": 3,
+        "same_destination": 7
+      },
+      "left_decision_ns_mean": 703059,
+      "left_decision_ns_p95": 1518014,
+      "losses": 3,
+      "matchup_id": "native-fixed-depth-vs-heuristic:cruise",
+      "mean_ticks_after_territorial_separation": 4.9609375,
+      "observed_win_rate": 0.921875,
+      "process_cpu_seconds": 1.901,
+      "right_agent": "heuristic:cruise",
+      "right_avoidable_deaths": 6,
+      "right_death_causes": {
+        "invalid_action": 118,
+        "same_destination": 7
+      },
+      "right_decision_ns_mean": 14606,
+      "right_decision_ns_p95": 17504,
+      "score_rate_draw_half": 0.94921875,
+      "seat_results": {
+        "0": {
+          "draws": 4,
+          "games": 64,
+          "losses": 3,
+          "wins": 57
+        },
+        "1": {
+          "draws": 3,
+          "games": 64,
+          "losses": 0,
+          "wins": 61
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.9140625,
+        0.98046875
+      ],
+      "seed_cluster_score_ci95_hoeffding": [
+        0.7794560605324226,
+        1.0
+      ],
+      "seed_clusters": 64,
+      "wins": 118
+    },
+    {
+      "collision_metrics_recorded": true,
+      "draws": 11,
+      "games": 128,
+      "games_with_territorial_separation": 120,
+      "left_agent": "native-fixed-depth",
+      "left_avoidable_deaths": 6,
+      "left_death_causes": {
+        "invalid_action": 13,
+        "same_destination": 8
+      },
+      "left_decision_ns_mean": 732975,
+      "left_decision_ns_p95": 1551676,
+      "losses": 10,
+      "matchup_id": "native-fixed-depth-vs-heuristic:local-mobility",
+      "mean_ticks_after_territorial_separation": 4.7890625,
+      "observed_win_rate": 0.8359375,
+      "process_cpu_seconds": 2.016,
+      "right_agent": "heuristic:local-mobility",
+      "right_avoidable_deaths": 6,
+      "right_death_causes": {
+        "invalid_action": 110,
+        "same_destination": 8
+      },
+      "right_decision_ns_mean": 22991,
+      "right_decision_ns_p95": 31416,
+      "score_rate_draw_half": 0.87890625,
+      "seat_results": {
+        "0": {
+          "draws": 6,
+          "games": 64,
+          "losses": 4,
+          "wins": 54
+        },
+        "1": {
+          "draws": 5,
+          "games": 64,
+          "losses": 6,
+          "wins": 53
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.83203125,
+        0.921875
+      ],
+      "seed_cluster_score_ci95_hoeffding": [
+        0.7091435605324226,
+        1.0
+      ],
+      "seed_clusters": 64,
+      "wins": 107
+    },
+    {
+      "collision_metrics_recorded": true,
+      "draws": 23,
+      "games": 128,
+      "games_with_territorial_separation": 106,
+      "left_agent": "native-fixed-depth",
+      "left_avoidable_deaths": 22,
+      "left_death_causes": {
+        "invalid_action": 8,
+        "same_destination": 22
+      },
+      "left_decision_ns_mean": 710916,
+      "left_decision_ns_p95": 1546820,
+      "losses": 7,
+      "matchup_id": "native-fixed-depth-vs-heuristic:interceptor",
+      "mean_ticks_after_territorial_separation": 5.3125,
+      "observed_win_rate": 0.765625,
+      "process_cpu_seconds": 1.652,
+      "right_agent": "heuristic:interceptor",
+      "right_avoidable_deaths": 21,
+      "right_death_causes": {
+        "invalid_action": 99,
+        "same_destination": 22
+      },
+      "right_decision_ns_mean": 14478,
+      "right_decision_ns_p95": 19227,
+      "score_rate_draw_half": 0.85546875,
+      "seat_results": {
+        "0": {
+          "draws": 8,
+          "games": 64,
+          "losses": 2,
+          "wins": 54
+        },
+        "1": {
+          "draws": 15,
+          "games": 64,
+          "losses": 5,
+          "wins": 44
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.8125,
+        0.8984375
+      ],
+      "seed_cluster_score_ci95_hoeffding": [
+        0.6857060605324226,
+        1.0
+      ],
+      "seed_clusters": 64,
+      "wins": 98
+    }
+  ],
+  "run_id": "rust-robustness-8x8-20261022"
+}

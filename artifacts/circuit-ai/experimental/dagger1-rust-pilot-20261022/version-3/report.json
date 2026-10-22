@@ -1,0 +1,153 @@
+{
+  "config": {
+    "edge_budget": 56,
+    "experiment_id": "dagger1-rust-pilot-20261022",
+    "height": 12,
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "matchups": [
+      "fixed-depth-vs-dagger1-selected-20261021",
+      "native-fixed-depth-vs-dagger1-selected-20261021"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 120,
+    "native_fixed_depth": true,
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "run_id": "dagger1-rust-pilot-20261022",
+    "seeds": [
+      8100000000000001,
+      8100000000000002,
+      8100000000000003,
+      8100000000000004,
+      8100000000000005,
+      8100000000000006,
+      8100000000000007,
+      8100000000000008
+    ],
+    "spatial_policy_checkpoint": "dagger1-selected-20261021",
+    "width": 12,
+    "workers": 4
+  },
+  "experiment_id": "dagger1-rust-pilot-20261022",
+  "format": "circuit-ai-simultaneous-search-experiment/1",
+  "frozen_opponents": [],
+  "matchups": [
+    {
+      "left_agent": "fixed-depth",
+      "matchup_id": "fixed-depth-vs-dagger1-selected-20261021",
+      "right_agent": "dagger1-selected-20261021",
+      "summary": {
+        "draws": 1,
+        "games": 16,
+        "games_with_separation": 16,
+        "left_avoidable_deaths": 0,
+        "left_completed_depth_mean": 2.133377814601755,
+        "left_death_causes": {
+          "invalid_action": 1
+        },
+        "left_decision_ns_mean": 91529763,
+        "left_decision_ns_p95": 209928468,
+        "left_decisions": 465,
+        "left_leaf_evaluations": 14467,
+        "left_simulations": 0,
+        "left_total_decision_ns": 42561339844,
+        "left_transition_edges": 17239,
+        "losses": 0,
+        "mean_ticks_after_separation": 9.8125,
+        "observed_win_rate": 0.9375,
+        "process_cpu_ns": 56983269465,
+        "right_avoidable_deaths": 0,
+        "right_completed_depth_mean": 0.0,
+        "right_death_causes": {
+          "occupied_trail": 16
+        },
+        "right_decision_ns_mean": 3530882,
+        "right_decision_ns_p95": 2926828,
+        "right_decisions": 465,
+        "right_leaf_evaluations": 0,
+        "right_simulations": 0,
+        "right_total_decision_ns": 1641860479,
+        "right_transition_edges": 0,
+        "score_rate_draw_half": 0.96875,
+        "wins": 15
+      }
+    },
+    {
+      "left_agent": "native-fixed-depth",
+      "matchup_id": "native-fixed-depth-vs-dagger1-selected-20261021",
+      "right_agent": "dagger1-selected-20261021",
+      "summary": {
+        "draws": 1,
+        "games": 16,
+        "games_with_separation": 16,
+        "left_avoidable_deaths": 0,
+        "left_completed_depth_mean": 2.175070436417923,
+        "left_death_causes": {
+          "invalid_action": 1
+        },
+        "left_decision_ns_mean": 1328010,
+        "left_decision_ns_p95": 2662213,
+        "left_decisions": 484,
+        "left_leaf_evaluations": 14689,
+        "left_simulations": 0,
+        "left_total_decision_ns": 642757219,
+        "left_transition_edges": 17540,
+        "losses": 0,
+        "mean_ticks_after_separation": 10.625,
+        "observed_win_rate": 0.9375,
+        "process_cpu_ns": 2164891939,
+        "right_avoidable_deaths": 0,
+        "right_completed_depth_mean": 0.0,
+        "right_death_causes": {
+          "occupied_trail": 16
+        },
+        "right_decision_ns_mean": 2293953,
+        "right_decision_ns_p95": 2894833,
+        "right_decisions": 484,
+        "right_leaf_evaluations": 0,
+        "right_simulations": 0,
+        "right_total_decision_ns": 1110273708,
+        "right_transition_edges": 0,
+        "score_rate_draw_half": 0.96875,
+        "wins": 15
+      }
+    }
+  ],
+  "policy_value_checkpoints": [],
+  "report_sha256": "760823c61dbd63992910aa15b3ac94ffd8e344906b04cf5c567f604245ed0346",
+  "run_id": "dagger1-rust-pilot-20261022",
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 59.148,
+    "gpu_enabled": false,
+    "host_os": "Ubuntu 24.04.5 LTS",
+    "internet_enabled": false,
+    "kaggle_kernel_run_type": "Batch",
+    "native_fixed_depth": true,
+    "native_territory": false,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "spatial_policy_checkpoint": "dagger1-selected-20261021",
+    "torch_cuda_build": null,
+    "torch_version": "2.11.0+cpu",
+    "wall_seconds": 20.943,
+    "workers": 4
+  },
+  "source_manifest_sha256": "04ef6df63ff03d57584b5c065dc86ae737d14cdcffebb6cf1eb0086f27b8282b",
+  "spatial_policy_checkpoints": [
+    {
+      "id": "dagger1-selected-20261021",
+      "sha256": "f01978c5ba9edd4f7d544a91115f3739d22c543731d90d3cdc4ea0d96f9a96af"
+    }
+  ],
+  "started_at_utc": "2026-10-22T13:27:18Z",
+  "status": "complete"
+}

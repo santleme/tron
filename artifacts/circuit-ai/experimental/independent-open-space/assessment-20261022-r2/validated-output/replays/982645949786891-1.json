@@ -1,0 +1,105 @@
+{
+  "action_schema": "lc-action/1",
+  "agents": [
+    {
+      "agent_id": "open-space",
+      "checkpoint_id": "open-space"
+    },
+    {
+      "agent_id": "fixed-depth-rust",
+      "checkpoint_id": "fixed-depth-rust-wasm-20261022"
+    }
+  ],
+  "arena_index": 982645949786891,
+  "derived_streams": [
+    {
+      "initseq": "7222835526063460111",
+      "initstate": "3046964721154197149",
+      "label": "episode"
+    },
+    {
+      "initseq": "5404041917915947518",
+      "initstate": "2775970591409604643",
+      "label": "agent/0"
+    },
+    {
+      "initseq": "8924598560202464435",
+      "initstate": "14251105402431322120",
+      "label": "agent/1"
+    }
+  ],
+  "engine_version": "lc-engine/1",
+  "format": "lc-replay/1",
+  "initial_state": {
+    "headings": [
+      "RIGHT",
+      "RIGHT"
+    ],
+    "height": 12,
+    "positions": [
+      {
+        "x": 7,
+        "y": 7
+      },
+      {
+        "x": 8,
+        "y": 6
+      }
+    ],
+    "trails": [
+      [
+        {
+          "x": 7,
+          "y": 7
+        }
+      ],
+      [
+        {
+          "x": 8,
+          "y": 6
+        }
+      ]
+    ],
+    "width": 12
+  },
+  "master_seed": "982645949786891",
+  "match_id": "ind-open-space-d69feb58a3564faea462-982645949786891-1",
+  "observation_schema": "lc-observation/1",
+  "replay_sha256": "87e4b86dc63229e52c9a3f98baca3226707ce80347568ecd622d9d11548cb1f2",
+  "result": "draw",
+  "run_id": "ind-open-space-d69feb58a3564faea462",
+  "tick_count": 2,
+  "ticks": [
+    {
+      "collision_causes": [
+        [],
+        []
+      ],
+      "joint_actions": [
+        0,
+        0
+      ],
+      "terminal_causes": [],
+      "tick": 0
+    },
+    {
+      "collision_causes": [
+        [
+          "same_destination"
+        ],
+        [
+          "same_destination"
+        ]
+      ],
+      "joint_actions": [
+        0,
+        3
+      ],
+      "terminal_causes": [
+        "agent_0_dead",
+        "agent_1_dead"
+      ],
+      "tick": 1
+    }
+  ]
+}

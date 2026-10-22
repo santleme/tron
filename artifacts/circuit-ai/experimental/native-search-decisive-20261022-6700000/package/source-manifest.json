@@ -1,0 +1,122 @@
+{
+  "files": [
+    {
+      "path": ".arena-source-revision",
+      "sha256": "680a7a0807f8077835fbd65da0dc349bb52306535505c93b9c8d4d7b224e88e8"
+    },
+    {
+      "path": "kernel-metadata.json",
+      "sha256": "6bcb04bf8d74c79ad90b520e42c7cfe38621c697d28408fe491acee35cddaa1a"
+    },
+    {
+      "path": "run-config.json",
+      "sha256": "c186fd726980f0864463e70bc3d6df8425b652ef83fb6b8a8f386de48590d4f6"
+    },
+    {
+      "path": "training/arena/README.md",
+      "sha256": "367e5bdffcd24c3bb396fa3250d840e21116c4f39f22e747b778351114b09754"
+    },
+    {
+      "path": "training/arena/__init__.py",
+      "sha256": "6dfaa706c704fa574ee8dd9cfe10b18450588057e051af1c6d680d59063bf922"
+    },
+    {
+      "path": "training/arena/engine.py",
+      "sha256": "cfd6fe1817e06e5e892306f1fac2b5eef3cdeb4e68da2e83b26c8f4f23a6c7d0"
+    },
+    {
+      "path": "training/arena/heuristics.py",
+      "sha256": "0c6d1b7d9600f5f976b6f0ce4ecc88fe3f44d3c725c1bf534d21ebca0eb0c8f5"
+    },
+    {
+      "path": "training/arena/seeds.py",
+      "sha256": "3b0af5e78dc4d88aa1911f2764b6dff1f17b082611ad84ebb9c2c650ad048885"
+    },
+    {
+      "path": "training/arena/vector.py",
+      "sha256": "c9f9fd4799b24404ef30be517290fef6051d163ccc0cb87a796fa42ff97cdd40"
+    },
+    {
+      "path": "training/search/README.md",
+      "sha256": "59eb7f098137c5c842a65be785c25251a05f5d6865f3f765197926fa3776a3c6"
+    },
+    {
+      "path": "training/search/__init__.py",
+      "sha256": "93b4ee56d65b27654b3680b9c22fc351b789269ee12fa3cb4f20f6c828fc9b4e"
+    },
+    {
+      "path": "training/search/analysis.py",
+      "sha256": "38b3eb2988d398219fe36a8d6bbe6232079cac329f00dc76c6b833c65d8fe18a"
+    },
+    {
+      "path": "training/search/bitboard.py",
+      "sha256": "1bfb866eda1a50baa8563a44cf0c7ab1f76c24830f2a82dbe639dd3261bb6835"
+    },
+    {
+      "path": "training/search/distill.py",
+      "sha256": "21b92ad5aa54896a94da1cf1720b7b5153211c05637f3568e9684ab3c934942c"
+    },
+    {
+      "path": "training/search/frozen_opponent.py",
+      "sha256": "3e2f47fdd4f8cb2522cc85d79ffa445318a64dc87d8825d4a969960db9d52bf8"
+    },
+    {
+      "path": "training/search/matrix.py",
+      "sha256": "1c1ad195ab12b4918131738111bc51e16aae9851bdba3e425a7e0bd119402d40"
+    },
+    {
+      "path": "training/search/native/fixed_depth.rs",
+      "sha256": "3821c2a14b777de66933ef2f28903df048bc03b0b9b23b5e32e533a025e61f3e"
+    },
+    {
+      "path": "training/search/native/libcircuit_planner.so",
+      "sha256": "31c9930f400fa00318e958db57a5af8dc5d0c4f9c119357fe91193efdf610347"
+    },
+    {
+      "path": "training/search/native/libcircuit_territory.so",
+      "sha256": "e41730e68335d9e048c09978d40f131dfe5528594d5974425bad2bfc3dc38779"
+    },
+    {
+      "path": "training/search/native/territory.py",
+      "sha256": "3dfef2bbf3b4378c3289418acdcd7ad8cd5ec45af2672a415381a9115055c369"
+    },
+    {
+      "path": "training/search/native/territory.rs",
+      "sha256": "2e657dee67c0de939e737a6f9ee549dec74c4382c28cbe292c5b8aa61b193b76"
+    },
+    {
+      "path": "training/search/native_planner.py",
+      "sha256": "43d1905f2867fa03f1c41a37fe936d81f620b7f9a66da92abc77342738809f4a"
+    },
+    {
+      "path": "training/search/planners.py",
+      "sha256": "877afd2ce9cf1bd049d63cae3c24b02569a1e4ef95d7cbdf8c40aa22ecfabe41"
+    },
+    {
+      "path": "training/search/policy_value.py",
+      "sha256": "c160d8dacc6d2bcd0e69ffd401ecb8c8ead87a2c8a8f00f811f17a064d6d423f"
+    },
+    {
+      "path": "training/search/territory.py",
+      "sha256": "a4cb30a5940fde7914df9e35974ea8a6ccd246545e09b177da58ffe758298000"
+    },
+    {
+      "path": "training/search/tournament.py",
+      "sha256": "b5d83acd98867a2b5253aef4f62c08f24a7e3a8f9f4da9968ed88921ad562f87"
+    },
+    {
+      "path": "training/search/train_policy_value.py",
+      "sha256": "e71961fd8a570dad81734af87f35e1da2c449c86c8942fd3bdcf7477f0b2788e"
+    }
+  ],
+  "format": "circuit-ai-source-manifest/1",
+  "git_commit": "4b960c543dad5dab9bf35535987898456d9e7858",
+  "git_worktree_dirty": true,
+  "package_builder": {
+    "path": "tools/kaggle/cli.py",
+    "sha256": "52c8c3a1e535899f8c40ff3963dee99f600275aab6e3e0ce062146b9e16009cc"
+  },
+  "runner_template_sha256": "875cd25b86b4112ebc73ed85b9524c66ccfa9cda32048aee2f5e1c707dba0bb3",
+  "source_manifest_sha256": "be63beae67d93061ef235b006999367f351641944457c9d39e438f58ee6e0d88",
+  "source_revision": "t3code/tron-simultaneous-neural-search-native-search-decisive-20261022-6700000"
+}

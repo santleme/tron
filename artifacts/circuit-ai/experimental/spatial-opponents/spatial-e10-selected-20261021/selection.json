@@ -1,0 +1,24 @@
+{
+  "campaign_id": "f0882084-7b1e-46e1-ad0b-144a26b1ca89",
+  "checkpoint_id": "spatial-84e4000a-8ecd-4d46-bfd6-a26583647f13-3feddc277f4a5d3b",
+  "checkpoint_sha256": "e10d44869ed2a9959655ffb0cbacddcfa422a8e06baa31efde697e05c63a481c",
+  "checkpoint_source": "kaggle-results-depth2-512-20261021T212022Z/best-exploratory-checkpoint",
+  "common_seed_comparison": "artifacts/spatial-experimental/common-seed-results-scale512-20261021T214237Z/comparison-result.json",
+  "draws": 75,
+  "format": "spatial-exploratory-selection/1",
+  "games": 384,
+  "losses": 118,
+  "mode": "EXPERIMENTAL",
+  "non_loss_rate": 0.6927083333333334,
+  "onnx_sha256": "c6d055849d8c78f3bdabeb95dc09fe8654e2109cb548a06f5140221f692c4d76",
+  "opponents": [
+    "cruise",
+    "local-mobility",
+    "interceptor"
+  ],
+  "run_id": "9d7e6108-fab8-4e9a-95fe-3b6009caebb9",
+  "seed_count": 64,
+  "selection_rule": "highest W + D - L in paired common-seed development evaluation, immediate safety mask enabled",
+  "win_rate": 0.4973958333333333,
+  "wins": 191
+}

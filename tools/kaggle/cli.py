@@ -77,7 +77,18 @@ def _run(args: Sequence[str], *, timeout: int = 120) -> str:
     if result.returncode:
         # Kaggle's error text can contain account details. Keep the command boundary
         # useful without copying arbitrary stderr into logs or artifacts.
-        raise KaggleError(f"Kaggle CLI failed (exit {result.returncode}); check Kaggle CLI authentication and kernel access.")
+        error_text = f"{result.stdout}\n{result.stderr}".lower()
+        if "429" in error_text or "too many requests" in error_text:
+            reason = "Kaggle rate limited the request; wait briefly before retrying."
+        elif "401" in error_text:
+            reason = "Kaggle rejected authentication; check the configured CLI credentials."
+        elif "403" in error_text or "forbidden" in error_text:
+            reason = "Kaggle denied this operation; check account access or resource limits."
+        elif "400" in error_text or "bad request" in error_text:
+            reason = "Kaggle rejected the kernel request; check the kernel metadata and package requirements."
+        else:
+            reason = "check Kaggle CLI authentication and kernel access."
+        raise KaggleError(f"Kaggle CLI failed (exit {result.returncode}); {reason}")
     return result.stdout.strip()
 
 
@@ -85,6 +96,94 @@ def _kernel_id(value: str) -> str:
     if not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+", value or ""):
         raise KaggleError("Kernel ID must be an explicit owner/slug, for example owner/light-cycles.")
     return value
+
+
+def _policy_value_id(value: object, field: str) -> str:
+    if (not isinstance(value, str)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", value)):
+        raise ValueError(f"{field} must be a safe artifact ID")
+    return value
+
+
+def _policy_value_data_config(config: object, run_id: str) -> dict:
+    allowed = {"experiment_id", "seeds", "width", "height", "edge_budget", "max_depth",
+               "heuristic_styles", "max_wall_seconds", "workers"}
+    if not isinstance(config, dict) or set(config) - allowed:
+        raise ValueError("fields differ from the bounded dataset-generation contract")
+    if set(config) not in (allowed - {"workers"}, allowed):
+        raise ValueError("all dataset-generation fields are required")
+    experiment_id = _policy_value_id(config["experiment_id"], "experiment_id")
+    if experiment_id != run_id:
+        raise ValueError("experiment_id must equal run_id for exact output discovery")
+    seeds = config["seeds"]
+    if (not isinstance(seeds, list) or not seeds
+            or any(type(seed) is not int or not 0 <= seed < (1 << 53) for seed in seeds)
+            or len(seeds) != len(set(seeds))):
+        raise ValueError("seeds must contain unique integers in [0, 2^53)")
+    # Keep the wrapper aligned with the generator's frozen partition guard so
+    # a bad config is rejected before any Kaggle package is built or submitted.
+    protected = ((0, 31), (1_000_000, 1_000_255), (2_000_000, 2_999_999),
+                 (3_000_000, 3_999_999), (4_000_000, 4_000_255), (5_000_000, 5_000_271))
+    if any(lower <= seed <= upper for seed in seeds for lower, upper in protected):
+        raise ValueError("seeds intersect a protected development/final seed partition")
+    width, height = config["width"], config["height"]
+    edge_budget, max_depth, wall = (config["edge_budget"], config["max_depth"],
+                                    config["max_wall_seconds"])
+    if (type(width) is not int or type(height) is not int or width < 2 or height < 2):
+        raise ValueError("width and height must be integers of at least two")
+    projected_samples = len(seeds) * 2 * (width * height + 1)
+    projected_array_bytes = projected_samples * (width * height * 12 + 233)
+    if projected_array_bytes > 19_000_000_000:
+        raise ValueError("projected distillation arrays exceed Kaggle's 20 GB working-disk capacity")
+    if (type(max_depth) is not int or not 1 <= max_depth <= 255
+            or type(edge_budget) is not int or not max_depth + 1 <= edge_budget <= 0xFFFFFFFF):
+        raise ValueError("max_depth must fit the planner ABI and edge_budget must fit its u32 packet")
+    if type(wall) is not int or not 60 <= wall <= 43_200:
+        raise ValueError("max_wall_seconds must fit Kaggle's 12-hour notebook session")
+    workers = config.get("workers", 1)
+    if type(workers) is not int or workers < 1:
+        raise ValueError("workers must be positive; Kaggle runtime clamps to available CPUs")
+    styles = config["heuristic_styles"]
+    from training.arena.heuristics import HEURISTIC_STYLES
+    if (not isinstance(styles, list) or not styles or len(styles) > len(HEURISTIC_STYLES)
+            or len(styles) != len(set(styles))
+            or any(style not in HEURISTIC_STYLES for style in styles)):
+        raise ValueError("heuristic_styles must be a unique non-empty subset of permitted development heuristics")
+    return {**config, "seeds": list(seeds), "heuristic_styles": list(styles),
+            "workers": workers}
+
+
+def _policy_value_train_config(config: object) -> dict:
+    dataset_fields = {"dataset_source", "dataset_experiment_id", "dataset_file", "dataset_manifest_file",
+                      "dataset_sha256", "dataset_manifest_sha256"}
+    train_fields = {"epochs", "batch_size", "hidden_size", "learning_rate",
+                    "value_weight", "validation_fraction", "seed"}
+    if not isinstance(config, dict) or set(config) != dataset_fields | train_fields:
+        raise ValueError("fields differ from the hash-pinned dataset and bounded trainer contract")
+    source = config["dataset_source"]
+    if not isinstance(source, str) or not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+", source):
+        raise ValueError("dataset_source must be a safe Kaggle owner/slug")
+    _policy_value_id(config["dataset_experiment_id"], "dataset_experiment_id")
+    for name in ("dataset_file", "dataset_manifest_file"):
+        item = config[name]
+        if (not isinstance(item, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", item)
+                or item in {".", ".."}):
+            raise ValueError(f"{name} must be a safe file name at the mounted dataset root")
+    if config["dataset_file"] != "examples.npz" or config["dataset_manifest_file"] != "manifest.json":
+        raise ValueError("training accepts only the generated examples.npz + manifest.json dataset pair")
+    for name in ("dataset_sha256", "dataset_manifest_sha256"):
+        if not isinstance(config[name], str) or not re.fullmatch(r"[0-9a-f]{64}", config[name]):
+            raise ValueError(f"{name} must be a lowercase SHA-256 digest")
+    if config["dataset_file"] == config["dataset_manifest_file"]:
+        raise ValueError("dataset and dataset manifest must be different files")
+    from training.search.train_policy_value import TrainConfig
+    train_values = {name: config[name] for name in train_fields}
+    train_values["device"] = "cuda"
+    trainer = TrainConfig(**train_values)
+    trainer.validate()
+    if trainer.seed >= (1 << 53):
+        raise ValueError("trainer seed must fit the cross-runtime integer range")
+    return dict(config)
 
 
 def _version(value: str) -> int:
@@ -161,12 +260,18 @@ def package_tree_sha256(source: Path) -> str:
 def _write_source_manifest(stage: Path, repo: Path, source_revision: str,
                            entrypoint_template: str) -> str:
     """Record staged source, package-builder, and runner-template identities."""
-    roots = (stage / "training", stage / "schemas")
-    if any(not root.is_dir() for root in roots):
-        raise KaggleError("Prepared package is missing training or schemas source.")
+    roots = tuple(root for root in (stage / "training", stage / "schemas") if root.is_dir())
+    has_supported_runner = any((stage / relative).is_file() for relative in (
+        "training/ppo/train.py", "training/ppo/g008_benchmark.py",
+        "training/search/tournament.py", "training/search/distill.py",
+        "training/search/train_policy_value.py"))
+    if not roots or not has_supported_runner:
+        raise KaggleError("Prepared package is missing source or the simultaneous-search runner.")
     source_paths = [path for root in roots for path in root.rglob("*") if path.is_file()]
-    source_paths.extend((stage / "run-config.json", stage / "training/requirements-kaggle.txt",
-                         stage / "kernel-metadata.json", stage / ".arena-source-revision"))
+    source_paths.extend(path for path in (
+        stage / "run-config.json", stage / "training/requirements-kaggle.txt",
+        stage / "kernel-metadata.json", stage / ".arena-source-revision",
+    ) if path.is_file())
     files = [{"path": path.relative_to(stage).as_posix(), "sha256": file_sha256(path)}
              for path in sorted(source_paths, key=lambda item: item.relative_to(stage).as_posix())]
     try:
@@ -221,12 +326,81 @@ def _load_run_settings(path: Path | None) -> dict:
         raise KaggleError("Run config must be readable JSON.") from exc
     if not isinstance(settings, dict) or set(settings) - {
             "run_id", "train_config", "throughput_benchmark", "g008_principal_benchmark",
-            "g008_train_schedule", "g008_campaign_train", "g008_evaluation"}:
+            "g008_train_schedule", "g008_campaign_train", "g008_evaluation",
+            "simultaneous_search", "policy_value_data", "policy_value_train",
+            "independent_open_space_evaluation"}:
         raise KaggleError("Run config contains unsupported fields.")
     run_id = settings.get("run_id", "kaggle-run")
-    config = settings.get("train_config", {})
     if not isinstance(run_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", run_id):
         raise KaggleError("Run config run_id must match the artifact ID contract.")
+    if "simultaneous_search" in settings:
+        if set(settings) != {"run_id", "simultaneous_search"}:
+            raise KaggleError("Experimental search packages cannot include training, G008, or benchmark settings.")
+        experiment = settings["simultaneous_search"]
+        if not isinstance(experiment, dict) or experiment.get("run_id") != run_id:
+            raise KaggleError("Experimental search config must bind its exact run_id.")
+        try:
+            from training.search.tournament import validate_config
+            validate_config(experiment)
+        except (ImportError, TypeError, ValueError) as exc:
+            raise KaggleError(f"Invalid bounded simultaneous-search experiment: {exc}") from exc
+        return {"run_id": run_id, "simultaneous_search": experiment}
+    if "independent_open_space_evaluation" in settings:
+        if set(settings) != {"run_id", "independent_open_space_evaluation"}:
+            raise KaggleError("Independent open-space assessment is isolated from training and official evaluation modes.")
+        config = settings["independent_open_space_evaluation"]
+        expected = {"seeds", "seed_plan_sha256", "width", "height", "max_depth", "edge_budget",
+                    "workers", "candidate_id", "candidate_wasm_sha256", "candidate_source_sha256",
+                    "opponent_source_sha256"}
+        if not isinstance(config, dict) or set(config) != expected:
+            raise KaggleError("Independent assessment config fields differ from its frozen-candidate contract.")
+        seeds = config["seeds"]
+        if (not isinstance(seeds, list) or len(seeds) != 256
+                or any(type(seed) is not int or not 0 <= seed < (1 << 53) for seed in seeds)
+                or len(set(seeds)) != len(seeds)):
+            raise KaggleError("Independent assessment requires 256 unique development seeds (<2^53).")
+        protected = ((0, 31), (1_000_000, 1_000_255), (2_000_000, 2_999_999),
+                     (3_000_000, 3_999_999), (4_000_000, 4_000_255),
+                     (5_000_000, 5_000_271))
+        if any(low <= seed <= high for seed in seeds for low, high in protected):
+            raise KaggleError("Independent assessment seeds overlap a protected experiment/evaluation partition.")
+        if (type(config["width"]) is not int or type(config["height"]) is not int
+                or config["width"] != 12 or config["height"] != 12
+                or type(config["max_depth"]) is not int or config["max_depth"] != 3
+                or type(config["edge_budget"]) is not int or config["edge_budget"] != 56):
+            raise KaggleError("Independent assessment must use the frozen candidate's 12x12 depth-3/56-edge config.")
+        if (type(config["workers"]) is not int or config["workers"] < 1
+                or not isinstance(config["candidate_id"], str)
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", config["candidate_id"])):
+            raise KaggleError("Independent assessment worker count or candidate ID is invalid.")
+        for field in ("seed_plan_sha256", "candidate_wasm_sha256", "candidate_source_sha256",
+                      "opponent_source_sha256"):
+            if not isinstance(config[field], str) or not re.fullmatch(r"[0-9a-f]{64}", config[field]):
+                raise KaggleError(f"Independent assessment {field} must be a lowercase SHA-256 digest.")
+        seed_plan = {"format": "circuit-ai-independent-open-space-seed-plan/1",
+                     "run_id": run_id, "seeds": seeds, "committed_before_execution": True}
+        if hashlib.sha256(json.dumps(seed_plan, sort_keys=True, separators=(",", ":"),
+                                    ensure_ascii=False, allow_nan=False).encode()).hexdigest() != config["seed_plan_sha256"]:
+            raise KaggleError("Independent assessment seed-plan digest does not bind its exact roster.")
+        return {"run_id": run_id,
+                "independent_open_space_evaluation": {**config, "run_id": run_id}}
+    pv_modes = [key for key in ("policy_value_data", "policy_value_train") if key in settings]
+    if pv_modes:
+        if len(pv_modes) != 1 or set(settings) != {"run_id", pv_modes[0]}:
+            raise KaggleError("Policy-Value data and training modes are isolated and mutually exclusive.")
+        mode, config = pv_modes[0], settings[pv_modes[0]]
+        try:
+            _policy_value_id(run_id, "run_id")
+            if mode == "policy_value_data":
+                config = _policy_value_data_config(config, run_id)
+            else:
+                if len(run_id) > 115:
+                    raise ValueError("run_id is too long for a viewer-safe checkpoint ID")
+                config = _policy_value_train_config(config)
+        except (TypeError, ValueError, KeyError) as exc:
+            raise KaggleError(f"Invalid bounded {mode} config: {exc}") from exc
+        return {"run_id": run_id, mode: config}
+    config = settings.get("train_config", {})
     allowed_config = {field.name for field in fields(__import__("training.ppo.train", fromlist=["TrainConfig"]).TrainConfig)}
     if not isinstance(config, dict) or set(config) - allowed_config:
         raise KaggleError("Run config train_config contains unknown fields or is not an object.")
@@ -468,6 +642,12 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
                    or settings.get("g008_evaluation", {}).get("campaign_id"))
     evaluation_mode = settings.get("g008_evaluation", {}).get("mode")
     v2_nonfinal_package = campaign_id == "g008-competitive-20261021-v2" and evaluation_mode != "final"
+    simultaneous_search_package = "simultaneous_search" in settings
+    policy_value_data_package = "policy_value_data" in settings
+    policy_value_train_package = "policy_value_train" in settings
+    independent_evaluation_package = "independent_open_space_evaluation" in settings
+    isolated_experimental_package = (simultaneous_search_package or policy_value_data_package
+                                     or policy_value_train_package or independent_evaluation_package)
     destination.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=f".{destination.name}.prepare-", dir=destination.parent))
     try:
@@ -485,6 +665,7 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
         def ignore_training(directory: str, names: list[str]) -> set[str]:
             ignored = {name for name in names
                        if name in {"kaggle", "__pycache__", ".pytest_cache"}
+                       or (name == "search" and campaign_id is not None)
                        or name.startswith(".kaggle.prepare-")}
             if not v2_nonfinal_package:
                 return ignored
@@ -502,7 +683,137 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
                     ignored.add(name)
             return ignored
 
-        shutil.copytree(repo / "training", stage / "training", ignore=ignore_training)
+        if simultaneous_search_package or policy_value_data_package or independent_evaluation_package:
+            (stage / "training").mkdir()
+            shutil.copytree(repo / "training" / "arena", stage / "training" / "arena",
+                            ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+            shutil.copytree(repo / "training" / "search", stage / "training" / "search",
+                            ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+            if independent_evaluation_package:
+                for relative in ("training/eval/lc_eval.py", "training/eval/g008_final_opponent.py",
+                                 "training/ppo/protocol.py"):
+                    target = stage / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(repo / relative, target)
+                candidate = json.loads((repo / "artifacts/circuit-ai/experimental/fixed-depth-candidate-20261022/candidate.json")
+                                       .read_text(encoding="utf-8"))
+                config = settings["independent_open_space_evaluation"]
+                candidate_source = repo / candidate["artifacts"]["rust_source"]["path"]
+                candidate_wasm = repo / candidate["artifacts"]["wasm"]["path"]
+                if (candidate.get("candidate_id") != config["candidate_id"]
+                        or candidate_source.is_symlink() or candidate_wasm.is_symlink()
+                        or not candidate_source.is_file() or not candidate_wasm.is_file()
+                        or file_sha256(candidate_source) != config["candidate_source_sha256"]
+                        or file_sha256(candidate_wasm) != config["candidate_wasm_sha256"]
+                        or candidate["artifacts"]["rust_source"]["sha256"] != config["candidate_source_sha256"]
+                        or candidate["artifacts"]["wasm"]["sha256"] != config["candidate_wasm_sha256"]):
+                    raise KaggleError("Independent assessment candidate hashes do not match the frozen manifest/source/WASM.")
+                candidate_dir = stage / "training/search/candidate"
+                candidate_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(candidate_wasm, candidate_dir / "fixed_depth.wasm")
+                shutil.copy2(repo / "artifacts/circuit-ai/experimental/fixed-depth-candidate-20261022/candidate.json",
+                             candidate_dir / "candidate.json")
+                (stage / "training/search/independent-seed-plan.json").write_text(
+                    json.dumps({"format": "circuit-ai-independent-open-space-seed-plan/1",
+                                "run_id": settings["run_id"],
+                                "seeds": config["seeds"],
+                                "seed_plan_sha256": config["seed_plan_sha256"],
+                                "committed_before_execution": True},
+                               sort_keys=True, indent=2) + "\n", encoding="utf-8")
+                native_dir = stage / "training/search/native"
+                native_dir.mkdir(parents=True, exist_ok=True)
+                native_source = native_dir / "fixed_depth.rs"
+                shutil.copy2(candidate_source, native_source)
+                rustc = shutil.which("rustc")
+                if not rustc:
+                    raise KaggleError("Independent assessment requires local rustc to build the native equivalent of frozen WASM source.")
+                try:
+                    subprocess.run([rustc, "--crate-type=cdylib", "--edition=2021", "-C", "opt-level=3",
+                                    "-C", "debuginfo=0", "-C", "strip=symbols", str(native_source),
+                                    "-o", str(native_dir / "libcircuit_planner.so")],
+                                   check=True, capture_output=True, text=True)
+                except subprocess.CalledProcessError as exc:
+                    raise KaggleError(f"failed to compile frozen fixed-depth planner: {exc.stderr.strip()}") from exc
+                opponent_hash = hashlib.sha256(json.dumps({
+                    "lc_eval.py": file_sha256(repo / "training/eval/lc_eval.py"),
+                    "g008_final_opponent.py": file_sha256(repo / "training/eval/g008_final_opponent.py")},
+                    sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+                if opponent_hash != config["opponent_source_sha256"]:
+                    raise KaggleError("Independent assessment open-space policy source hash changed after seed-plan creation.")
+            if policy_value_data_package:
+                for forbidden in ("train_policy_value.py",):
+                    (stage / "training/search" / forbidden).unlink(missing_ok=True)
+            frozen_opponent = settings["simultaneous_search"].get("frozen_opponent") if simultaneous_search_package else None
+            if frozen_opponent is not None:
+                from training.search.tournament import FROZEN_OPPONENTS
+                if frozen_opponent not in FROZEN_OPPONENTS:
+                    raise KaggleError("Experimental search requested a non-permitted frozen opponent.")
+                expected_sha = FROZEN_OPPONENTS[frozen_opponent]
+                opponent_source = repo / "artifacts/circuit-ai/evaluations/g008-v15-continuation-236/checkpoints/step-236.pt"
+                if (opponent_source.is_symlink() or not opponent_source.is_file()
+                        or file_sha256(opponent_source) != expected_sha):
+                    raise KaggleError("Permitted v15 step-236 checkpoint is missing or its SHA-256 differs.")
+            spatial_policy = (settings["simultaneous_search"].get("spatial_policy_checkpoint")
+                              if simultaneous_search_package else None)
+            if spatial_policy is not None:
+                from training.search.tournament import SPATIAL_POLICY_CHECKPOINTS
+                spec = SPATIAL_POLICY_CHECKPOINTS[spatial_policy]
+                opponent_source = repo / spec["source"]
+                if (opponent_source.is_symlink() or not opponent_source.is_file()
+                        or file_sha256(opponent_source) != spec["sha256"]):
+                    raise KaggleError("Permitted experimental spatial checkpoint is missing or its SHA-256 differs.")
+                asset_dir = stage / "training/search/assets" / spatial_policy
+                asset_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(opponent_source, asset_dir / spec["filename"])
+            if simultaneous_search_package and settings["simultaneous_search"].get("native_territory", False):
+                rustc = shutil.which("rustc")
+                if not rustc:
+                    raise KaggleError("native_territory requires local rustc to build the offline Kaggle artifact.")
+                native_dir = stage / "training/search/native"
+                native_dir.mkdir(parents=True, exist_ok=True)
+                try:
+                    subprocess.run(
+                        [rustc, "--crate-type=cdylib", "--edition=2021", "-C", "opt-level=3",
+                         "-C", "debuginfo=0", "-C", "strip=symbols",
+                         str(native_dir / "territory.rs"), "-o", str(native_dir / "libcircuit_territory.so")],
+                        check=True, capture_output=True, text=True,
+                    )
+                except subprocess.CalledProcessError as exc:
+                    raise KaggleError(f"failed to compile native territory kernel: {exc.stderr.strip()}") from exc
+            if simultaneous_search_package and settings["simultaneous_search"].get("native_fixed_depth", False):
+                rustc = shutil.which("rustc")
+                if not rustc:
+                    raise KaggleError("native_fixed_depth requires local rustc to build the offline Kaggle artifact.")
+                native_dir = stage / "training/search/native"
+                native_dir.mkdir(parents=True, exist_ok=True)
+                planner_source = repo / "apps/viewer/search/territory.rs"
+                if planner_source.is_symlink() or not planner_source.is_file():
+                    raise KaggleError("native_fixed_depth planner source is missing or unsafe.")
+                staged_source = native_dir / "fixed_depth.rs"
+                shutil.copy2(planner_source, staged_source)
+                try:
+                    subprocess.run(
+                        [rustc, "--crate-type=cdylib", "--edition=2021", "-C", "opt-level=3",
+                         "-C", "debuginfo=0", "-C", "strip=symbols", str(staged_source),
+                         "-o", str(native_dir / "libcircuit_planner.so")],
+                        check=True, capture_output=True, text=True,
+                    )
+                except subprocess.CalledProcessError as exc:
+                    raise KaggleError(f"failed to compile native fixed-depth planner: {exc.stderr.strip()}") from exc
+            # Exclude all model, split, and official evaluation artifacts.
+            (stage / "schemas").mkdir()
+        elif policy_value_train_package:
+            (stage / "training/search").mkdir(parents=True)
+            for module in ("train_policy_value.py", "policy_value.py"):
+                shutil.copy2(repo / "training/search" / module,
+                             stage / "training/search" / module)
+            (stage / "training/ppo").mkdir(parents=True)
+            shutil.copy2(repo / "training/ppo/protocol.py", stage / "training/ppo/protocol.py")
+            shutil.copy2(repo / "training/requirements-kaggle.txt",
+                         stage / "training/requirements-kaggle.txt")
+            (stage / "schemas").mkdir()
+        else:
+            shutil.copytree(repo / "training", stage / "training", ignore=ignore_training)
         if "g008_evaluation" in settings and settings["g008_evaluation"]["mode"] == "validation":
             opponent_source = repo / "artifacts/circuit-ai/runs/lc-circuit-ai-selfplay-300-viewer-ready/checkpoints/step-300.pt"
             if not opponent_source.is_file():
@@ -510,7 +821,9 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
             opponent_asset = stage / "training/eval/assets/g007-step-300.pt"
             opponent_asset.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(opponent_source, opponent_asset)
-        if v2_nonfinal_package:
+        if isolated_experimental_package:
+            pass
+        elif v2_nonfinal_package:
             def ignore_schemas(directory: str, names: list[str]) -> set[str]:
                 ignored = {name for name in names if name in {"__pycache__", ".pytest_cache"}}
                 if Path(directory).resolve() == (repo / "schemas").resolve():
@@ -520,10 +833,11 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
         else:
             shutil.copytree(repo / "schemas", stage / "schemas",
                             ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
-        if not v2_nonfinal_package:
+        if not v2_nonfinal_package and not isolated_experimental_package:
             shutil.copy2(repo / "training/README.md", stage / "training/README.md")
-        for relative in ("training/requirements-kaggle.txt",):
-            shutil.copy2(repo / relative, stage / relative)
+        if not isolated_experimental_package:
+            for relative in ("training/requirements-kaggle.txt",):
+                shutil.copy2(repo / relative, stage / relative)
         (stage / "run-config.json").write_text(
             json.dumps(settings, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         (stage / ".arena-source-revision").write_text(source_revision + "\n", encoding="utf-8")
@@ -534,15 +848,29 @@ def prepare(kernel_id: str, source_revision: str, output_dir: Path | None = None
             "language": "python",
             "kernel_type": "script",
             "is_private": True,
-            "enable_gpu": True,
-            "enable_internet": True,
+            "enable_gpu": policy_value_train_package or not (simultaneous_search_package or policy_value_data_package
+                                                              or independent_evaluation_package),
+            "enable_internet": (policy_value_train_package or
+                                not (simultaneous_search_package or policy_value_data_package
+                                     or independent_evaluation_package)),
             # Both frozen G008 workloads use a single CUDA device on the T4;
             # ordinary kernels retain Kaggle's default accelerator shape.
-            "machine_shape": "NvidiaTeslaT4" if any(
+            "machine_shape": "NvidiaTeslaT4" if (policy_value_train_package or any(
                 key in settings for key in ("g008_principal_benchmark", "g008_train_schedule",
-                                            "g008_campaign_train", "g008_evaluation")) else "",
-            "dataset_sources": ([settings["g008_evaluation"]["candidate_dataset_source"]]
-                                if "g008_evaluation" in settings else []),
+                                            "g008_campaign_train", "g008_evaluation"))) else "",
+            "dataset_sources": ([settings["policy_value_train"]["dataset_source"]]
+                if policy_value_train_package else (
+                [__import__("training.search.tournament", fromlist=["POLICY_VALUE_CHECKPOINTS"])
+                 .POLICY_VALUE_CHECKPOINTS[
+                     settings["simultaneous_search"]["policy_value_checkpoint"]]["dataset"]]
+                if (simultaneous_search_package
+                    and settings["simultaneous_search"].get("policy_value_checkpoint")) else (
+                [settings["g008_evaluation"]["candidate_dataset_source"]]
+                if "g008_evaluation" in settings else
+                (["pascalcoimbra/circuit-ai-v15-step236-experimental"]
+                 if (simultaneous_search_package
+                     and settings["simultaneous_search"].get("frozen_opponent") == "v15-step236")
+                 else [])))),
             "competition_sources": [],
             "kernel_sources": [],
             "model_sources": [],
@@ -554,14 +882,17 @@ from __future__ import annotations
 
 import importlib.util
 import base64
+import hashlib
 import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import zipfile
 
 
@@ -609,6 +940,237 @@ def constrain_cuda_visibility():
 
 
 def main():
+    settings = json.loads((ROOT / "run-config.json").read_text(encoding="utf-8"))
+    if "simultaneous_search" in settings:
+        run_id = settings.get("run_id")
+        if not isinstance(run_id, str) or not run_id:
+            raise RuntimeError("Experimental search run config must contain run_id")
+        output_root = Path(os.environ.get("ARENA_OUTPUT_DIR", "/kaggle/working/arena-output"))
+        output = output_root / run_id
+        if output.exists():
+            raise FileExistsError(f"Refusing to overwrite existing Kaggle output: {output}")
+        source_manifest_sha256 = json.loads(
+            (ROOT / "source-manifest.json").read_text(encoding="utf-8")
+        )["source_manifest_sha256"]
+        from training.search.tournament import run_experiment
+        run_experiment(settings["simultaneous_search"], output,
+                       source_manifest_sha256=source_manifest_sha256)
+        return
+    if "independent_open_space_evaluation" in settings:
+        run_id = settings["run_id"]
+        output_root = Path(os.environ.get("ARENA_OUTPUT_DIR", "/kaggle/working/arena-output"))
+        output = output_root / run_id
+        if output.exists():
+            raise FileExistsError(f"Refusing to overwrite existing Kaggle output: {output}")
+        source_manifest_sha256 = json.loads(
+            (ROOT / "source-manifest.json").read_text(encoding="utf-8")
+        )["source_manifest_sha256"]
+        from training.search.independent_open_space import run as run_independent_assessment
+        run_independent_assessment(settings["independent_open_space_evaluation"], output,
+                                   source_manifest_sha256=source_manifest_sha256)
+        return
+    if "policy_value_data" in settings:
+        import signal
+        from training.search.distill import DistillConfig, write_dataset
+        config = settings["policy_value_data"]
+        run_id = settings["run_id"]
+        output_root = Path(os.environ.get("ARENA_OUTPUT_DIR", "/kaggle/working/arena-output"))
+        output = output_root / run_id
+        if output.exists():
+            raise FileExistsError(f"Refusing to overwrite existing Kaggle output: {output}")
+        dataset_config = DistillConfig(
+            seeds=tuple(config["seeds"]), width=config["width"], height=config["height"],
+            edge_budget=config["edge_budget"], max_depth=config["max_depth"],
+            heuristic_styles=tuple(config["heuristic_styles"]))
+        class WorkLimit(TimeoutError):
+            pass
+        def expired(_signum, _frame):
+            raise WorkLimit("Policy-Value teacher dataset exceeded its configured wall-time budget")
+        signal.signal(signal.SIGALRM, expired)
+        signal.alarm(config["max_wall_seconds"])
+        generation_started = time.monotonic()
+        try:
+            manifest = write_dataset(dataset_config, output, format="npz",
+                                     experiment_id=config["experiment_id"],
+                                     workers=config.get("workers", 1))
+        finally:
+            signal.alarm(0)
+        generation_seconds = time.monotonic() - generation_started
+        manifest_path = output / "manifest.json"
+        manifest["run_id"] = run_id
+        max_samples = len(config["seeds"]) * 2 * (config["width"] * config["height"] + 1)
+        sample_bytes = config["width"] * config["height"] * 12 + 233
+        if max_samples * sample_bytes > 19_000_000_000:
+            raise RuntimeError("Projected distillation arrays exceed Kaggle's 20 GB working-disk capacity")
+        manifest["kaggle_runtime"] = {
+            "gpu_enabled": False, "internet_enabled": False,
+            "elapsed_generation_seconds": round(generation_seconds, 3),
+            "workers": manifest["generation_workers"],
+            "projected_sample_capacity": max_samples,
+            "projected_array_bytes": max_samples * sample_bytes,
+            "python_version": sys.version,
+            "source_manifest_sha256": json.loads(
+                (ROOT / "source-manifest.json").read_text(encoding="utf-8"))["source_manifest_sha256"],
+            "config_sha256": hashlib.sha256(json.dumps(config, sort_keys=True, separators=(",", ":"),
+                                                       ensure_ascii=False).encode()).hexdigest(),
+        }
+        manifest.pop("manifest_sha256", None)
+        encoded = json.dumps(manifest, sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=False, allow_nan=False).encode("utf-8")
+        manifest["manifest_sha256"] = hashlib.sha256(encoded).hexdigest()
+        manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2,
+                                            ensure_ascii=False, allow_nan=False) + "\\n",
+                                 encoding="utf-8")
+        print(f"Completed CPU-only Policy-Value dataset {run_id}; examples={manifest['sample_count']}")
+        return
+    if "policy_value_train" in settings:
+        config = settings["policy_value_train"]
+        source = config["dataset_source"]
+        input_root = Path("/kaggle/input")
+        dataset_owner, dataset_slug = source.split("/", 1)
+        dataset_root = input_root / dataset_slug
+        from training.ppo.protocol import file_sha256
+        mount_entries = []
+        if input_root.is_dir():
+            mount_entries = sorted(entry.name for entry in input_root.iterdir())
+        mount_roots = [dataset_root, input_root / dataset_owner / dataset_slug,
+                       input_root / "datasets" / dataset_owner / dataset_slug,
+                       input_root / "datasets" / dataset_slug]
+        mount_roots.extend(input_root / name for name in mount_entries if name != dataset_slug)
+        if input_root.is_dir():
+            mount_roots.extend(path.parent for path in input_root.rglob(
+                config["dataset_manifest_file"]))
+        mount_roots = list(dict.fromkeys(mount_roots))
+        resolved_pair = None
+        for candidate_root in mount_roots:
+            try:
+                mounted_root = candidate_root.resolve(strict=True)
+                candidate_manifest = candidate_root / config["dataset_manifest_file"]
+                candidate_data = candidate_root / config["dataset_file"]
+                mounted_manifest = candidate_manifest.resolve(strict=True)
+                mounted_data = candidate_data.resolve(strict=True)
+            except OSError:
+                continue
+            if (mounted_manifest.is_relative_to(mounted_root)
+                    and mounted_data.is_relative_to(mounted_root)
+                    and mounted_manifest.is_file() and mounted_data.is_file()
+                    and file_sha256(mounted_manifest) == config["dataset_manifest_sha256"]
+                    and file_sha256(mounted_data) == config["dataset_sha256"]):
+                resolved_pair = (candidate_manifest, candidate_data)
+                break
+        if resolved_pair is None:
+            raise RuntimeError(
+                "No mounted Policy-Value dataset matched its pinned hashes; "
+                f"source={source!r}, input_entries={mount_entries!r}.")
+        manifest_path, dataset_path = resolved_pair
+        try:
+            dataset_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError("Mounted Policy-Value dataset manifest is invalid.") from exc
+        digest_document = dict(dataset_manifest)
+        recorded_manifest_sha = digest_document.pop("manifest_sha256", None)
+        canonical_manifest_sha = hashlib.sha256(json.dumps(
+            digest_document, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            allow_nan=False).encode("utf-8")).hexdigest()
+        data_record = dataset_manifest.get("data", {})
+        dataset_config = dataset_manifest.get("config", {})
+        dataset_sample_count = dataset_manifest.get("sample_count")
+        seeds = dataset_config.get("seeds") if isinstance(dataset_config, dict) else None
+        protected_seed_ranges = ((0, 31), (1_000_000, 1_000_255),
+                                 (2_000_000, 2_999_999), (3_000_000, 3_999_999),
+                                 (4_000_000, 4_000_255), (5_000_000, 5_000_271))
+        styles = dataset_config.get("heuristic_styles") if isinstance(dataset_config, dict) else None
+        allowed_styles = {"cruise", "local-mobility", "interceptor"}
+        width = dataset_config.get("width") if isinstance(dataset_config, dict) else None
+        height = dataset_config.get("height") if isinstance(dataset_config, dict) else None
+        edge_budget = dataset_config.get("edge_budget") if isinstance(dataset_config, dict) else None
+        max_depth = dataset_config.get("max_depth") if isinstance(dataset_config, dict) else None
+        sample_bound_ok = (
+            type(width) is int and type(height) is int and width >= 2 and height >= 2
+            and type(seeds) is list and len(seeds) >= 1
+            and all(type(seed) is int and 0 <= seed < (1 << 53) for seed in seeds)
+            and len(seeds) == len(set(seeds))
+            and not any(lower <= seed <= upper for seed in seeds
+                        for lower, upper in protected_seed_ranges)
+            and type(edge_budget) is int and 8 <= edge_budget <= 0xFFFFFFFF
+            and type(max_depth) is int and 1 <= max_depth <= 255
+            and edge_budget >= max_depth + 1
+            and isinstance(styles, list) and 1 <= len(styles) <= 3
+            and len(styles) == len(set(styles)) and set(styles) <= allowed_styles
+            and type(dataset_sample_count) is int and 0 < dataset_sample_count
+            and dataset_sample_count <= len(seeds) * 2 * (width * height + 1)
+            and dataset_sample_count * (width * height * 12 + 233) <= 19_000_000_000)
+        expected_source_paths = {
+            "training/arena/engine.py", "training/arena/heuristics.py",
+            "training/arena/seeds.py", "training/search/bitboard.py",
+            "training/search/matrix.py", "training/search/planners.py",
+            "training/search/territory.py", "training/search/native/territory.py",
+            "training/search/native/territory.rs", "training/search/distill.py",
+        }
+        source_hashes = dataset_manifest.get("source_sha256", {})
+        if (dataset_manifest.get("format") != "circuit-ai-distillation-dataset/1"
+                or dataset_manifest.get("experiment_id") != config["dataset_experiment_id"]
+                or dataset_manifest.get("run_id") != config["dataset_experiment_id"]
+                or dataset_manifest.get("protection_scope") !=
+                   "development seeds only; no official/final/reserved split data accessed"
+                or dataset_manifest.get("teacher", {}).get("algorithm") != "fixed-depth"
+                or not sample_bound_ok
+                or dataset_manifest.get("opponents") != [f"heuristic:{style}" for style in styles]
+                or dataset_manifest.get("sample_schema", {}).get("id") != "circuit-ai-policy-value-sample/1"
+                or not isinstance(source_hashes, dict) or set(source_hashes) != expected_source_paths
+                or any(not re.fullmatch(r"[0-9a-f]{64}", str(value))
+                       for value in source_hashes.values())
+                or recorded_manifest_sha != canonical_manifest_sha
+                or data_record.get("file") != config["dataset_file"]
+                or data_record.get("sha256") != config["dataset_sha256"]):
+            raise RuntimeError("Mounted Policy-Value dataset manifest identity or embedded digest is invalid.")
+        constrain_cuda_visibility()
+        import torch
+        if not torch.cuda.is_available():
+            raise RuntimeError("Policy-Value Kaggle training requires CUDA; refusing CPU fallback.")
+        torch.cuda.set_device(0)
+        ensure_support_dependencies(torch)
+        run_id = settings["run_id"]
+        output_root = Path(os.environ.get("ARENA_OUTPUT_DIR", "/kaggle/working/arena-output"))
+        output = output_root / run_id
+        if output.exists():
+            raise FileExistsError(f"Refusing to overwrite existing Kaggle output: {output}")
+        output.mkdir(parents=True)
+        from training.search.train_policy_value import TrainConfig, train_from_npz
+        trainer_config = {key: config[key] for key in (
+            "epochs", "batch_size", "hidden_size", "learning_rate", "value_weight",
+            "validation_fraction", "seed")}
+        trainer_config["device"] = "cuda"
+        runtime = {"gpu_enabled": True, "device": torch.cuda.get_device_name(0),
+                   "torch_version": torch.__version__, "cuda_version": torch.version.cuda,
+                   "source_manifest_sha256": json.loads(
+                       (ROOT / "source-manifest.json").read_text(encoding="utf-8"))["source_manifest_sha256"]}
+        training_started = time.monotonic()
+        report = train_from_npz(dataset_path, TrainConfig(**trainer_config), output,
+                                run_id=run_id, export_onnx=True, dataset_source=source)
+        runtime["elapsed_training_seconds"] = round(time.monotonic() - training_started, 3)
+        report["dataset"] = {"source": source, "sha256": config["dataset_sha256"],
+                             "manifest_sha256": config["dataset_manifest_sha256"]}
+        report["runtime"] = runtime
+        (output / "training-report.json").write_text(
+            json.dumps(report, sort_keys=True, indent=2, allow_nan=False) + "\\n", encoding="utf-8")
+        manifest_path = output / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["dataset"] = report["dataset"]
+        manifest["runtime"] = runtime
+        manifest["files"] = [{"path": path.relative_to(output).as_posix(),
+                              "sha256": file_sha256(path)}
+                             for path in sorted(output.rglob("*"))
+                             if path.is_file() and path != manifest_path]
+        manifest.pop("manifest_sha256", None)
+        manifest["manifest_sha256"] = hashlib.sha256(json.dumps(
+            manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            allow_nan=False).encode("utf-8")).hexdigest()
+        manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2,
+                                            ensure_ascii=False, allow_nan=False) + "\\n",
+                                 encoding="utf-8")
+        print(f"Completed CUDA Policy-Value training {run_id}; artifacts: {output}")
+        return
     # Import/check PyTorch before any optional dependency installation. Kaggle
     # training is deliberately GPU-only; local training retains CPU support.
     # Kaggle can initialize CUDA before this script runs, so changing
@@ -3064,6 +3626,503 @@ def validate_run_artifacts(root: Path, expected_run_id: str) -> None:
         _validate_replay(replay)
 
 
+def validate_search_output_artifacts(root: Path, expected_run_id: str) -> None:
+    """Validate the compact manifest emitted by an experimental search tournament."""
+    def search_digest(value: dict, field: str) -> str:
+        document = dict(value)
+        document.pop(field, None)
+        encoded = json.dumps(document, sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=False, allow_nan=False).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    try:
+        manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+        report = json.loads((root / "report.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise KaggleError("Downloaded search output is missing a valid manifest or report.") from exc
+    if (not isinstance(manifest, dict)
+            or manifest.get("format") != "circuit-ai-simultaneous-search-output-manifest/1"
+            or manifest.get("run_id") != expected_run_id
+            or not isinstance(manifest.get("experiment_id"), str)
+            or search_digest(manifest, "manifest_sha256") != manifest.get("manifest_sha256")):
+        raise KaggleError("Experimental search output manifest identity or digest is invalid.")
+    if (not isinstance(report, dict)
+            or report.get("format") != "circuit-ai-simultaneous-search-experiment/1"
+            or report.get("run_id") != expected_run_id
+            or report.get("experiment_id") != manifest["experiment_id"]
+            or report.get("source_manifest_sha256") != manifest.get("source_manifest_sha256")
+            or report.get("status") not in {"complete", "partial-time-cap"}
+            or search_digest(report, "report_sha256") != report.get("report_sha256")):
+        raise KaggleError("Experimental search report identity or digest is invalid.")
+    runtime = report.get("runtime")
+    if (not isinstance(runtime, dict) or runtime.get("gpu_enabled") is not False
+            or runtime.get("internet_enabled") is not False):
+        raise KaggleError("Experimental search report must attest CPU-only, offline execution.")
+    try:
+        from training.search.tournament import validate_config
+        config = report["config"]
+        validate_config(config)
+    except (ImportError, KeyError, TypeError, ValueError) as exc:
+        raise KaggleError("Experimental search report contains an invalid tournament config.") from exc
+    if (config.get("run_id") != expected_run_id
+            or config.get("experiment_id") != manifest["experiment_id"]):
+        raise KaggleError("Experimental search report config does not match its output identity.")
+
+    listed: dict[str, str] = {}
+    for entry in manifest.get("files", []):
+        if not isinstance(entry, dict):
+            raise KaggleError("Experimental search output file entry is malformed.")
+        relative = safe_relative_path(entry.get("path", ""))
+        digest = entry.get("sha256")
+        if relative in listed or relative not in {"report.json", "games.jsonl"}:
+            raise KaggleError("Experimental search output has a duplicate or unexpected file path.")
+        path = root / relative
+        if path.is_symlink() or not path.is_file() or not isinstance(digest, str) or file_sha256(path) != digest:
+            raise KaggleError(f"Experimental search output hash mismatch for {relative}.")
+        listed[relative] = digest
+    if set(listed) != {"report.json", "games.jsonl"}:
+        raise KaggleError("Experimental search output must list report.json and games.jsonl exactly once.")
+
+    summaries = report.get("matchups")
+    if not isinstance(summaries, list):
+        raise KaggleError("Experimental search report matchup list is malformed.")
+    planner_pairs = [(config["planners"][i], config["planners"][j])
+                     for i in range(3) for j in range(i + 1, 3)]
+    planner_heuristic_pairs = [(planner, heuristic) for planner in config["planners"]
+                               for heuristic in config["heuristics"]]
+    all_matchup_pairs = planner_pairs + planner_heuristic_pairs
+    frozen_opponent = config.get("frozen_opponent")
+    if frozen_opponent:
+        all_matchup_pairs.append(("fixed-depth", frozen_opponent))
+        if config.get("native_fixed_depth"):
+            all_matchup_pairs.append(("native-fixed-depth", frozen_opponent))
+    policy_value_checkpoint = config.get("policy_value_checkpoint")
+    if policy_value_checkpoint:
+        all_matchup_pairs.extend((planner, policy_value_checkpoint)
+                                 for planner in config["planners"])
+        if config.get("native_fixed_depth"):
+            all_matchup_pairs.append(("native-fixed-depth", policy_value_checkpoint))
+    spatial_policy_checkpoint = config.get("spatial_policy_checkpoint")
+    if spatial_policy_checkpoint:
+        all_matchup_pairs.extend((planner, spatial_policy_checkpoint)
+                                 for planner in config["planners"])
+        if config.get("native_fixed_depth"):
+            all_matchup_pairs.append(("native-fixed-depth", spatial_policy_checkpoint))
+    if config.get("native_fixed_depth"):
+        all_matchup_pairs.extend(("native-fixed-depth", planner)
+                                 for planner in config["planners"])
+        all_matchup_pairs.extend(("native-fixed-depth", heuristic)
+                                 for heuristic in config["heuristics"])
+    all_matchup_map = {f"{left}-vs-{right}": (left, right) for left, right in all_matchup_pairs}
+    configured = config.get("matchups", list(all_matchup_map))
+    expected_matchups = set(configured)
+    matchup_pairs = {matchup: all_matchup_map[matchup] for matchup in expected_matchups}
+    matchup_ids = {item.get("matchup_id") for item in summaries if isinstance(item, dict)}
+    roster_valid = (matchup_ids == expected_matchups if report["status"] == "complete"
+                    else matchup_ids <= expected_matchups)
+    if not roster_valid or len(matchup_ids) != len(summaries):
+        raise KaggleError("Experimental search report matchup roster differs from its bounded config.")
+    expected_agents = set(config["planners"] + config["heuristics"])
+    if config.get("native_fixed_depth"):
+        expected_agents.add("native-fixed-depth")
+    from training.search.tournament import FROZEN_OPPONENTS
+    expected_frozen = ([{"id": frozen_opponent, "sha256": FROZEN_OPPONENTS[frozen_opponent]}]
+                       if frozen_opponent else [])
+    if report.get("frozen_opponents", []) != expected_frozen:
+        raise KaggleError("Experimental search report frozen-opponent ID/hash provenance is invalid.")
+    from training.search.tournament import POLICY_VALUE_CHECKPOINTS
+    expected_policy_value = ([{"id": policy_value_checkpoint,
+                               "sha256": POLICY_VALUE_CHECKPOINTS[policy_value_checkpoint]["sha256"]}]
+                             if policy_value_checkpoint else [])
+    if report.get("policy_value_checkpoints", []) != expected_policy_value:
+        raise KaggleError("Experimental search report Policy-Value checkpoint provenance is invalid.")
+    from training.search.tournament import SPATIAL_POLICY_CHECKPOINTS
+    expected_spatial = ([{"id": spatial_policy_checkpoint,
+                          "sha256": SPATIAL_POLICY_CHECKPOINTS[spatial_policy_checkpoint]["sha256"]}]
+                        if spatial_policy_checkpoint else [])
+    if report.get("spatial_policy_checkpoints", []) != expected_spatial:
+        raise KaggleError("Experimental search report spatial-checkpoint provenance is invalid.")
+    runtime = report.get("runtime")
+    if not isinstance(runtime, dict):
+        raise KaggleError("Experimental search runtime provenance is malformed.")
+    if (frozen_opponent or spatial_policy_checkpoint) and (
+            not isinstance(runtime.get("torch_version"), str)
+            or not runtime["torch_version"].strip()
+            or "torch_cuda_build" not in runtime
+            or "host_os" not in runtime):
+        raise KaggleError("Frozen-opponent output is missing PyTorch or host runtime provenance.")
+    if policy_value_checkpoint and (
+            not isinstance(runtime.get("torch_version"), str)
+            or not runtime["torch_version"].strip()
+            or "torch_cuda_build" not in runtime
+            or runtime.get("policy_value_checkpoint") != policy_value_checkpoint):
+        raise KaggleError("Policy-Value output is missing model or PyTorch runtime provenance.")
+    if spatial_policy_checkpoint and runtime.get("spatial_policy_checkpoint") != spatial_policy_checkpoint:
+        raise KaggleError("Spatial-policy output is missing its exact checkpoint runtime identity.")
+    if runtime.get("native_fixed_depth", False) is not config.get("native_fixed_depth", False):
+        raise KaggleError("Native fixed-depth runtime flag does not match its validated config.")
+    if frozen_opponent:
+        expected_agents.add(frozen_opponent)
+    if policy_value_checkpoint:
+        expected_agents.add(policy_value_checkpoint)
+    if spatial_policy_checkpoint:
+        expected_agents.add(spatial_policy_checkpoint)
+    observed: dict[str, dict[str, int]] = {}
+    seat_pairs: dict[str, dict[int, set[int]]] = {}
+    try:
+        with (root / "games.jsonl").open("r", encoding="utf-8") as stream:
+            for line in stream:
+                game = json.loads(line)
+                matchup = game["matchup_id"]
+                if (matchup not in matchup_ids
+                        or (game["left_agent"], game["right_agent"]) != matchup_pairs[matchup]
+                        or game["left_agent"] not in expected_agents
+                        or game["right_agent"] not in expected_agents
+                        or game["seed"] not in config["seeds"]
+                        or game["target_seat"] not in (0, 1)
+                        or game["outcome"] not in {"left_win", "draw", "right_win"}):
+                    raise ValueError("game identity")
+                seats = seat_pairs.setdefault(matchup, {}).setdefault(game["seed"], set())
+                if game["target_seat"] in seats:
+                    raise ValueError("duplicate seed/seat assignment")
+                seats.add(game["target_seat"])
+                counts = observed.setdefault(matchup, {"games": 0, "wins": 0, "draws": 0, "losses": 0})
+                counts["games"] += 1
+                counts[{"left_win": "wins", "draw": "draws", "right_win": "losses"}[game["outcome"]]] += 1
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        raise KaggleError("Experimental search games file contains malformed or unexpected records.") from exc
+    if report["status"] == "complete" and len(observed) != len(expected_matchups):
+        raise KaggleError("Completed experimental search output is missing selected matchup records.")
+    for item in summaries:
+        if (item.get("left_agent"), item.get("right_agent")) != matchup_pairs[item["matchup_id"]]:
+            raise KaggleError(f"Experimental search matchup identity is invalid: {item.get('matchup_id')}.")
+        counts = observed.get(item.get("matchup_id"), {"games": 0, "wins": 0, "draws": 0, "losses": 0})
+        summary = item.get("summary", {})
+        if any(summary.get(key) != value for key, value in counts.items()):
+            raise KaggleError(f"Experimental search summary disagrees with games for {item.get('matchup_id')}.")
+        if report["status"] == "complete" and counts["games"] != 2 * len(config["seeds"]):
+            raise KaggleError(f"Completed experimental search matchup is incomplete: {item.get('matchup_id')}.")
+        if report["status"] == "complete" and any(
+                seat_pairs.get(item["matchup_id"], {}).get(seed) != {0, 1}
+                for seed in config["seeds"]):
+            raise KaggleError(f"Completed experimental search matchup is not paired by seed and seat: {item.get('matchup_id')}.")
+
+
+def _pv_content_digest(value: dict, field: str) -> str:
+    document = dict(value)
+    document.pop(field, None)
+    encoded = json.dumps(document, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=False, allow_nan=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _wilson_interval(wins: int, draws: int, losses: int) -> list[float]:
+    n = wins + draws + losses
+    if n <= 0:
+        raise KaggleError("Wilson interval requires at least one game.")
+    z = 1.959963984540054
+    p = wins / n
+    denominator = 1 + z * z / n
+    center = (p + z * z / (2 * n)) / denominator
+    margin = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / denominator
+    return [max(0.0, center - margin), min(1.0, center + margin)]
+
+
+def validate_independent_open_space_output(root: Path, expected_run_id: str) -> None:
+    """Validate a fresh nonofficial 512-game assessment and every canonical replay."""
+    try:
+        manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+        report = json.loads((root / "report.json").read_text(encoding="utf-8"))
+        seed_plan = json.loads((root / "seed-plan.json").read_text(encoding="utf-8"))
+        source_manifest = json.loads((root / "source-manifest.json").read_text(encoding="utf-8"))
+        game_lines = (root / "games.jsonl").read_text(encoding="utf-8").splitlines()
+    except (OSError, json.JSONDecodeError) as exc:
+        raise KaggleError("Independent assessment output is missing a valid manifest, report, seed plan, or games file.") from exc
+    if (not isinstance(manifest, dict)
+            or manifest.get("format") != "circuit-ai-independent-open-space-output-manifest/1"
+            or manifest.get("run_id") != expected_run_id
+            or manifest.get("manifest_sha256") != _pv_content_digest(manifest, "manifest_sha256")
+            or not isinstance(report, dict)
+            or report.get("format") != "circuit-ai-independent-open-space-evaluation/1"
+            or report.get("run_id") != expected_run_id or report.get("official") is not False
+            or report.get("status") != "complete"
+            or report.get("report_sha256") != _pv_content_digest(report, "report_sha256")
+            or report.get("source_manifest_sha256") != manifest.get("source_manifest_sha256")):
+        raise KaggleError("Independent assessment identity, nonofficial status, or digest is invalid.")
+    if (not isinstance(source_manifest, dict)
+            or source_manifest.get("format") != "circuit-ai-source-manifest/1"
+            or source_manifest.get("source_manifest_sha256") != manifest.get("source_manifest_sha256")
+            or source_manifest.get("source_manifest_sha256") != _pv_content_digest(
+                source_manifest, "source_manifest_sha256")):
+        raise KaggleError("Independent assessment source manifest identity or digest is invalid.")
+    if (not isinstance(seed_plan, dict) or seed_plan.get("run_id") != expected_run_id
+            or seed_plan.get("format") != "circuit-ai-independent-open-space-seed-plan/1"
+            or seed_plan.get("seed_plan_sha256") != _pv_content_digest(seed_plan, "seed_plan_sha256")
+            or seed_plan.get("seed_plan_sha256") != report.get("seed_plan_sha256")
+            or seed_plan.get("committed_before_execution") is not True):
+        raise KaggleError("Independent assessment seed plan is missing or not committed before execution.")
+    seeds = seed_plan.get("seeds")
+    if (not isinstance(seeds, list) or len(seeds) != 256 or len(set(seeds)) != 256
+            or any(type(seed) is not int or not 0 <= seed < (1 << 53) for seed in seeds)):
+        raise KaggleError("Independent assessment seed roster must contain 256 unique development seeds.")
+    protected_seed_ranges = ((0, 31), (1_000_000, 1_000_255), (2_000_000, 2_999_999),
+                             (3_000_000, 3_999_999), (4_000_000, 4_000_255),
+                             (5_000_000, 5_000_271))
+    if seeds != sorted(seeds) or any(low <= seed <= high
+                                     for seed in seeds for low, high in protected_seed_ranges):
+        raise KaggleError("Independent assessment seed plan is unsorted or overlaps a protected partition.")
+    if (report.get("seed_count") != 256 or report.get("game_count") != 512
+            or report.get("seat_order") != [0, 1]
+            or report.get("candidate_id") != "fixed-depth-rust-wasm-20261022"):
+        raise KaggleError("Independent assessment did not complete the frozen 256-seed, both-seat matrix.")
+    try:
+        candidate_path = (Path(__file__).resolve().parents[2]
+                          / "artifacts/circuit-ai/experimental/fixed-depth-candidate-20261022/candidate.json")
+        candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+        source_path = candidate_path.parents[0] / "fixed_depth.rs"
+        wasm_path = candidate_path.parents[0] / "fixed_depth.wasm"
+    except (OSError, json.JSONDecodeError) as exc:
+        raise KaggleError("Frozen candidate provenance is unavailable for independent output validation.") from exc
+    if (candidate.get("candidate_id") != report.get("candidate_id")
+            or source_path.is_symlink() or wasm_path.is_symlink()
+            or file_sha256(source_path) != report.get("candidate_source_sha256")
+            or file_sha256(wasm_path) != report.get("candidate_wasm_sha256")
+            or candidate.get("artifacts", {}).get("rust_source", {}).get("sha256") != report.get("candidate_source_sha256")
+            or candidate.get("artifacts", {}).get("wasm", {}).get("sha256") != report.get("candidate_wasm_sha256")):
+        raise KaggleError("Independent assessment report is not bound to the frozen candidate source and WASM.")
+    summary = report.get("summary")
+    runtime = report.get("runtime")
+    if (not isinstance(summary, dict) or not isinstance(runtime, dict)
+            or runtime.get("gpu_enabled") is not False or runtime.get("internet_enabled") is not False
+            or type(runtime.get("workers")) is not int or runtime["workers"] < 1):
+        raise KaggleError("Independent assessment runtime or summary evidence is malformed.")
+
+    listed: dict[str, str] = {}
+    for item in manifest.get("files", []):
+        if not isinstance(item, dict) or set(item) != {"path", "sha256"}:
+            raise KaggleError("Independent assessment output contains a malformed file record.")
+        try:
+            relative = safe_relative_path(item["path"])
+        except (TypeError, ValueError) as exc:
+            raise KaggleError("Independent assessment output contains an unsafe path.") from exc
+        path, digest = root / relative, item["sha256"]
+        if (relative in listed or relative == "manifest.json" or not isinstance(digest, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                or path.is_symlink() or not path.is_file() or file_sha256(path) != digest):
+            raise KaggleError(f"Independent assessment file hash/path mismatch for {relative}.")
+        listed[relative] = digest
+    actual_files = {item.relative_to(root).as_posix() for item in root.rglob("*") if item.is_file()}
+    if actual_files != set(listed) | {"manifest.json"}:
+        raise KaggleError("Independent assessment output has unlisted or missing files.")
+    if not {"report.json", "seed-plan.json", "games.jsonl", "source-manifest.json"}.issubset(listed):
+        raise KaggleError("Independent assessment manifest omitted a required evidence file.")
+    source_files = {item.get("path"): item.get("sha256") for item in source_manifest.get("files", [])
+                    if isinstance(item, dict)}
+    candidate_source_sha = source_files.get("training/search/native/fixed_depth.rs")
+    candidate_wasm_sha = source_files.get("training/search/candidate/fixed_depth.wasm")
+    open_space_hashes = {
+        "lc_eval.py": source_files.get("training/eval/lc_eval.py"),
+        "g008_final_opponent.py": source_files.get("training/eval/g008_final_opponent.py"),
+    }
+    expected_opponent_sha = hashlib.sha256(json.dumps(
+        open_space_hashes, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+    native_library_sha = source_files.get("training/search/native/libcircuit_planner.so")
+    candidate = json.loads((Path(__file__).resolve().parents[2]
+                            / "artifacts/circuit-ai/experimental/fixed-depth-candidate-20261022/candidate.json")
+                           .read_text(encoding="utf-8"))
+    if (candidate_source_sha != report.get("candidate_source_sha256")
+            or candidate_wasm_sha != report.get("candidate_wasm_sha256")
+            or open_space_hashes["lc_eval.py"] is None
+            or open_space_hashes["g008_final_opponent.py"] is None
+            or expected_opponent_sha != report.get("opponent_source_sha256")
+            or native_library_sha is None
+            or runtime.get("native_library_sha256") != native_library_sha
+            or source_files.get("training/search/candidate/candidate.json") is None
+            or source_files.get("training/search/candidate/candidate.json") != file_sha256(
+                Path(__file__).resolve().parents[2]
+                / "artifacts/circuit-ai/experimental/fixed-depth-candidate-20261022/candidate.json")
+            or candidate.get("artifacts", {}).get("rust_source", {}).get("sha256") != candidate_source_sha
+            or candidate.get("artifacts", {}).get("wasm", {}).get("sha256") != candidate_wasm_sha):
+        raise KaggleError("Independent assessment source manifest does not bind candidate and opponent bytes.")
+
+    games = []
+    expected_roster = {(seed, seat) for seed in seeds for seat in (0, 1)}
+    observed_roster = set()
+    for line in game_lines:
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise KaggleError("Independent assessment games.jsonl contains invalid JSON.") from exc
+        if not isinstance(row, dict):
+            raise KaggleError("Independent assessment game record is malformed.")
+        key = (row.get("seed"), row.get("candidate_seat"))
+        if key not in expected_roster or key in observed_roster or row.get("outcome") not in {"win", "draw", "loss"}:
+            raise KaggleError("Independent assessment game roster is duplicated or differs from its committed seed plan.")
+        observed_roster.add(key)
+        replay_rel = safe_relative_path(row.get("replay_file", ""))
+        replay_path = root / replay_rel
+        if (replay_rel not in listed or replay_path.is_symlink() or not replay_path.is_file()
+                or file_sha256(replay_path) != listed.get(replay_rel)):
+            raise KaggleError("Independent assessment game replay is missing or its digest differs.")
+        try:
+            replay = json.loads(replay_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise KaggleError("Independent assessment replay is invalid JSON.") from exc
+        _schema_validate(replay, "lc-replay-1.schema.json")
+        if (replay.get("run_id") != expected_run_id
+                or replay.get("match_id") != f"{expected_run_id}-{row['seed']}-{row['candidate_seat']}"
+                or replay.get("replay_sha256") != row.get("replay_sha256")
+                or replay.get("replay_sha256") != _pv_content_digest(replay, "replay_sha256")):
+            raise KaggleError("Independent assessment replay identity/digest is invalid.")
+        _validate_replay(replay)
+        games.append(row)
+    if observed_roster != expected_roster or len(games) != 512:
+        raise KaggleError("Independent assessment is missing a seed/seat game.")
+    expected_replays = {row["replay_file"] for row in games}
+    if {path for path in listed if path.startswith("replays/")} != expected_replays:
+        raise KaggleError("Independent assessment contains extra or missing replay files.")
+
+    wins = sum(row["outcome"] == "win" for row in games)
+    draws = sum(row["outcome"] == "draw" for row in games)
+    losses = sum(row["outcome"] == "loss" for row in games)
+    counts = {"wins": wins, "draws": draws, "losses": losses}
+    if any(summary.get(key) != value for key, value in counts.items()):
+        raise KaggleError("Independent assessment W/D/L totals differ from game records.")
+    observed_rate = wins / 512
+    score_rate = (wins + 0.5 * draws) / 512
+    if (summary.get("observed_win_rate") != observed_rate
+            or summary.get("score_rate_draw_half") != score_rate
+            or summary.get("wilson_95_win_rate") != _wilson_interval(wins, draws, losses)):
+        raise KaggleError("Independent assessment win rates or Wilson 95% interval are inconsistent.")
+    seats = summary.get("seat_results")
+    for seat in (0, 1):
+        seat_games = [row for row in games if row["candidate_seat"] == seat]
+        expected = {"games": 256, "wins": sum(row["outcome"] == "win" for row in seat_games),
+                    "draws": sum(row["outcome"] == "draw" for row in seat_games),
+                    "losses": sum(row["outcome"] == "loss" for row in seat_games)}
+        if not isinstance(seats, dict) or seats.get(str(seat)) != expected:
+            raise KaggleError(f"Independent assessment seat-{seat} summary is inconsistent.")
+
+
+def validate_policy_value_data_output(root: Path, expected_run_id: str) -> None:
+    try:
+        manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise KaggleError("Downloaded Policy-Value dataset is missing a valid manifest.") from exc
+    data = manifest.get("data") if isinstance(manifest, dict) else None
+    if (not isinstance(manifest, dict)
+            or manifest.get("format") != "circuit-ai-distillation-dataset/1"
+            or manifest.get("run_id") != expected_run_id
+            or manifest.get("experiment_id") != expected_run_id
+            or manifest.get("manifest_sha256") != _pv_content_digest(manifest, "manifest_sha256")
+            or manifest.get("protection_scope") != "development seeds only; no official/final/reserved split data accessed"
+            or type(manifest.get("sample_count")) is not int or manifest["sample_count"] <= 0
+            or not isinstance(manifest.get("kaggle_runtime"), dict)
+            or manifest["kaggle_runtime"].get("gpu_enabled") is not False
+            or manifest["kaggle_runtime"].get("internet_enabled") is not False
+            or not isinstance(data, dict) or data.get("format") != "npz"
+            or data.get("file") != "examples.npz"
+            or not re.fullmatch(r"[0-9a-f]{64}", str(data.get("sha256", "")))):
+        raise KaggleError("Policy-Value dataset manifest identity, provenance, or digest is invalid.")
+    path = root / "examples.npz"
+    if path.is_symlink() or not path.is_file() or file_sha256(path) != data["sha256"]:
+        raise KaggleError("Policy-Value dataset NPZ is missing or its manifest-bound hash is invalid.")
+    expected_files = {"manifest.json", "examples.npz"}
+    actual_files = {item.relative_to(root).as_posix() for item in root.rglob("*") if item.is_file()}
+    if actual_files != expected_files or any(item.is_symlink() for item in root.rglob("*")):
+        raise KaggleError("Policy-Value dataset output contains missing, linked, or unexpected files.")
+
+
+def validate_policy_value_train_output(root: Path, expected_run_id: str) -> None:
+    try:
+        manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+        report = json.loads((root / "training-report.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise KaggleError("Downloaded Policy-Value training output is missing its manifest or report.") from exc
+    dataset = manifest.get("dataset") if isinstance(manifest, dict) else None
+    runtime = manifest.get("runtime") if isinstance(manifest, dict) else None
+    checkpoint_id = report.get("checkpoint_id") if isinstance(report, dict) else None
+    if (not isinstance(checkpoint_id, str)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", checkpoint_id)):
+        raise KaggleError("Policy-Value report checkpoint ID is malformed.")
+    checkpoint_prefix = f"checkpoints/{checkpoint_id}"
+    expected_paths = {"training-report.json", f"{checkpoint_prefix}.pt",
+                      f"{checkpoint_prefix}.onnx", f"{checkpoint_prefix}.metadata.json"}
+    if (not isinstance(manifest, dict)
+            or manifest.get("format") != "lc-search-policy-value-run/1"
+            or manifest.get("run_id") != expected_run_id
+            or manifest.get("manifest_sha256") != _pv_content_digest(manifest, "manifest_sha256")
+            or not isinstance(dataset, dict)
+            or not isinstance(dataset.get("source"), str)
+            or not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+", dataset["source"])
+            or any(not re.fullmatch(r"[0-9a-f]{64}", str(dataset.get(key, "")))
+                   for key in ("sha256", "manifest_sha256"))
+            or not isinstance(runtime, dict) or runtime.get("gpu_enabled") is not True
+            or not isinstance(runtime.get("device"), str) or not runtime["device"]
+            or not isinstance(runtime.get("torch_version"), str) or not runtime["torch_version"]
+            or not isinstance(runtime.get("cuda_version"), str) or not runtime["cuda_version"]
+            or not isinstance(report, dict)
+            or report.get("format") != "lc-search-policy-value-training/1"
+            or report.get("run_id") != expected_run_id
+            or report.get("device") != "cuda"
+            or report.get("dataset") != dataset):
+        raise KaggleError("Policy-Value training manifest, pinned dataset identity, GPU evidence, or report identity is invalid.")
+    entries = manifest.get("files")
+    if not isinstance(entries, list):
+        raise KaggleError("Policy-Value training manifest has no file inventory.")
+    listed: dict[str, str] = {}
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != {"path", "sha256"}:
+            raise KaggleError("Policy-Value training manifest contains a malformed file record.")
+        try:
+            relative = safe_relative_path(entry["path"])
+        except (TypeError, ValueError) as exc:
+            raise KaggleError("Policy-Value training manifest contains an unsafe path.") from exc
+        path, digest = root / relative, entry["sha256"]
+        if (relative in listed or relative not in expected_paths
+                or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                or path.is_symlink() or not path.is_file() or file_sha256(path) != digest):
+            raise KaggleError(f"Policy-Value training output hash/path mismatch for {relative}.")
+        listed[relative] = digest
+    actual_files = {item.relative_to(root).as_posix() for item in root.rglob("*") if item.is_file()}
+    if set(listed) != expected_paths or actual_files != expected_paths | {"manifest.json"}:
+        raise KaggleError("Policy-Value training output has missing or unexpected files.")
+    try:
+        metadata = json.loads((root / f"{checkpoint_prefix}.metadata.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise KaggleError("Policy-Value checkpoint metadata is invalid.") from exc
+    if (metadata.get("checkpoint_id") != checkpoint_id
+            or metadata.get("metadata_sha256") != _pv_content_digest(metadata, "metadata_sha256")):
+        raise KaggleError("Policy-Value checkpoint metadata identity or digest is invalid.")
+    onnx = metadata.get("onnx", {})
+    pytorch = metadata.get("pytorch", {})
+    if (onnx.get("file") != f"{checkpoint_prefix}.onnx"
+            or onnx.get("sha256") != listed.get(f"{checkpoint_prefix}.onnx")
+            or pytorch.get("file") != f"{checkpoint_prefix}.pt"
+            or pytorch.get("sha256") != listed.get(f"{checkpoint_prefix}.pt")):
+        raise KaggleError("Policy-Value checkpoint metadata does not bind the downloaded model files.")
+
+
+def validate_downloaded_output(root: Path, expected_run_id: str) -> None:
+    """Route an explicitly selected output to its matching artifact contract."""
+    try:
+        manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise KaggleError("Downloaded output is missing a valid manifest.json.") from exc
+    if (isinstance(manifest, dict)
+            and manifest.get("format") == "circuit-ai-simultaneous-search-output-manifest/1"):
+        validate_search_output_artifacts(root, expected_run_id)
+    elif (isinstance(manifest, dict)
+          and manifest.get("format") == "circuit-ai-independent-open-space-output-manifest/1"):
+        validate_independent_open_space_output(root, expected_run_id)
+    elif isinstance(manifest, dict) and manifest.get("format") == "circuit-ai-distillation-dataset/1":
+        validate_policy_value_data_output(root, expected_run_id)
+    elif isinstance(manifest, dict) and manifest.get("format") == "lc-search-policy-value-run/1":
+        validate_policy_value_train_output(root, expected_run_id)
+    else:
+        validate_run_artifacts(root, expected_run_id)
+
+
 def validate_principal_benchmark_artifacts(root: Path, expected_run_id: str) -> None:
     """Validate compact G008 benchmark outputs (which intentionally have no training manifest)."""
     try:
@@ -3107,7 +4166,6 @@ def validate_principal_benchmark_artifacts(root: Path, expected_run_id: str) -> 
                 or tuple(item["run_key"] for item in roster) != run_keys):
             raise KaggleError("G008 benchmark schedule roster is missing, altered, or out of frozen order.")
         run_ids = {item["run_key"]: item["run_id"] for item in roster}
-        schedules = prepare_benchmark_schedules(run_ids)
         expected_plan_sha = seed_plan_sha256()
         expected_spec_digest = schedule_spec_digest(expected_plan_sha)
         principal_config, frozen_config_document = load_principal_config()
@@ -3126,11 +4184,6 @@ def validate_principal_benchmark_artifacts(root: Path, expected_run_id: str) -> 
         if (report.get("seed_plan_sha256") != expected_plan_sha
                 or report.get("schedule_spec_digest") != expected_spec_digest):
             raise KaggleError("G008 benchmark seed-plan or schedule-spec binding is missing or stale.")
-        for item in roster:
-            schedule = schedules[item["run_key"]]
-            if (item["expanded_schedule_digest"] != schedule["expanded_schedule_digest"]
-                    or schedule["schedule_spec_digest"] != expected_spec_digest):
-                raise KaggleError("G008 benchmark schedule roster digest is stale.")
     except KaggleError:
         raise
     except (OSError, TypeError, ValueError, KeyError) as exc:
@@ -3332,6 +4385,20 @@ def validate_principal_benchmark_artifacts(root: Path, expected_run_id: str) -> 
                 or warmup.get("training_metrics_sha256") != file_sha256(metrics_path)):
             raise KaggleError(f"G008 warmup {index} failed CUDA metrics validation.")
 
+    # The report and metrics have now passed their inexpensive checks. Finish
+    # with the complete validation of the 191k-slot frozen schedule roster.
+    try:
+        schedules = prepare_benchmark_schedules(run_ids)
+        for item in roster:
+            schedule = schedules[item["run_key"]]
+            if (item["expanded_schedule_digest"] != schedule["expanded_schedule_digest"]
+                    or schedule["schedule_spec_digest"] != expected_spec_digest):
+                raise KaggleError("G008 benchmark schedule roster digest is stale.")
+    except KaggleError:
+        raise
+    except (OSError, TypeError, ValueError, KeyError) as exc:
+        raise KaggleError(f"G008 frozen schedule validation failed: {exc}") from exc
+
 
 def _validate_principal_benchmark_v3(root: Path, expected_run_id: str, report: dict,
                                      evidence: object, report_path: Path) -> None:
@@ -3364,7 +4431,6 @@ def _validate_principal_benchmark_v3(root: Path, expected_run_id: str, report: d
                        for item in roster)):
             raise KaggleError("G008 /3 must bind all five pairs and sixteen warmups in frozen order.")
         run_ids = {item["run_key"]: item["run_id"] for item in roster}
-        schedules = prepare_benchmark_schedules(run_ids)
         plan_sha = seed_plan_sha256()
         spec_digest = schedule_spec_digest(plan_sha)
         config, config_doc = load_principal_config()
@@ -3373,9 +4439,6 @@ def _validate_principal_benchmark_v3(root: Path, expected_run_id: str, report: d
                 or report.get("config_sha256") != config_doc["config_sha256"]
                 or report.get("config_artifact_sha256") != file_sha256(CONFIG_PATH)):
             raise KaggleError("G008 /3 config, seed plan, or schedule specification is stale.")
-        for item in roster:
-            if item["expanded_schedule_digest"] != schedules[item["run_key"]]["expanded_schedule_digest"]:
-                raise KaggleError("G008 /3 schedule roster digest is stale.")
     except KaggleError:
         raise
     except (OSError, TypeError, ValueError, KeyError) as exc:
@@ -3654,6 +4717,18 @@ def _validate_principal_benchmark_v3(root: Path, expected_run_id: str, report: d
             or report.get("cuda_optimizer_updates_total") != measured_optimizer_total):
         raise KaggleError("G008 /3 top-level optimizer counts disagree with frozen runs and hashed metrics.")
 
+    # Finish with full schedule verification once the report's hashes,
+    # identities and all measured evidence have passed their cheap checks.
+    try:
+        schedules = prepare_benchmark_schedules(run_ids)
+        for item in roster:
+            if item["expanded_schedule_digest"] != schedules[item["run_key"]]["expanded_schedule_digest"]:
+                raise KaggleError("G008 /3 schedule roster digest is stale.")
+    except KaggleError:
+        raise
+    except (OSError, TypeError, ValueError, KeyError) as exc:
+        raise KaggleError(f"G008 /3 frozen schedule validation failed: {exc}") from exc
+
 
 def _wire_state(state: State) -> dict:
     return {"width": state.width, "height": state.height,
@@ -3735,7 +4810,7 @@ def download(kernel_id: str, version: int, run_id: str, output_dir: Path, *,
                 if len(matches) != 1:
                     raise KaggleError("Downloaded output must contain exactly one manifest for the requested run.")
                 artifact_root = matches[0]
-                validate_run_artifacts(artifact_root, run_id)
+                validate_downloaded_output(artifact_root, run_id)
             else:
                 benchmark_matches = []
                 for evidence_path in stage.rglob("kaggle-execution-evidence.json"):
@@ -3752,7 +4827,7 @@ def download(kernel_id: str, version: int, run_id: str, output_dir: Path, *,
                 artifact_root = benchmark_matches[0]
                 validate_principal_benchmark_artifacts(artifact_root, run_id)
         else:
-            validate_run_artifacts(artifact_root, run_id)
+            validate_downloaded_output(artifact_root, run_id)
         # Atomic promotion on the same filesystem; the destination was checked
         # before download and is checked again to fail closed on a race.
         if destination.exists():

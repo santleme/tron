@@ -1,0 +1,66 @@
+{
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 0,
+    "unit": "seed with both seat assignments"
+  },
+  "experiment_id": "dagger1-rust-decisive-20261022",
+  "format": "circuit-ai-simultaneous-search-analysis/1",
+  "matchups": [
+    {
+      "collision_metrics_recorded": true,
+      "draws": 25,
+      "games": 512,
+      "games_with_territorial_separation": 494,
+      "left_agent": "native-fixed-depth",
+      "left_avoidable_deaths": 15,
+      "left_death_causes": {
+        "invalid_action": 16,
+        "same_destination": 18
+      },
+      "left_decision_ns_mean": 1436715,
+      "left_decision_ns_p95": 2950176,
+      "losses": 9,
+      "matchup_id": "native-fixed-depth-vs-dagger1-selected-20261021",
+      "mean_ticks_after_territorial_separation": 9.7109375,
+      "observed_win_rate": 0.93359375,
+      "process_cpu_seconds": 80.348,
+      "right_agent": "dagger1-selected-20261021",
+      "right_avoidable_deaths": 16,
+      "right_death_causes": {
+        "occupied_head": 8,
+        "occupied_trail": 392,
+        "out_of_bounds": 85,
+        "same_destination": 18
+      },
+      "right_decision_ns_mean": 2208670,
+      "right_decision_ns_p95": 2773829,
+      "score_rate_draw_half": 0.9580078125,
+      "seat_results": {
+        "0": {
+          "draws": 13,
+          "games": 256,
+          "losses": 5,
+          "wins": 238
+        },
+        "1": {
+          "draws": 12,
+          "games": 256,
+          "losses": 4,
+          "wins": 240
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.943359375,
+        0.9716796875
+      ],
+      "seed_cluster_score_ci95_hoeffding": [
+        0.8731264677662113,
+        1.0
+      ],
+      "seed_clusters": 256,
+      "wins": 478
+    }
+  ],
+  "run_id": "dagger1-rust-decisive-20261022"
+}

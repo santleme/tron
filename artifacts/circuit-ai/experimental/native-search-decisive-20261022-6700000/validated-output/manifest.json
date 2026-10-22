@@ -1,0 +1,17 @@
+{
+  "experiment_id": "native-search-decisive-20261022-6700000",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "3251fd0a70c53b573994fcaa9616a5940ab23814334d75bb706347a3c95610fc"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "205104af9b25fbcdb974ce323a397888652ed634262fb26f2c840ce0ccd8c5ec"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "2c6c3eb65268f00bebe249d2c909d2b5c123cba4e30fe79bfbbe5e30705f0e3a",
+  "run_id": "native-search-decisive-20261022-6700000",
+  "source_manifest_sha256": "be63beae67d93061ef235b006999367f351641944457c9d39e438f58ee6e0d88"
+}

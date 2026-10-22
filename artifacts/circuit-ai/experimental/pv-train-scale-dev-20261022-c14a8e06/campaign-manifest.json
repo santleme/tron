@@ -1,0 +1,22 @@
+{
+  "campaign_kind": "EXPERIMENTAL Policy-Value scale training on Kaggle T4",
+  "configuration": {
+    "batch_size": 256,
+    "epochs": 60,
+    "hidden_size": 128,
+    "learning_rate": 0.0003,
+    "seed": 20261023,
+    "validation_fraction": 0.1,
+    "value_weight": 1.0
+  },
+  "dataset_experiment_id": "pv-distill-scale-20261022-c14a8e06",
+  "dataset_manifest_sha256": "8592067721e469d39195b002a2d44f40b23a233f9b6057cad9d1f95c295a8bbc",
+  "dataset_samples": 13863,
+  "dataset_sha256": "301af3a2304e05939e4b61d6655f5a608d297fcb85357196969e52552b7bd01e",
+  "dataset_source": "pascalcoimbra/circuit-ai-pv-scale-20261022-c14a8e06",
+  "dataset_version": 1,
+  "experiment_id": "pv-train-scale-dev-20261022-c14a8e06",
+  "manifest_sha256": "ca3a0810f669b5bbcc9be05f48d077c9dd7dcad868e4c8089462fa7bdbf105e5",
+  "protocol": "256 development seed groups; no reserved/final evaluation data accessed",
+  "source_revision": "t3code/tron-simultaneous-neural-search"
+}
