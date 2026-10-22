@@ -1,0 +1,17 @@
+{
+  "code_file": "run_kaggle.py",
+  "competition_sources": [],
+  "dataset_sources": [
+    "pascalcoimbra/circuit-ai-pv-scale-20261022-c14a8e06"
+  ],
+  "enable_gpu": true,
+  "enable_internet": true,
+  "id": "pascalcoimbra/pv-train-scale-dev-20261022-c14a8e06",
+  "is_private": true,
+  "kernel_sources": [],
+  "kernel_type": "script",
+  "language": "python",
+  "machine_shape": "NvidiaTeslaT4",
+  "model_sources": [],
+  "title": "pv-train-scale-dev-20261022-c14a8e06"
+}

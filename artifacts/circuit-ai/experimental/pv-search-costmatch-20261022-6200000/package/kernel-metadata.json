@@ -1,0 +1,17 @@
+{
+  "code_file": "run_kaggle.py",
+  "competition_sources": [],
+  "dataset_sources": [
+    "pascalcoimbra/circuit-ai-pv-policy-value-scale-20261022"
+  ],
+  "enable_gpu": false,
+  "enable_internet": false,
+  "id": "pascalcoimbra/pv-search-costmatch-20261022-6200000",
+  "is_private": true,
+  "kernel_sources": [],
+  "kernel_type": "script",
+  "language": "python",
+  "machine_shape": "",
+  "model_sources": [],
+  "title": "pv-search-costmatch-20261022-6200000"
+}

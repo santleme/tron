@@ -1,0 +1,111 @@
+{
+  "config": {
+    "agent_edge_budgets": {
+      "ducb1-tuned": 32,
+      "fixed-depth": 56,
+      "regret-matching": 32
+    },
+    "edge_budget": 32,
+    "experiment_id": "pv-search-triage-20261022-b7d21f4c",
+    "height": 12,
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "matchups": [
+      "fixed-depth-vs-pv-scale-20261022"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 3600,
+    "native_territory": true,
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "policy_value_checkpoint": "pv-scale-20261022",
+    "run_id": "pv-search-triage-20261022-b7d21f4c",
+    "seeds": [
+      6000000,
+      6000001,
+      6000002,
+      6000003
+    ],
+    "width": 12,
+    "workers": 4
+  },
+  "experiment_id": "pv-search-triage-20261022-b7d21f4c",
+  "format": "circuit-ai-simultaneous-search-experiment/1",
+  "frozen_opponents": [],
+  "matchups": [
+    {
+      "left_agent": "fixed-depth",
+      "matchup_id": "fixed-depth-vs-pv-scale-20261022",
+      "right_agent": "pv-scale-20261022",
+      "summary": {
+        "draws": 1,
+        "games": 8,
+        "games_with_separation": 7,
+        "left_avoidable_deaths": 1,
+        "left_death_causes": {
+          "same_destination": 1
+        },
+        "left_decision_ns_mean": 11915639,
+        "left_decision_ns_p95": 19175049,
+        "left_decisions": 201,
+        "left_leaf_evaluations": 6913,
+        "left_simulations": 0,
+        "left_total_decision_ns": 2395043470,
+        "left_transition_edges": 8261,
+        "losses": 0,
+        "mean_ticks_after_separation": 6.625,
+        "observed_win_rate": 0.875,
+        "process_cpu_ns": 15054598695,
+        "right_avoidable_deaths": 1,
+        "right_death_causes": {
+          "occupied_head": 1,
+          "occupied_trail": 6,
+          "same_destination": 1
+        },
+        "right_decision_ns_mean": 3100398,
+        "right_decision_ns_p95": 1193107,
+        "right_decisions": 201,
+        "right_leaf_evaluations": 0,
+        "right_simulations": 0,
+        "right_total_decision_ns": 623180193,
+        "right_transition_edges": 0,
+        "score_rate_draw_half": 0.9375,
+        "wins": 7
+      }
+    }
+  ],
+  "policy_value_checkpoints": [
+    {
+      "id": "pv-scale-20261022",
+      "sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7"
+    }
+  ],
+  "report_sha256": "2d3db25e09c9eebbcd98da27fe7864b6d23261bad117d6c38d1426a5f44cf421",
+  "run_id": "pv-search-triage-20261022-b7d21f4c",
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 15.055,
+    "gpu_enabled": false,
+    "host_os": "Ubuntu 24.04.5 LTS",
+    "internet_enabled": false,
+    "kaggle_kernel_run_type": "Batch",
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "policy_value_checkpoint": "pv-scale-20261022",
+    "python": "3.13.15",
+    "torch_cuda_build": null,
+    "torch_version": "2.11.0+cpu",
+    "wall_seconds": 10.977,
+    "workers": 4
+  },
+  "source_manifest_sha256": "c5ce69a3d69ef634a2929bce19677b472e50442587b66bccd9ee4d4ae5bffd4b",
+  "started_at_utc": "2026-10-22T04:36:39Z",
+  "status": "complete"
+}

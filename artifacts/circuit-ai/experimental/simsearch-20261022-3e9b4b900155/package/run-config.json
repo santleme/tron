@@ -1,0 +1,30 @@
+{
+  "run_id": "simsearch-20261022-3e9b4b900155",
+  "simultaneous_search": {
+    "edge_budget": 32,
+    "experiment_id": "simsearch-20261022-3e9b4b900155",
+    "height": 12,
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 3600,
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "run_id": "simsearch-20261022-3e9b4b900155",
+    "seeds": [
+      7055102989980581,
+      7073394253232575,
+      7032608075356648,
+      7024511006072243,
+      7029035422422987,
+      7058360069951547
+    ],
+    "width": 12
+  }
+}

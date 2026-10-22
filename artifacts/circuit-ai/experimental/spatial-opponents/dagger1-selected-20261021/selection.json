@@ -1,0 +1,97 @@
+{
+  "campaign_id": "e50e535a-86e8-4e31-bc65-f1481ef0aead",
+  "checkpoint_id": "spatial-918e8206-5c6c-4fb8-92ab-a2a8ff89fed2-4facb8fbb69e8172",
+  "checkpoint_sha256": "f01978c5ba9edd4f7d544a91115f3739d22c543731d90d3cdc4ea0d96f9a96af",
+  "checkpoint_source": "failure-dagger-run-20261021/model-dagger/checkpoints",
+  "common_seed_comparison": "artifacts/spatial-experimental/common-seed-results-confirm512-20261021/comparison-result.json",
+  "draws": 657,
+  "format": "spatial-exploratory-selection/1",
+  "games": 3072,
+  "limitations": [
+    "Exploratory development heuristics and seeds only; not official or reserved evaluation.",
+    "Local-mobility confidence interval overlaps zero.",
+    "Dagger2 improved internal seed scores but regressed significantly versus Dagger1 on fresh seeds."
+  ],
+  "losses": 863,
+  "mode": "EXPERIMENTAL",
+  "onnx_sha256": "1ccf1bfa2085546eeb5abd8dbfcbbc4cea362e881e46d560f6332d15e34ed301",
+  "opponents": [
+    "cruise",
+    "local-mobility",
+    "interceptor"
+  ],
+  "paired_mean_w_minus_l_delta": 0.07422,
+  "paired_w_minus_l_ci95": [
+    0.03405,
+    0.11439
+  ],
+  "per_opponent": {
+    "cruise": {
+      "draws": 211,
+      "failure_diagnosis": {
+        "diagnostic_states": 2022,
+        "mean_chamber_cells": 19.475272007912956,
+        "mean_reachable_cells": 20.90108803165183,
+        "mean_safe_action_count": 1.281404549950544,
+        "states_with_no_immediate_escape": 337,
+        "states_with_one_safe_action": 1007,
+        "teacher_action_disagreements": 436,
+        "teacher_immediate_rescues": 426
+      },
+      "losses": 337,
+      "target_terminal_causes_on_losses": {
+        "occupied_head": 11,
+        "occupied_trail": 302,
+        "out_of_bounds": 24
+      },
+      "wins": 476
+    },
+    "interceptor": {
+      "draws": 326,
+      "failure_diagnosis": {
+        "diagnostic_states": 1005,
+        "mean_chamber_cells": 41.48955223880597,
+        "mean_reachable_cells": 43.114427860696516,
+        "mean_safe_action_count": 1.3771144278606966,
+        "states_with_no_immediate_escape": 169,
+        "states_with_one_safe_action": 457,
+        "teacher_action_disagreements": 270,
+        "teacher_immediate_rescues": 255
+      },
+      "losses": 169,
+      "target_terminal_causes_on_losses": {
+        "occupied_head": 29,
+        "occupied_trail": 111,
+        "out_of_bounds": 29
+      },
+      "wins": 529
+    },
+    "local-mobility": {
+      "draws": 120,
+      "failure_diagnosis": {
+        "diagnostic_states": 2140,
+        "mean_chamber_cells": 20.239719626168224,
+        "mean_reachable_cells": 21.618691588785047,
+        "mean_safe_action_count": 1.1616822429906541,
+        "states_with_no_immediate_escape": 357,
+        "states_with_one_safe_action": 1227,
+        "teacher_action_disagreements": 381,
+        "teacher_immediate_rescues": 357
+      },
+      "losses": 357,
+      "target_terminal_causes_on_losses": {
+        "occupied_head": 1,
+        "occupied_trail": 300,
+        "out_of_bounds": 56
+      },
+      "wins": 547
+    }
+  },
+  "previous_draws": 685,
+  "previous_losses": 963,
+  "previous_wins": 1424,
+  "run_id": "7f90ef2f-a2cb-4397-8388-a41156cbcc6f",
+  "seed_count": 512,
+  "selection_rule": "Best paired W-L improvement with no opponent regression after failure-focused DAgger; confirm512 compare, immediate safety mask enabled.",
+  "wins": 1552
+}

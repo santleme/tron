@@ -1,0 +1,93 @@
+{
+  "action_schema": "lc-action/1",
+  "agents": [
+    {
+      "agent_id": "open-space",
+      "checkpoint_id": "open-space"
+    },
+    {
+      "agent_id": "fixed-depth-rust",
+      "checkpoint_id": "fixed-depth-rust-wasm-20261022"
+    }
+  ],
+  "arena_index": 1267987177730920,
+  "derived_streams": [
+    {
+      "initseq": "3597834690435862594",
+      "initstate": "18326269437752106058",
+      "label": "episode"
+    },
+    {
+      "initseq": "5499499893926763601",
+      "initstate": "15839791776584943466",
+      "label": "agent/0"
+    },
+    {
+      "initseq": "13564568548084273969",
+      "initstate": "6841780227260278667",
+      "label": "agent/1"
+    }
+  ],
+  "engine_version": "lc-engine/1",
+  "format": "lc-replay/1",
+  "initial_state": {
+    "headings": [
+      "UP",
+      "UP"
+    ],
+    "height": 12,
+    "positions": [
+      {
+        "x": 10,
+        "y": 10
+      },
+      {
+        "x": 11,
+        "y": 9
+      }
+    ],
+    "trails": [
+      [
+        {
+          "x": 10,
+          "y": 10
+        }
+      ],
+      [
+        {
+          "x": 11,
+          "y": 9
+        }
+      ]
+    ],
+    "width": 12
+  },
+  "master_seed": "1267987177730920",
+  "match_id": "ind-open-space-d69feb58a3564faea462-1267987177730920-1",
+  "observation_schema": "lc-observation/1",
+  "replay_sha256": "3ff9aa6af3a226b60a856f9a72279fde01da64bbfa3123695ab8a80c244a53d7",
+  "result": "draw",
+  "run_id": "ind-open-space-d69feb58a3564faea462",
+  "tick_count": 1,
+  "ticks": [
+    {
+      "collision_causes": [
+        [
+          "same_destination"
+        ],
+        [
+          "same_destination"
+        ]
+      ],
+      "joint_actions": [
+        0,
+        3
+      ],
+      "terminal_causes": [
+        "agent_0_dead",
+        "agent_1_dead"
+      ],
+      "tick": 0
+    }
+  ]
+}

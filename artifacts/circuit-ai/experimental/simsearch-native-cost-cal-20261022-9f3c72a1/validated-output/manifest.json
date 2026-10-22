@@ -1,0 +1,17 @@
+{
+  "experiment_id": "simsearch-native-cost-cal-20261022-9f3c72a1",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "b7f2c21d307032ba16b04469ba8cb2628e7c1d6e2b547532b226dbc6cc2b87c0"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "1c25c7a86a7ced5d784c864344d840b2029f834e5ebb3d4f7a3ce53abea23bfe"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "c78880ee2c50629f28241b2502a800e777d456c5e52d390336e9335721c02b8a",
+  "run_id": "simsearch-native-cost-cal-20261022-9f3c72a1",
+  "source_manifest_sha256": "79a3e3055ae3b5f80fb26f36d6b666335b40e721ac68a9d6d557e20fe93a5050"
+}

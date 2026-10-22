@@ -1,0 +1,17 @@
+{
+  "experiment_id": "pv-search-latency-20261022-6400000",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "a8aceb9cebd6dda2336d3a1ff603a02d01f07a1bcae6379aced2c78cbf7a4778"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "4fd751d72755eb2c56b9696405fad02a0b20521629a6bab178bbd928cd0a48b4"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "6aba62d80c6dfd5e0d26697f88ab7fca3899efba06e37e922efa49554f447554",
+  "run_id": "pv-search-latency-20261022-6400000",
+  "source_manifest_sha256": "3586d32a277232dcc4286f12344486d56605e0b0b54a00e5d574f7b9f899601c"
+}

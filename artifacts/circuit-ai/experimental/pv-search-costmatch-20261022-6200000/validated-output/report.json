@@ -1,0 +1,126 @@
+{
+  "config": {
+    "agent_edge_budgets": {
+      "ducb1-tuned": 16,
+      "fixed-depth": 16,
+      "regret-matching": 16
+    },
+    "edge_budget": 16,
+    "experiment_id": "pv-search-costmatch-20261022-6200000",
+    "height": 12,
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "matchups": [
+      "fixed-depth-vs-pv-scale-20261022"
+    ],
+    "max_depth": 1,
+    "max_wall_seconds": 3600,
+    "native_territory": true,
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "policy_value_checkpoint": "pv-scale-20261022",
+    "run_id": "pv-search-costmatch-20261022-6200000",
+    "seeds": [
+      6200000,
+      6200001,
+      6200002,
+      6200003,
+      6200004,
+      6200005,
+      6200006,
+      6200007,
+      6200008,
+      6200009,
+      6200010,
+      6200011,
+      6200012,
+      6200013,
+      6200014,
+      6200015
+    ],
+    "width": 12,
+    "workers": 4
+  },
+  "experiment_id": "pv-search-costmatch-20261022-6200000",
+  "format": "circuit-ai-simultaneous-search-experiment/1",
+  "frozen_opponents": [],
+  "matchups": [
+    {
+      "left_agent": "fixed-depth",
+      "matchup_id": "fixed-depth-vs-pv-scale-20261022",
+      "right_agent": "pv-scale-20261022",
+      "summary": {
+        "draws": 2,
+        "games": 32,
+        "games_with_separation": 30,
+        "left_avoidable_deaths": 2,
+        "left_completed_depth_mean": 0.9982638888888888,
+        "left_death_causes": {
+          "invalid_action": 1,
+          "same_destination": 2
+        },
+        "left_decision_ns_mean": 1534121,
+        "left_decision_ns_p95": 3176579,
+        "left_decisions": 832,
+        "left_leaf_evaluations": 4469,
+        "left_simulations": 0,
+        "left_total_decision_ns": 1276389499,
+        "left_transition_edges": 4548,
+        "losses": 1,
+        "mean_ticks_after_separation": 10.28125,
+        "observed_win_rate": 0.90625,
+        "process_cpu_ns": 16555667958,
+        "right_avoidable_deaths": 2,
+        "right_completed_depth_mean": 0.0,
+        "right_death_causes": {
+          "occupied_trail": 26,
+          "out_of_bounds": 3,
+          "same_destination": 2
+        },
+        "right_decision_ns_mean": 1504447,
+        "right_decision_ns_p95": 1115961,
+        "right_decisions": 832,
+        "right_leaf_evaluations": 0,
+        "right_simulations": 0,
+        "right_total_decision_ns": 1251700541,
+        "right_transition_edges": 0,
+        "score_rate_draw_half": 0.9375,
+        "wins": 29
+      }
+    }
+  ],
+  "policy_value_checkpoints": [
+    {
+      "id": "pv-scale-20261022",
+      "sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7"
+    }
+  ],
+  "report_sha256": "cc0a662995d3764f0602c7d1a4e692cf2ec6279b20097cdd254e223cfacd7ee9",
+  "run_id": "pv-search-costmatch-20261022-6200000",
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 16.556,
+    "gpu_enabled": false,
+    "host_os": "Ubuntu 24.04.5 LTS",
+    "internet_enabled": false,
+    "kaggle_kernel_run_type": "Batch",
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "policy_value_checkpoint": "pv-scale-20261022",
+    "python": "3.13.15",
+    "torch_cuda_build": null,
+    "torch_version": "2.11.0+cpu",
+    "wall_seconds": 8.49,
+    "workers": 4
+  },
+  "source_manifest_sha256": "09b33ec887d154b614d5a195d79850a287dfb3c9e532f13026c9e6593ca75ffa",
+  "started_at_utc": "2026-10-22T04:40:24Z",
+  "status": "complete"
+}

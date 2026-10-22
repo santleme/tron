@@ -1,0 +1,17 @@
+{
+  "experiment_id": "pv-search-decisive-20261022-6100000",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "0390882eb82a22179858bfadb410855afc00c59d433c7e8a8a25daabd0808096"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "c744d3e6de5e24f9342470a99d04705344d5c62de6811d46e7482f69ec4031ec"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "dadb9cc7d51c99580c3715afc4de6986f99186aaf44478be69b9a0524acdc5d3",
+  "run_id": "pv-search-decisive-20261022-6100000",
+  "source_manifest_sha256": "b3d53bb3c0f374bd10fbb9b1b163bde387fcec41a956312787750341bf520119"
+}

@@ -1,0 +1,17 @@
+{
+  "experiment_id": "rust-robustness-8x8-20261022",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "29fe6d8eedf97120107019897405fd71964ba22dd32803cc615b9c0263404c98"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "e77afd2921d0790e93314edf4def3fffd35af28114daf8fa5fbfc93ca4833401"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "919c11ec8d78960e2c8b50e7f9fdecb32c4b864154a750f4cc200aca35f82a52",
+  "run_id": "rust-robustness-8x8-20261022",
+  "source_manifest_sha256": "a4963e133a0e2076e237b0d3584b792e86d27c018819aa05a58e9038edeb32d8"
+}

@@ -1,0 +1,17 @@
+{
+  "experiment_id": "simsearch-fused-eval-rust-20261022-9f3c72a1",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "65e7f0cb9e35c63daa378194b457e3e4ebcf372385dececca83ba05ba3ad7fbe"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "03a89f5a5fa30efd695716b520d0a65b8aa09eb102d279fd6bc776c5b258962b"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "15f49d04d3080f60099d66c5e48e421ff1bb7ed62561f89c5c1e9b2bf6c7d667",
+  "run_id": "simsearch-fused-eval-rust-20261022-9f3c72a1",
+  "source_manifest_sha256": "0dfcf96d2ad6dbe80340b83545fc204515e5ba75f8a296f437b037c0b844f7cf"
+}

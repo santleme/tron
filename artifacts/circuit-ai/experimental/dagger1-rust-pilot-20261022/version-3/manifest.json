@@ -1,0 +1,17 @@
+{
+  "experiment_id": "dagger1-rust-pilot-20261022",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "c98a96f8e3b4a89e3883f8448eb2952e3b30b7775812cb9a0bfd0528cc7466eb"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "5be789c40d8fe35cc036a64518267eba9370765b8b032752022f125ee0463ecf"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "f6752c3b92d8233e900a0176a9a8c12c419621e1420a8fbbb171c68e09e71565",
+  "run_id": "dagger1-rust-pilot-20261022",
+  "source_manifest_sha256": "04ef6df63ff03d57584b5c065dc86ae737d14cdcffebb6cf1eb0086f27b8282b"
+}

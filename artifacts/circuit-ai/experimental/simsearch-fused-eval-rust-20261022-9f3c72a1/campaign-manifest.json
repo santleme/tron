@@ -1,0 +1,43 @@
+{
+  "campaign_kind": "EXPERIMENTAL paired evaluator performance and action-parity calibration",
+  "condition": "fused-rust-evaluator",
+  "config_sha256": "95beb867220c9bd812c1cb049443d24ecef57ea2c1ce9d82ed37518b00f0a13c",
+  "experiment_id": "simsearch-fused-eval-rust-20261022-9f3c72a1",
+  "kaggle_version": 1,
+  "kernel_id": "pascalcoimbra/simsearch-fused-eval-rust-20261022-9f3c72a1",
+  "matchups": [
+    "fixed-depth-vs-ducb1-tuned",
+    "fixed-depth-vs-regret-matching",
+    "ducb1-tuned-vs-regret-matching"
+  ],
+  "official_registry_modified": false,
+  "package_dir": "package",
+  "paired_against": "same seeds/matchups as the other condition; this is a speed/parity benchmark, not model selection",
+  "paired_comparison_file": "fused-evaluator-comparison.json",
+  "planned_games": 96,
+  "report_sha256": "375a7b0325ca8ad0c4bdd9b2018fffba23f6785882cc317f8cc2c7a577b5183e",
+  "reserved_final_sets_used": false,
+  "resources": {
+    "gpu": false,
+    "internet": false,
+    "paid_services": false,
+    "workers": 4
+  },
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 61.983,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "wall_seconds": 18.454,
+    "workers": 4
+  },
+  "seat_alternation": true,
+  "seed_list_sha256": "f58ce6f5d37d4a20a175b33cb57c7afd0bb5d1bc644d3b99893c7a943725830e",
+  "source_manifest_sha256": "0dfcf96d2ad6dbe80340b83545fc204515e5ba75f8a296f437b037c0b844f7cf",
+  "source_revision": "simsearch-fused-eval-rust-20261022-9f3c72a1-r1",
+  "state": "downloaded-validated-paired-compared"
+}

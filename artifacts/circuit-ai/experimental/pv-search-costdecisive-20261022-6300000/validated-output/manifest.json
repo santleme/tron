@@ -1,0 +1,17 @@
+{
+  "experiment_id": "pv-search-costdecisive-20261022-6300000",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "8cbe23d3181465bb3472260c516fe37d292c099890afce098126820dd94e7914"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "bad2603061919f3cae8596540ff2df43363034fa0c3c98405f82e4b21d7a88bd"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "04ba228eb972c631f99a458f79205d382a2d5282e36801ad41da2ff665b563a4",
+  "run_id": "pv-search-costdecisive-20261022-6300000",
+  "source_manifest_sha256": "9e9ae4a8536104bfbd46222df81c376539cfd6cf10f77030f8b9c59811a78599"
+}

@@ -1,0 +1,18 @@
+{
+  "policy_value_train": {
+    "batch_size": 256,
+    "dataset_experiment_id": "pv-distill-dev-20261022-f2abc7d8",
+    "dataset_file": "examples.npz",
+    "dataset_manifest_file": "manifest.json",
+    "dataset_manifest_sha256": "12e43c1c646977098dab1398688f53c114a05908f91f5cb3bb1667f216544a52",
+    "dataset_sha256": "8f81c53c027716aeb31c8d3f60583c132be6eba6989ceabaf7fa1accce24787b",
+    "dataset_source": "pascalcoimbra/circuit-ai-pv-distill-dev-20261022-f2abc7d8",
+    "epochs": 60,
+    "hidden_size": 128,
+    "learning_rate": 0.0003,
+    "seed": 20261022,
+    "validation_fraction": 0.1,
+    "value_weight": 1.0
+  },
+  "run_id": "pv-train-dev-20261022-f2abc7d8"
+}

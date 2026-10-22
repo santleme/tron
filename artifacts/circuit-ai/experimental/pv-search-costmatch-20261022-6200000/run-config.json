@@ -1,0 +1,51 @@
+{
+  "run_id": "pv-search-costmatch-20261022-6200000",
+  "simultaneous_search": {
+    "run_id": "pv-search-costmatch-20261022-6200000",
+    "experiment_id": "pv-search-costmatch-20261022-6200000",
+    "width": 12,
+    "height": 12,
+    "seeds": [
+      6200000,
+      6200001,
+      6200002,
+      6200003,
+      6200004,
+      6200005,
+      6200006,
+      6200007,
+      6200008,
+      6200009,
+      6200010,
+      6200011,
+      6200012,
+      6200013,
+      6200014,
+      6200015
+    ],
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "edge_budget": 16,
+    "agent_edge_budgets": {
+      "fixed-depth": 16,
+      "ducb1-tuned": 16,
+      "regret-matching": 16
+    },
+    "max_depth": 1,
+    "max_wall_seconds": 3600,
+    "workers": 4,
+    "native_territory": true,
+    "policy_value_checkpoint": "pv-scale-20261022",
+    "matchups": [
+      "fixed-depth-vs-pv-scale-20261022"
+    ]
+  }
+}

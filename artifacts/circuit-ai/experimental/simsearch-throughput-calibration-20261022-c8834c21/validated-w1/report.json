@@ -1,0 +1,184 @@
+{
+  "config": {
+    "edge_budget": 32,
+    "experiment_id": "simsearch-throughput-calibration-20261022-c8834c21-w1",
+    "height": 12,
+    "heuristics": [
+      "heuristic:cruise",
+      "heuristic:local-mobility",
+      "heuristic:interceptor"
+    ],
+    "matchups": [
+      "fixed-depth-vs-ducb1-tuned",
+      "fixed-depth-vs-regret-matching",
+      "ducb1-tuned-vs-regret-matching"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 600,
+    "planners": [
+      "fixed-depth",
+      "ducb1-tuned",
+      "regret-matching"
+    ],
+    "run_id": "simsearch-throughput-calibration-20261022-c8834c21-w1",
+    "seeds": [
+      6383936850315420,
+      8729350399975536,
+      6919802936982250,
+      7425362967690185,
+      1266392182844725,
+      4310897086472868,
+      3832050303010107,
+      8544247546591378,
+      8688246269105596,
+      1623208723574312,
+      5047591732253079,
+      8322668395100355,
+      5133857124678607,
+      599537401621173,
+      4295774407951245,
+      1273622845655359
+    ],
+    "width": 12,
+    "workers": 1
+  },
+  "experiment_id": "simsearch-throughput-calibration-20261022-c8834c21-w1",
+  "format": "circuit-ai-simultaneous-search-experiment/1",
+  "matchups": [
+    {
+      "left_agent": "fixed-depth",
+      "matchup_id": "fixed-depth-vs-ducb1-tuned",
+      "right_agent": "ducb1-tuned",
+      "summary": {
+        "draws": 3,
+        "games": 32,
+        "games_with_separation": 29,
+        "left_avoidable_deaths": 3,
+        "left_death_causes": {
+          "same_destination": 3
+        },
+        "left_decision_ns_mean": 31600770,
+        "left_decision_ns_p95": 59660942,
+        "left_decisions": 804,
+        "left_leaf_evaluations": 17065,
+        "left_simulations": 0,
+        "left_total_decision_ns": 25407019782,
+        "left_transition_edges": 20011,
+        "losses": 0,
+        "mean_ticks_after_separation": 7.875,
+        "observed_win_rate": 0.90625,
+        "process_cpu_ns": 38519291138,
+        "right_avoidable_deaths": 3,
+        "right_death_causes": {
+          "invalid_action": 29,
+          "same_destination": 3
+        },
+        "right_decision_ns_mean": 16102941,
+        "right_decision_ns_p95": 24613310,
+        "right_decisions": 804,
+        "right_leaf_evaluations": 12970,
+        "right_simulations": 12970,
+        "right_total_decision_ns": 12946764982,
+        "right_transition_edges": 23888,
+        "score_rate_draw_half": 0.953125,
+        "wins": 29
+      }
+    },
+    {
+      "left_agent": "fixed-depth",
+      "matchup_id": "fixed-depth-vs-regret-matching",
+      "right_agent": "regret-matching",
+      "summary": {
+        "draws": 3,
+        "games": 32,
+        "games_with_separation": 30,
+        "left_avoidable_deaths": 2,
+        "left_death_causes": {
+          "invalid_action": 2,
+          "same_destination": 2
+        },
+        "left_decision_ns_mean": 28529264,
+        "left_decision_ns_p95": 58313164,
+        "left_decisions": 1018,
+        "left_leaf_evaluations": 20800,
+        "left_simulations": 0,
+        "left_total_decision_ns": 29042790797,
+        "left_transition_edges": 24410,
+        "losses": 1,
+        "mean_ticks_after_separation": 10.9375,
+        "observed_win_rate": 0.875,
+        "process_cpu_ns": 45061335693,
+        "right_avoidable_deaths": 1,
+        "right_death_causes": {
+          "invalid_action": 29,
+          "same_destination": 2
+        },
+        "right_decision_ns_mean": 15481678,
+        "right_decision_ns_p95": 24404729,
+        "right_decisions": 1018,
+        "right_leaf_evaluations": 17089,
+        "right_simulations": 17089,
+        "right_total_decision_ns": 15760348492,
+        "right_transition_edges": 30184,
+        "score_rate_draw_half": 0.921875,
+        "wins": 28
+      }
+    },
+    {
+      "left_agent": "ducb1-tuned",
+      "matchup_id": "ducb1-tuned-vs-regret-matching",
+      "right_agent": "regret-matching",
+      "summary": {
+        "draws": 6,
+        "games": 32,
+        "games_with_separation": 27,
+        "left_avoidable_deaths": 4,
+        "left_death_causes": {
+          "invalid_action": 23,
+          "same_destination": 5
+        },
+        "left_decision_ns_mean": 15714751,
+        "left_decision_ns_p95": 24231576,
+        "left_decisions": 1125,
+        "left_leaf_evaluations": 16143,
+        "left_simulations": 16143,
+        "left_total_decision_ns": 17679095838,
+        "left_transition_edges": 33540,
+        "losses": 22,
+        "mean_ticks_after_separation": 7.8125,
+        "observed_win_rate": 0.125,
+        "process_cpu_ns": 35844872049,
+        "right_avoidable_deaths": 4,
+        "right_death_causes": {
+          "invalid_action": 5,
+          "same_destination": 5
+        },
+        "right_decision_ns_mean": 15891984,
+        "right_decision_ns_p95": 24014357,
+        "right_decisions": 1125,
+        "right_leaf_evaluations": 16232,
+        "right_simulations": 16232,
+        "right_total_decision_ns": 17878482760,
+        "right_transition_edges": 33495,
+        "score_rate_draw_half": 0.21875,
+        "wins": 4
+      }
+    }
+  ],
+  "report_sha256": "b5c169998df8817282a081d9c8a59c0cd90ccd9a6581582ed29ac202f815606a",
+  "run_id": "simsearch-throughput-calibration-20261022-c8834c21-w1",
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 119.425,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "wall_seconds": 119.561,
+    "workers": 1
+  },
+  "source_manifest_sha256": "3010ffd12283e0f11d492fedbec4c6e0a07c1f3441150e3ed90fae38b1016289",
+  "started_at_utc": "2026-10-22T02:43:46Z",
+  "status": "complete"
+}

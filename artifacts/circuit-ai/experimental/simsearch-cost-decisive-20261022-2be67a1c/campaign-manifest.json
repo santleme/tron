@@ -1,0 +1,100 @@
+{
+  "analysis_file": "analysis.json",
+  "budget_calibration_run_id": "simsearch-cost-calibration-20261022-1d00d9cf",
+  "budgets": {
+    "ducb1-tuned": 42,
+    "fixed-depth": 32,
+    "regret-matching": 42
+  },
+  "campaign_kind": "EXPERIMENTAL cost-normalized decisive simultaneous-search tournament",
+  "config_sha256": "af140032f6bdc9be32ad8d34e0c37f975712110aaf7b3ceb8899d639339e785c",
+  "evaluation_policy": {
+    "official_registry_modified": false,
+    "open_space_used": false,
+    "reserved_final_sets_used": false,
+    "seat_alternation": true,
+    "spatial_checkpoint_used": false
+  },
+  "experiment_id": "simsearch-cost-decisive-20261022-2be67a1c",
+  "games_per_matchup": 512,
+  "kaggle_version": 1,
+  "kernel_id": "pascalcoimbra/simsearch-cost-decisive-20261022-2be67a1c",
+  "last_observed_kaggle_state": "KernelWorkerStatus.COMPLETE",
+  "matchups": [
+    "fixed-depth-vs-ducb1-tuned",
+    "fixed-depth-vs-regret-matching",
+    "ducb1-tuned-vs-regret-matching"
+  ],
+  "max_depth": 3,
+  "package_dir": "package",
+  "package_tree_sha256": "b04a7ec5647fa905c9218f353fd3f366e34fc7aa566a3aa1d3ff267e02529659",
+  "planned_games_total": 1536,
+  "planned_seeds": 256,
+  "resource_policy": {
+    "gpu": false,
+    "internet": false,
+    "max_wall_seconds": 7200,
+    "paid_services": false,
+    "workers": 4
+  },
+  "result_file": "validated-output/report.json",
+  "result_summary": {
+    "ducb1-tuned-vs-regret-matching": {
+      "draws": 96,
+      "games": 512,
+      "left_decision_ns_mean": 26927265,
+      "losses": 277,
+      "right_decision_ns_mean": 26909854,
+      "score_rate_draw_half": 0.365234375,
+      "seed_cluster_score_ci95": [
+        0.3291015625,
+        0.4033203125
+      ],
+      "wins": 139
+    },
+    "fixed-depth-vs-ducb1-tuned": {
+      "draws": 26,
+      "games": 512,
+      "left_decision_ns_mean": 27427914,
+      "losses": 16,
+      "right_decision_ns_mean": 26689899,
+      "score_rate_draw_half": 0.943359375,
+      "seed_cluster_score_ci95": [
+        0.9248046875,
+        0.9599609375
+      ],
+      "wins": 470
+    },
+    "fixed-depth-vs-regret-matching": {
+      "draws": 63,
+      "games": 512,
+      "left_decision_ns_mean": 27344645,
+      "losses": 30,
+      "right_decision_ns_mean": 26825956,
+      "score_rate_draw_half": 0.8798828125,
+      "seed_cluster_score_ci95": [
+        0.8564453125,
+        0.90234375
+      ],
+      "wins": 419
+    }
+  },
+  "run_id": "simsearch-cost-decisive-20261022-2be67a1c",
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 2338.883,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "wall_seconds": 682.872,
+    "workers": 4
+  },
+  "seed_list_sha256": "17b4ec23091a5ecd09da892b20e256f8ca6712f038bc50db30a8b0e9d53cba41",
+  "seed_source": "SHA-256 derived fresh development seeds; disjoint from all prior experimental configs/manifests",
+  "source_manifest_sha256": "ece63c865f749d3811c043d975af445eed68341b9de3b6ce167792ee58f39ab7",
+  "source_revision": "simsearch-cost-decisive-20261022-2be67a1c",
+  "state": "downloaded-validated-analyzed"
+}

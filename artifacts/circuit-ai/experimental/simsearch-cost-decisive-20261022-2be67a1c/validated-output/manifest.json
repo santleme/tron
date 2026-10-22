@@ -1,0 +1,17 @@
+{
+  "experiment_id": "simsearch-cost-decisive-20261022-2be67a1c",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "438cfa05d893b0544a4368cdc4b7d6c7883a078db21eff966a6e20c130adf0bc"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "3ac426b3e685594e24c49582d8591288da4dbe60c407f5379856dfa5479db9e1"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "1b62e2a6adac09cd11cff88d111d24da26f20767ea083dee566cb45d84e4b0a0",
+  "run_id": "simsearch-cost-decisive-20261022-2be67a1c",
+  "source_manifest_sha256": "ece63c865f749d3811c043d975af445eed68341b9de3b6ce167792ee58f39ab7"
+}

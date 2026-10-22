@@ -1,0 +1,35 @@
+{
+  "campaign_kind": "EXPERIMENTAL fused-Rust equal-latency budget calibration",
+  "config_sha256": "372057605240aca4dac00e56f60f384c7b6abb3bbc2db428c2e24b036bff8059",
+  "edge_budgets": {
+    "ducb1-tuned": 32,
+    "fixed-depth": 48,
+    "regret-matching": 32
+  },
+  "experiment_id": "simsearch-native-cost-cal-20261022-9f3c72a1",
+  "kaggle_version": 1,
+  "kernel_id": "pascalcoimbra/simsearch-native-cost-cal-20261022-9f3c72a1",
+  "matchups": [
+    "fixed-depth-vs-ducb1-tuned",
+    "fixed-depth-vs-regret-matching",
+    "ducb1-tuned-vs-regret-matching"
+  ],
+  "max_depth": 3,
+  "native_territory": true,
+  "official_registry_modified": false,
+  "package_dir": "package",
+  "paired_against": "prior development seeds retained for engine/latency calibration; not competitive selection",
+  "planned_games": 96,
+  "reserved_final_sets_used": false,
+  "resources": {
+    "gpu": false,
+    "internet": false,
+    "paid_services": false,
+    "workers": 4
+  },
+  "seat_alternation": true,
+  "seed_list_sha256": "f58ce6f5d37d4a20a175b33cb57c7afd0bb5d1bc644d3b99893c7a943725830e",
+  "source_manifest_sha256": "79a3e3055ae3b5f80fb26f36d6b666335b40e721ac68a9d6d557e20fe93a5050",
+  "source_revision": "simsearch-native-cost-cal-20261022-9f3c72a1-r1",
+  "state": "submitted-awaiting-run"
+}

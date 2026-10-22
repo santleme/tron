@@ -1,0 +1,61 @@
+{
+  "candidate_id": "fixed-depth-rust-wasm-20261022",
+  "candidate_source_sha256": "4ebf0b4c8518bb05e76e74180d42ccae00e4c1ae19e542908af9ad1e8f6b13b2",
+  "candidate_wasm_sha256": "e601cbf991681c747c3b87a6d1fbc683ae3a2d7b9366a2567e5128917da4ce0a",
+  "format": "circuit-ai-independent-open-space-evaluation/1",
+  "game_count": 512,
+  "official": false,
+  "opponent_id": "open-space",
+  "opponent_source_sha256": "bc799b1aeaeaec6a9e8fe0bd02554fea5ae52ba1b73157f9b66dc2e04cf6a4b4",
+  "purpose": "fresh independent one-shot assessment; not used for tuning",
+  "report_sha256": "8bddf5dad482a07950d8f3be588dbf8000ab877315984e601ede284ece874196",
+  "run_id": "ind-open-space-d69feb58a3564faea462",
+  "runtime": {
+    "cpu_count": 4,
+    "cpu_name": "Kaggle runtime CPU",
+    "elapsed_seconds": 4.183,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "native_library_sha256": "49e98457a18ea6ca6695f9e2df50b629b08d53072f36f94f8a0d0617e7a7fb5d",
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "workers": 4
+  },
+  "seat_order": [
+    0,
+    1
+  ],
+  "seed_count": 256,
+  "seed_plan_sha256": "da21e3504455e5039bbf90000acd187f97ea271379466fb4ffb071a6f3f8d709",
+  "source_manifest_sha256": "34acab2a595c37a021da5084268697b84c3b1f468c794170fed124cd01b666b8",
+  "status": "complete",
+  "summary": {
+    "candidate_completed_depth_mean": 2.2863483579315225,
+    "candidate_decision_ns_mean": 743455,
+    "candidate_decision_ns_p95": 1905710,
+    "draws": 26,
+    "losses": 13,
+    "mean_survival_ticks": 31.185546875,
+    "observed_win_rate": 0.923828125,
+    "score_rate_draw_half": 0.94921875,
+    "seat_results": {
+      "0": {
+        "draws": 12,
+        "games": 256,
+        "losses": 7,
+        "wins": 237
+      },
+      "1": {
+        "draws": 14,
+        "games": 256,
+        "losses": 6,
+        "wins": 236
+      }
+    },
+    "wilson_95_win_rate": [
+      0.8975633728664396,
+      0.9437804016184606
+    ],
+    "wins": 473
+  }
+}

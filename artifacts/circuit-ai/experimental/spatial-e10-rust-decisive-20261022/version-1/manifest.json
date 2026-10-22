@@ -1,0 +1,17 @@
+{
+  "experiment_id": "spatial-e10-rust-decisive-20261022",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "ae4d2374c02ba97854ae72c2553b954be2f86b9df4c9a15d400babcd69c91822"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "f146203829128a5f15003008ec9d7e9945a24e70487b50c98dedb0f5dd89a71e"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "c7295a538b2458b3736d273ae610a3d1aa733422e77e01c3986e79cf59216819",
+  "run_id": "spatial-e10-rust-decisive-20261022",
+  "source_manifest_sha256": "049f65f2e42362f974c47bcfd28c472a058326d2c1c499d4fe5953689e5f4dac"
+}

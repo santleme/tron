@@ -1,0 +1,51 @@
+{
+  "analysis_file": "analysis.json",
+  "checkpoint_sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7",
+  "config_sha256": "bfad7fe1bc0099e008644d06e2d5438f3169e2a68d55e528a9e1dd98a7fc21a8",
+  "dataset_source": "pascalcoimbra/circuit-ai-pv-policy-value-scale-20261022",
+  "format": "circuit-ai-experimental-search-campaign/1",
+  "kernel_id": "pascalcoimbra/pv-search-latency9-20261022-6600000",
+  "kernel_version": 1,
+  "mode": "CPU-only 512-game comparison; depth 1, edge budget 9; full root matrix budget",
+  "output_manifest_sha256": "1c394dbbcd50d5adb2daeb92508121bd44f643a21847c3185119ff242644b874",
+  "report_sha256": "b5a0f8aad7570fbf3caab38368987b70595b8560a33a1e67e40c7ea4d9aba01b",
+  "reserved_evaluations_used": false,
+  "resource_limits": {
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "max_wall_seconds": 600,
+    "workers": 4
+  },
+  "result": {
+    "completed_depth_mean": 0.9706963650689611,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 55.876,
+    "draws": 54,
+    "edge_budget": 9,
+    "games": 512,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "kind": "planner-vs-policy-budget-follow-up",
+    "latency_equivalent": false,
+    "losses": 43,
+    "observed_win_rate": 0.810546875,
+    "policy_decision_ns_mean": 1115145,
+    "policy_decision_ns_p95": 1331366,
+    "score_ci95_seed_cluster_bootstrap": [
+      0.8359375,
+      0.888671875
+    ],
+    "score_rate": 0.86328125,
+    "search_decision_ns_mean": 1430646,
+    "search_decision_ns_p95": 2910894,
+    "status": "complete",
+    "wall_seconds": 24.596,
+    "wins": 415
+  },
+  "result_file": "validated-output/report.json",
+  "run_id": "pv-search-latency9-20261022-6600000",
+  "seed_count": 256,
+  "seeds_sha256": "1fb1b278a9f424b7d461531aa72ed506afdc05ceebee0ed10e03c5f8a3463a7d",
+  "source_manifest_sha256": "aa5efaa21ada78cbae7f3890916414ff48057b6c0958c1d5cf5134a40f530a05",
+  "status": "downloaded-validated-analyzed"
+}

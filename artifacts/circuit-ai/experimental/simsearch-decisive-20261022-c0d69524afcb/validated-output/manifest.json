@@ -1,0 +1,17 @@
+{
+  "experiment_id": "simsearch-decisive-20261022-c0d69524afcb",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "d01161a9a4fe1f6367972750abfb5cc8f83a0b08804cd08a807bd1da5e371d82"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "34747b4a76132b3de51e7927f12c9202426ca4e181e7eee80b351b48f4dbf8fb"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "95db91d0acafa83c489d3912038334186387526d56e13fcfb7c0f25f9c985d8b",
+  "run_id": "simsearch-decisive-20261022-c0d69524afcb",
+  "source_manifest_sha256": "7745ca12b4dff313e05ca107fb01346bb645f2b0daac091e231e0a0b555a6fc4"
+}

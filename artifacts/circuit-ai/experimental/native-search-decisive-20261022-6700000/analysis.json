@@ -1,0 +1,172 @@
+{
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 0,
+    "unit": "seed with both seat assignments"
+  },
+  "experiment_id": "native-search-decisive-20261022-6700000",
+  "format": "circuit-ai-simultaneous-search-analysis/1",
+  "matchups": [
+    {
+      "collision_metrics_recorded": true,
+      "draws": 57,
+      "games": 512,
+      "games_with_territorial_separation": 458,
+      "left_agent": "fixed-depth",
+      "left_avoidable_deaths": 53,
+      "left_death_causes": {
+        "invalid_action": 42,
+        "same_destination": 54
+      },
+      "left_decision_ns_mean": 1331068,
+      "left_decision_ns_p95": 2725333,
+      "losses": 39,
+      "matchup_id": "fixed-depth-vs-pv-scale-20261022",
+      "mean_ticks_after_territorial_separation": 7.767578125,
+      "observed_win_rate": 0.8125,
+      "process_cpu_seconds": 51.0,
+      "right_agent": "pv-scale-20261022",
+      "right_avoidable_deaths": 52,
+      "right_death_causes": {
+        "occupied_head": 5,
+        "occupied_trail": 333,
+        "out_of_bounds": 81,
+        "same_destination": 54
+      },
+      "right_decision_ns_mean": 930671,
+      "right_decision_ns_p95": 1071367,
+      "score_rate_draw_half": 0.8681640625,
+      "seat_results": {
+        "0": {
+          "draws": 27,
+          "games": 256,
+          "losses": 21,
+          "wins": 208
+        },
+        "1": {
+          "draws": 30,
+          "games": 256,
+          "losses": 18,
+          "wins": 208
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.8427734375,
+        0.8935546875
+      ],
+      "seed_cluster_score_ci95_hoeffding": [
+        0.7832827177662113,
+        0.9530454072337887
+      ],
+      "seed_clusters": 256,
+      "wins": 416
+    },
+    {
+      "collision_metrics_recorded": true,
+      "draws": 63,
+      "games": 512,
+      "games_with_territorial_separation": 452,
+      "left_agent": "native-fixed-depth",
+      "left_avoidable_deaths": 58,
+      "left_death_causes": {
+        "invalid_action": 40,
+        "same_destination": 60
+      },
+      "left_decision_ns_mean": 373222,
+      "left_decision_ns_p95": 679222,
+      "losses": 37,
+      "matchup_id": "native-fixed-depth-vs-pv-scale-20261022",
+      "mean_ticks_after_territorial_separation": 7.865234375,
+      "observed_win_rate": 0.8046875,
+      "process_cpu_seconds": 24.578,
+      "right_agent": "pv-scale-20261022",
+      "right_avoidable_deaths": 57,
+      "right_death_causes": {
+        "occupied_head": 6,
+        "occupied_trail": 329,
+        "out_of_bounds": 80,
+        "same_destination": 60
+      },
+      "right_decision_ns_mean": 834124,
+      "right_decision_ns_p95": 1004273,
+      "score_rate_draw_half": 0.8662109375,
+      "seat_results": {
+        "0": {
+          "draws": 29,
+          "games": 256,
+          "losses": 18,
+          "wins": 209
+        },
+        "1": {
+          "draws": 34,
+          "games": 256,
+          "losses": 19,
+          "wins": 203
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.841796875,
+        0.8896484375
+      ],
+      "seed_cluster_score_ci95_hoeffding": [
+        0.7813295927662113,
+        0.9510922822337887
+      ],
+      "seed_clusters": 256,
+      "wins": 412
+    },
+    {
+      "collision_metrics_recorded": true,
+      "draws": 92,
+      "games": 512,
+      "games_with_territorial_separation": 438,
+      "left_agent": "native-fixed-depth",
+      "left_avoidable_deaths": 68,
+      "left_death_causes": {
+        "invalid_action": 228,
+        "same_destination": 74
+      },
+      "left_decision_ns_mean": 341254,
+      "left_decision_ns_p95": 671165,
+      "losses": 210,
+      "matchup_id": "native-fixed-depth-vs-fixed-depth",
+      "mean_ticks_after_territorial_separation": 12.765625,
+      "observed_win_rate": 0.41015625,
+      "process_cpu_seconds": 34.913,
+      "right_agent": "fixed-depth",
+      "right_avoidable_deaths": 68,
+      "right_death_causes": {
+        "invalid_action": 228,
+        "same_destination": 74
+      },
+      "right_decision_ns_mean": 1278689,
+      "right_decision_ns_p95": 2743701,
+      "score_rate_draw_half": 0.5,
+      "seat_results": {
+        "0": {
+          "draws": 46,
+          "games": 256,
+          "losses": 103,
+          "wins": 107
+        },
+        "1": {
+          "draws": 46,
+          "games": 256,
+          "losses": 107,
+          "wins": 103
+        }
+      },
+      "seed_cluster_score_ci95": [
+        0.5,
+        0.5
+      ],
+      "seed_cluster_score_ci95_hoeffding": [
+        0.4151186552662113,
+        0.5848813447337887
+      ],
+      "seed_clusters": 256,
+      "wins": 210
+    }
+  ],
+  "run_id": "native-search-decisive-20261022-6700000"
+}

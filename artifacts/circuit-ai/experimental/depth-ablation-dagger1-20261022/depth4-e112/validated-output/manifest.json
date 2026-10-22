@@ -1,0 +1,17 @@
+{
+  "experiment_id": "depth-ablation-depth4-e112-9ea098d2",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "6a600684c9acf756d2f5c55de1d5ec491905cebc824622f914ba306d69140c87"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "d3eddf7ac55c10f544f8e533434c4ba8ea656b4d955773847d2084614c3ffcdb"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "289933a17eea8715e05c48fea81669f4fc6c84416b0b109c55af5bff803b4722",
+  "run_id": "depth-ablation-depth4-e112-9ea098d2",
+  "source_manifest_sha256": "d38187e378bdee995c8d96064084b03feececf8d45833899d743b1b4992163c3"
+}

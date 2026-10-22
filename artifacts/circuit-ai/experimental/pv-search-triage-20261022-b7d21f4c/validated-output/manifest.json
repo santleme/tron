@@ -1,0 +1,17 @@
+{
+  "experiment_id": "pv-search-triage-20261022-b7d21f4c",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "04e324d243ad3daf82402a64a164db2c8949ae2ee78e14c91344ac1540255d09"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "02224f2fb6acb6a346feab62285101eceb6e684ba2ce6be7542eeb12940e79b6"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "2c600ee59847b4117f81b4fd4accff770fdc26c01f204077abad650a33bcbdcd",
+  "run_id": "pv-search-triage-20261022-b7d21f4c",
+  "source_manifest_sha256": "c5ce69a3d69ef634a2929bce19677b472e50442587b66bccd9ee4d4ae5bffd4b"
+}

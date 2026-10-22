@@ -1,0 +1,40 @@
+{
+  "format": "circuit-ai-experimental-search-campaign/1",
+  "run_id": "pv-search-costmatch-20261022-6200000",
+  "kernel_id": "pascalcoimbra/pv-search-costmatch-20261022-6200000",
+  "kernel_version": 1,
+  "dataset_source": "pascalcoimbra/circuit-ai-pv-policy-value-scale-20261022",
+  "checkpoint_sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7",
+  "seeds": [
+    6200000,
+    6200001,
+    6200002,
+    6200003,
+    6200004,
+    6200005,
+    6200006,
+    6200007,
+    6200008,
+    6200009,
+    6200010,
+    6200011,
+    6200012,
+    6200013,
+    6200014,
+    6200015
+  ],
+  "reserved_evaluations_used": false,
+  "mode": "CPU-only cost-matched calibration, max depth 1, 16 edge budget",
+  "result": {
+    "status": "complete",
+    "kind": "cost-calibration",
+    "games": 32,
+    "wins": 29,
+    "draws": 2,
+    "losses": 1,
+    "score_rate": 0.9375,
+    "fixed_depth_decision_ns_mean": 1534121,
+    "policy_value_decision_ns_mean": 1504447,
+    "fixed_depth_depth_mean": 0.9983
+  }
+}

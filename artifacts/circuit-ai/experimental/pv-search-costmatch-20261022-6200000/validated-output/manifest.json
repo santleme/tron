@@ -1,0 +1,17 @@
+{
+  "experiment_id": "pv-search-costmatch-20261022-6200000",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "3b2bc7a78a433acb2abd13eecdc9a2584f1fe6477530c454677a3fc2a02c7285"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "d71acba1929b74930cd01daa5e077e0625f319bff4bcdebb6fd4dce40b830b0e"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "f937a927f19f997b07109d76c14317387870c201e8ffff9444c9be22b126d4f4",
+  "run_id": "pv-search-costmatch-20261022-6200000",
+  "source_manifest_sha256": "09b33ec887d154b614d5a195d79850a287dfb3c9e532f13026c9e6593ca75ffa"
+}

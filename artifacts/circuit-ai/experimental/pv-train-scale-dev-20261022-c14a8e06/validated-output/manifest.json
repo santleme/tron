@@ -1,0 +1,36 @@
+{
+  "dataset": {
+    "manifest_sha256": "8592067721e469d39195b002a2d44f40b23a233f9b6057cad9d1f95c295a8bbc",
+    "sha256": "301af3a2304e05939e4b61d6655f5a608d297fcb85357196969e52552b7bd01e",
+    "source": "pascalcoimbra/circuit-ai-pv-scale-20261022-c14a8e06"
+  },
+  "files": [
+    {
+      "path": "checkpoints/pv-train-scale-dev-20261022-c14a8e06-policy-value.metadata.json",
+      "sha256": "9efb77f5b1caba6b556e5101e31eba685bbe39ef2b060c088890d68277d56128"
+    },
+    {
+      "path": "checkpoints/pv-train-scale-dev-20261022-c14a8e06-policy-value.onnx",
+      "sha256": "8286f9eebcae16c75e333e442f55a4d7240bd512b903f18c63ce3c65198da7a3"
+    },
+    {
+      "path": "checkpoints/pv-train-scale-dev-20261022-c14a8e06-policy-value.pt",
+      "sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7"
+    },
+    {
+      "path": "training-report.json",
+      "sha256": "83e896282adade9f9930f74b3ff8ee9d176c1eadb94f750fa4a8360a1e712f94"
+    }
+  ],
+  "format": "lc-search-policy-value-run/1",
+  "manifest_sha256": "8caf21274a4007a40ad1dc2b2941f0dca35a0a22da8ddbd5995a1e467b562b6e",
+  "run_id": "pv-train-scale-dev-20261022-c14a8e06",
+  "runtime": {
+    "cuda_version": "12.8",
+    "device": "Tesla T4",
+    "elapsed_training_seconds": 16.471,
+    "gpu_enabled": true,
+    "source_manifest_sha256": "9fe5957c121e8148af4ca55d0f4c0d084a0884e32c527bb9f2d3ace5b024feaf",
+    "torch_version": "2.11.0+cu128"
+  }
+}

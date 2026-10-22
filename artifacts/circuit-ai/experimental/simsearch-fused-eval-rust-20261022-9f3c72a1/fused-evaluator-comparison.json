@@ -1,0 +1,83 @@
+{
+  "campaign_kind": "paired CPU performance and behavior-parity calibration",
+  "conditions": {
+    "python": {
+      "run_id": "simsearch-fused-eval-python-20261022-9f3c72a1",
+      "runtime": {
+        "cpu_count": 4,
+        "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+        "cpu_process_seconds": 193.209,
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "native_territory": false,
+        "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+        "python": "3.13.15",
+        "wall_seconds": 56.366,
+        "workers": 4
+      },
+      "source_manifest_sha256": "b0c134605d2f5c33c140508a0c44516c918c253e7827c0e92d7e707887e3b9b9"
+    },
+    "rust": {
+      "run_id": "simsearch-fused-eval-rust-20261022-9f3c72a1",
+      "runtime": {
+        "cpu_count": 4,
+        "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+        "cpu_process_seconds": 61.983,
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "native_territory": true,
+        "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+        "python": "3.13.15",
+        "wall_seconds": 18.454,
+        "workers": 4
+      },
+      "source_manifest_sha256": "0dfcf96d2ad6dbe80340b83545fc204515e5ba75f8a296f437b037c0b844f7cf"
+    }
+  },
+  "cpu_speedup_rust_vs_python": 3.117,
+  "format": "circuit-ai-fused-territory-performance-comparison/1",
+  "games": 96,
+  "gpu_used": false,
+  "identical_paired_game_traces": true,
+  "matchups": [
+    "fixed-depth-vs-ducb1-tuned",
+    "fixed-depth-vs-regret-matching",
+    "ducb1-tuned-vs-regret-matching"
+  ],
+  "official_registry_modified": false,
+  "per_planner_mean_decision_ms": {
+    "python": {
+      "ducb1-tuned": {
+        "decisions": 1929,
+        "mean_decision_ms": 26.716
+      },
+      "fixed-depth": {
+        "decisions": 1822,
+        "mean_decision_ms": 47.507
+      },
+      "regret-matching": {
+        "decisions": 2143,
+        "mean_decision_ms": 26.042
+      }
+    },
+    "rust": {
+      "ducb1-tuned": {
+        "decisions": 1929,
+        "mean_decision_ms": 11.835
+      },
+      "fixed-depth": {
+        "decisions": 1822,
+        "mean_decision_ms": 7.122
+      },
+      "regret-matching": {
+        "decisions": 2143,
+        "mean_decision_ms": 11.838
+      }
+    }
+  },
+  "reserved_final_sets_used": false,
+  "seat_alternation": true,
+  "seed_clusters": 16,
+  "trace_mismatches": 0,
+  "wall_speedup_rust_vs_python": 3.054
+}

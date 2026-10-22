@@ -1,0 +1,57 @@
+{
+  "format": "circuit-ai-experimental-search-campaign/1",
+  "run_id": "pv-search-triage-20261022-b7d21f4c",
+  "kernel_id": "pascalcoimbra/pv-search-triage-20261022-b7d21f4c",
+  "kernel_version": 2,
+  "dataset_source": "pascalcoimbra/circuit-ai-pv-policy-value-scale-20261022",
+  "dataset_checkpoint_sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7",
+  "seeds": [
+    6000000,
+    6000001,
+    6000002,
+    6000003
+  ],
+  "reserved_evaluations_used": false,
+  "mode": "CPU-only triage",
+  "result": {
+    "status": "complete",
+    "kind": "triage",
+    "games": 8,
+    "wins": 7,
+    "draws": 1,
+    "losses": 0,
+    "wall_seconds": 10.977,
+    "fixed_depth_decision_ns_mean": 11915639,
+    "policy_value_decision_ns_mean": 3100398
+  },
+  "attempts": [
+    {
+      "version": 1,
+      "status": "error",
+      "cause": "search bundle omitted training.ppo.protocol required by importing the trainer module",
+      "resolved_by": "extracting policy model architecture to isolated training/search/policy_value.py"
+    },
+    {
+      "version": 2,
+      "status": "complete",
+      "games": 8,
+      "result": "fixed-depth 7 wins, 1 draw, 0 losses; checkpoint loaded on CPU and output validation passed",
+      "runtime": {
+        "wall_seconds": 10.977,
+        "cpu_process_seconds": 15.055,
+        "torch_version": "2.11.0+cpu",
+        "gpu_enabled": false,
+        "internet_enabled": false
+      },
+      "summary": {
+        "games": 8,
+        "wins": 7,
+        "draws": 1,
+        "losses": 0,
+        "wall_seconds": 10.977,
+        "fixed_depth_decision_ns_mean": 11915639,
+        "policy_value_decision_ns_mean": 3100398
+      }
+    }
+  ]
+}

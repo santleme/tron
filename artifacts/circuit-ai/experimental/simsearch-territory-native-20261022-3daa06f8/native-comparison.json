@@ -1,0 +1,87 @@
+{
+  "aggregate_process_cpu_seconds": {
+    "python": 222.119,
+    "reduction_percent": 52.29,
+    "rust": 105.979
+  },
+  "baseline_run_id": "simsearch-throughput-calibration-20261022-c8834c21-w4",
+  "environment": {
+    "cpu_count": 4,
+    "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_process_seconds": 105.979,
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "native_territory": true,
+    "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+    "python": "3.13.15",
+    "wall_seconds": 31.431,
+    "workers": 4
+  },
+  "format": "circuit-ai-native-territory-comparison/1",
+  "games_compared": 96,
+  "identical_game_traces": 96,
+  "identical_outcome_tick_and_action_traces": true,
+  "mean_decision_ms": {
+    "python": {
+      "ducb1-tuned": {
+        "decisions": 1929,
+        "elapsed_ns": 58077057538,
+        "leaf_evaluations": 29113,
+        "mean_decision_ms": 30.107,
+        "transition_edges": 57428
+      },
+      "fixed-depth": {
+        "decisions": 1822,
+        "elapsed_ns": 100765290700,
+        "leaf_evaluations": 37865,
+        "mean_decision_ms": 55.305,
+        "transition_edges": 44421
+      },
+      "regret-matching": {
+        "decisions": 2143,
+        "elapsed_ns": 63145277543,
+        "leaf_evaluations": 33321,
+        "mean_decision_ms": 29.466,
+        "transition_edges": 63679
+      }
+    },
+    "rust": {
+      "ducb1-tuned": {
+        "decisions": 1929,
+        "elapsed_ns": 31919613221,
+        "leaf_evaluations": 29113,
+        "mean_decision_ms": 16.547,
+        "transition_edges": 57428
+      },
+      "fixed-depth": {
+        "decisions": 1822,
+        "elapsed_ns": 39129077038,
+        "leaf_evaluations": 37865,
+        "mean_decision_ms": 21.476,
+        "transition_edges": 44421
+      },
+      "regret-matching": {
+        "decisions": 2143,
+        "elapsed_ns": 35158321247,
+        "leaf_evaluations": 33321,
+        "mean_decision_ms": 16.406,
+        "transition_edges": 63679
+      }
+    },
+    "speedup": {
+      "ducb1-tuned": 1.819,
+      "fixed-depth": 2.575,
+      "regret-matching": 1.796
+    }
+  },
+  "native_run_id": "simsearch-territory-native-20261022-3daa06f8",
+  "official_registry_modified": false,
+  "reserved_final_sets_used": false,
+  "seed_source": "same 16 fresh development seeds and paired seat order as workers=4 Python condition",
+  "wall_seconds": {
+    "python": 65.041,
+    "reduction_percent": 51.68,
+    "rust": 31.431,
+    "speedup": 2.069
+  }
+}

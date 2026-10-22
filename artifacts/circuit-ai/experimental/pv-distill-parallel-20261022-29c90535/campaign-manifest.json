@@ -1,0 +1,43 @@
+{
+  "campaign_kind": "EXPERIMENTAL CPU throughput A/B for parallel fixed-depth teacher-data generation",
+  "configuration": {
+    "edge_budget": 56,
+    "experiment_id": "pv-distill-parallel-20261022-29c90535",
+    "height": 12,
+    "heuristic_styles": [
+      "cruise",
+      "local-mobility",
+      "interceptor"
+    ],
+    "max_depth": 3,
+    "max_wall_seconds": 3600,
+    "width": 12,
+    "workers": 4
+  },
+  "experiment_id": "pv-distill-parallel-20261022-29c90535",
+  "manifest_sha256": "01ed7a734abb107905c6b1a31d5aee387f1a7a7f54b2cbc52ec41b1579b7cf02",
+  "protocol": "fresh development-only seeds; reserved/final G008 evaluations unused",
+  "result": {
+    "dataset_manifest_sha256": "ee497c204b1357b3854cf09ff9fa4e00d5fe5f87eea305bb6c62aac4b37286bb",
+    "dataset_sha256": "b019b5e72104897294075ae0d19849df01ceef1f948ec9e361592e3f82805871",
+    "elapsed_generation_seconds": 87.933,
+    "examples_per_second": 72.521,
+    "gpu_enabled": false,
+    "kernel_version": 1,
+    "normalized_throughput_speedup": 1.53,
+    "samples": 6377,
+    "single_worker_baseline": {
+      "elapsed_seconds": 148.035006023,
+      "examples_per_second": 47.394,
+      "experiment_id": "pv-distill-dev-20261022-f2abc7d8",
+      "samples": 7016
+    },
+    "status": "success",
+    "workers": 4
+  },
+  "run_config": "run-config.json",
+  "seed_count": 128,
+  "seed_overlap_with_prior_experiments": false,
+  "seeds_sha256": "17a5694c28ae1862cfd9f5ca4c74d0dbe92e667e1403a0edb3a2822db213b11b",
+  "source_revision": "t3code/tron-simultaneous-neural-search"
+}

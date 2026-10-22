@@ -1,0 +1,93 @@
+{
+  "analysis_file": "analysis.json",
+  "checkpoint_sha256": "200e5b74ca3ee61861694eaba0d36021dcfe5b9868f8c9d7d370bfd9517571d7",
+  "config_sha256": "c186fd726980f0864463e70bc3d6df8425b652ef83fb6b8a8f386de48590d4f6",
+  "dataset_source": "pascalcoimbra/circuit-ai-pv-policy-value-scale-20261022",
+  "format": "circuit-ai-experimental-search-campaign/1",
+  "kernel_id": "pascalcoimbra/native-search-decisive-20261022-6700000",
+  "kernel_version": 1,
+  "mode": "CPU-only 3-way native planner comparison; 512 games per matchup; depth 1, edge budget 9",
+  "output_manifest_sha256": "2c6c3eb65268f00bebe249d2c909d2b5c123cba4e30fe79bfbbe5e30705f0e3a",
+  "report_sha256": "3c194d0eeb99a5f15c240babf04af02db785878b507a5c29336f6d3f619989a2",
+  "reserved_evaluations_used": false,
+  "resource_limits": {
+    "gpu_enabled": false,
+    "internet_enabled": false,
+    "max_wall_seconds": 600,
+    "workers": 4
+  },
+  "result": {
+    "games_per_matchup": 512,
+    "kind": "native-planner-comparison",
+    "matchups": {
+      "fixed-depth-vs-pv-scale-20261022": {
+        "draws": 57,
+        "left_decision_ns_mean": 1331068,
+        "left_decision_ns_p95": 2725333,
+        "losses": 39,
+        "right_decision_ns_mean": 930671,
+        "right_decision_ns_p95": 1071367,
+        "score_ci95_seed_cluster_bootstrap": [
+          0.8427734375,
+          0.8935546875
+        ],
+        "score_rate": 0.8681640625,
+        "wins": 416
+      },
+      "native-fixed-depth-vs-fixed-depth": {
+        "draws": 92,
+        "left_decision_ns_mean": 341254,
+        "left_decision_ns_p95": 671165,
+        "losses": 210,
+        "right_decision_ns_mean": 1278689,
+        "right_decision_ns_p95": 2743701,
+        "score_ci95_seed_cluster_bootstrap": [
+          0.5,
+          0.5
+        ],
+        "score_rate": 0.5,
+        "wins": 210
+      },
+      "native-fixed-depth-vs-pv-scale-20261022": {
+        "draws": 63,
+        "left_decision_ns_mean": 373222,
+        "left_decision_ns_p95": 679222,
+        "losses": 37,
+        "right_decision_ns_mean": 834124,
+        "right_decision_ns_p95": 1004273,
+        "score_ci95_seed_cluster_bootstrap": [
+          0.841796875,
+          0.8896484375
+        ],
+        "score_rate": 0.8662109375,
+        "wins": 412
+      }
+    },
+    "runtime": {
+      "cpu_count": 4,
+      "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+      "cpu_process_seconds": 110.49,
+      "gpu_enabled": false,
+      "host_os": "Ubuntu 24.04.5 LTS",
+      "internet_enabled": false,
+      "kaggle_kernel_run_type": "Batch",
+      "native_fixed_depth": true,
+      "native_territory": true,
+      "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+      "policy_value_checkpoint": "pv-scale-20261022",
+      "python": "3.13.15",
+      "torch_cuda_build": null,
+      "torch_version": "2.11.0+cpu",
+      "wall_seconds": 41.04,
+      "workers": 4
+    },
+    "seed_count": 256,
+    "status": "complete"
+  },
+  "result_file": "validated-output/report.json",
+  "run_id": "native-search-decisive-20261022-6700000",
+  "seed_count": 256,
+  "seeds_sha256": "524075f970cdb3e4cf8affa4b29d147414ec6b208f2edf46740b45ea46d611fe",
+  "source_manifest_sha256": "be63beae67d93061ef235b006999367f351641944457c9d39e438f58ee6e0d88",
+  "status": "downloaded-validated-analyzed"
+}

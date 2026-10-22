@@ -1,0 +1,42 @@
+{
+  "files": [
+    {
+      "path": ".arena-source-revision",
+      "sha256": "0f600ed00ed127f2de97ff00fc58b5a382cd00068d5631e036c3473e86c3d126"
+    },
+    {
+      "path": "kernel-metadata.json",
+      "sha256": "ec0090a7a43f9d5b014ad5f7741936d37a5776644e738bd2f4e6e1152f4948b8"
+    },
+    {
+      "path": "run-config.json",
+      "sha256": "d0dbf4042ba381c90c31b67ab468283714c6a4c0fafb00cae28045d391393fc9"
+    },
+    {
+      "path": "training/ppo/protocol.py",
+      "sha256": "a4ee059e7938542a54f1f91fbad6493de5bbcc049173aa7929581307782184c7"
+    },
+    {
+      "path": "training/requirements-kaggle.txt",
+      "sha256": "4c87102d2243e1fffab97a0d9b40d172078a7732aae651aa2edc7567a1968508"
+    },
+    {
+      "path": "training/requirements-kaggle.txt",
+      "sha256": "4c87102d2243e1fffab97a0d9b40d172078a7732aae651aa2edc7567a1968508"
+    },
+    {
+      "path": "training/search/train_policy_value.py",
+      "sha256": "b2b27965fbf6f1012f5357293aca33c03779ad7c68d77429ba462f0dfd3b018a"
+    }
+  ],
+  "format": "circuit-ai-source-manifest/1",
+  "git_commit": "4b960c543dad5dab9bf35535987898456d9e7858",
+  "git_worktree_dirty": true,
+  "package_builder": {
+    "path": "tools/kaggle/cli.py",
+    "sha256": "c5e40392cd832df8d45284cede24b7d5b2414abb85946e89c581f43120f58104"
+  },
+  "runner_template_sha256": "4bf10051bd2348a4ef349c25c644ff87db0b01e0ab279cc5b7fd6fbec7c0023a",
+  "source_manifest_sha256": "9ed3a1efda7dab09f94453c28ec6bffa3b9d62433576d2f84d816c5236e90f8e",
+  "source_revision": "pv-train-dev-20261022-f2abc7d8-r1"
+}

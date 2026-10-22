@@ -1,0 +1,110 @@
+{
+  "files": [
+    {
+      "path": ".arena-source-revision",
+      "sha256": "a67650f5d9d11e2630d4a9c76f4d1c334ad6e83b1e346e1e7577b09593aef627"
+    },
+    {
+      "path": "kernel-metadata.json",
+      "sha256": "cc1185cfe53936de9ece7b6250c25f935c718f5953f5da9d82b9d5f1851df8bf"
+    },
+    {
+      "path": "run-config.json",
+      "sha256": "c9dd5b2f5c0d44a1b06a18f2c3119bff4b3e35857b141ce5329714afde6eeb2a"
+    },
+    {
+      "path": "training/arena/README.md",
+      "sha256": "367e5bdffcd24c3bb396fa3250d840e21116c4f39f22e747b778351114b09754"
+    },
+    {
+      "path": "training/arena/__init__.py",
+      "sha256": "6dfaa706c704fa574ee8dd9cfe10b18450588057e051af1c6d680d59063bf922"
+    },
+    {
+      "path": "training/arena/engine.py",
+      "sha256": "cfd6fe1817e06e5e892306f1fac2b5eef3cdeb4e68da2e83b26c8f4f23a6c7d0"
+    },
+    {
+      "path": "training/arena/heuristics.py",
+      "sha256": "0c6d1b7d9600f5f976b6f0ce4ecc88fe3f44d3c725c1bf534d21ebca0eb0c8f5"
+    },
+    {
+      "path": "training/arena/seeds.py",
+      "sha256": "3b0af5e78dc4d88aa1911f2764b6dff1f17b082611ad84ebb9c2c650ad048885"
+    },
+    {
+      "path": "training/arena/vector.py",
+      "sha256": "c9f9fd4799b24404ef30be517290fef6051d163ccc0cb87a796fa42ff97cdd40"
+    },
+    {
+      "path": "training/search/README.md",
+      "sha256": "59eb7f098137c5c842a65be785c25251a05f5d6865f3f765197926fa3776a3c6"
+    },
+    {
+      "path": "training/search/__init__.py",
+      "sha256": "93b4ee56d65b27654b3680b9c22fc351b789269ee12fa3cb4f20f6c828fc9b4e"
+    },
+    {
+      "path": "training/search/analysis.py",
+      "sha256": "38b3eb2988d398219fe36a8d6bbe6232079cac329f00dc76c6b833c65d8fe18a"
+    },
+    {
+      "path": "training/search/bitboard.py",
+      "sha256": "1bfb866eda1a50baa8563a44cf0c7ab1f76c24830f2a82dbe639dd3261bb6835"
+    },
+    {
+      "path": "training/search/distill.py",
+      "sha256": "21b92ad5aa54896a94da1cf1720b7b5153211c05637f3568e9684ab3c934942c"
+    },
+    {
+      "path": "training/search/frozen_opponent.py",
+      "sha256": "3e2f47fdd4f8cb2522cc85d79ffa445318a64dc87d8825d4a969960db9d52bf8"
+    },
+    {
+      "path": "training/search/matrix.py",
+      "sha256": "1c1ad195ab12b4918131738111bc51e16aae9851bdba3e425a7e0bd119402d40"
+    },
+    {
+      "path": "training/search/native/libcircuit_territory.so",
+      "sha256": "02795adfe3750176a3e9bc8d3d3cab2b18a72acc19b8672db5bdaf5c261e64f9"
+    },
+    {
+      "path": "training/search/native/territory.py",
+      "sha256": "3dfef2bbf3b4378c3289418acdcd7ad8cd5ec45af2672a415381a9115055c369"
+    },
+    {
+      "path": "training/search/native/territory.rs",
+      "sha256": "2e657dee67c0de939e737a6f9ee549dec74c4382c28cbe292c5b8aa61b193b76"
+    },
+    {
+      "path": "training/search/planners.py",
+      "sha256": "877afd2ce9cf1bd049d63cae3c24b02569a1e4ef95d7cbdf8c40aa22ecfabe41"
+    },
+    {
+      "path": "training/search/policy_value.py",
+      "sha256": "c160d8dacc6d2bcd0e69ffd401ecb8c8ead87a2c8a8f00f811f17a064d6d423f"
+    },
+    {
+      "path": "training/search/territory.py",
+      "sha256": "a4cb30a5940fde7914df9e35974ea8a6ccd246545e09b177da58ffe758298000"
+    },
+    {
+      "path": "training/search/tournament.py",
+      "sha256": "b6e023de8c7a1215bf97154484d0e884509b39359854ab64d31adec68b25b4ff"
+    },
+    {
+      "path": "training/search/train_policy_value.py",
+      "sha256": "e71961fd8a570dad81734af87f35e1da2c449c86c8942fd3bdcf7477f0b2788e"
+    }
+  ],
+  "format": "circuit-ai-source-manifest/1",
+  "git_commit": "4b960c543dad5dab9bf35535987898456d9e7858",
+  "git_worktree_dirty": true,
+  "package_builder": {
+    "path": "tools/kaggle/cli.py",
+    "sha256": "770b0bfcf398c1766d2e6f8ccea395a47824c34ac3456706fe7d0e93627d40e6"
+  },
+  "runner_template_sha256": "875cd25b86b4112ebc73ed85b9524c66ccfa9cda32048aee2f5e1c707dba0bb3",
+  "source_manifest_sha256": "c078a29ba2b103b4b85a6381f59c8a94d032a3115a58c75a823865a9070a5b3d",
+  "source_revision": "t3code/tron-simultaneous-neural-search-pv-search-latency8-20261022-6500000"
+}

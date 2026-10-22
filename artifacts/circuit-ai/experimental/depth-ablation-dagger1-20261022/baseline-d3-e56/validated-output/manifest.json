@@ -1,0 +1,17 @@
+{
+  "experiment_id": "depth-ablation-baseline-d3-e56-81341571",
+  "files": [
+    {
+      "path": "report.json",
+      "sha256": "1b23dad6f948cdb0f5b257f15c368c686bdb4473ad12a12fc960926d4fdebc5e"
+    },
+    {
+      "path": "games.jsonl",
+      "sha256": "74eac6877849561e0e46521c8bbc8b050174a10b3a468e39cee78ef46757b43a"
+    }
+  ],
+  "format": "circuit-ai-simultaneous-search-output-manifest/1",
+  "manifest_sha256": "ce5e6717c79d1f728b6286750a0d383840fab28564eece21acec6fa7c4f78840",
+  "run_id": "depth-ablation-baseline-d3-e56-81341571",
+  "source_manifest_sha256": "da4b529f44a0d16ef987905f7c88c0ac0adbdcc93a9c3539ac77091ead08efa2"
+}

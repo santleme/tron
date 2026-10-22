@@ -1,0 +1,308 @@
+{
+  "checkpoints": {
+    "dagger1-selected-20261021": {
+      "sha256": "f01978c5ba9edd4f7d544a91115f3739d22c543731d90d3cdc4ea0d96f9a96af",
+      "source_worktree": "other worktree, copied read-only into this worktree for packaging"
+    },
+    "spatial-e10-selected-20261021": {
+      "sha256": "e10d44869ed2a9959655ffb0cbacddcfa422a8e06baa31efde697e05c63a481c",
+      "source_worktree": "other worktree, copied read-only into this worktree for packaging"
+    }
+  },
+  "created_for": "fixed-depth Rust exploratory comparisons, 2026-10-22",
+  "failed_debug_submissions": [
+    {
+      "kaggle_kernel_id": "pascalcoimbra/dagger1-rust-pilot-20261022",
+      "reason": "KeyError model_state_dict; checkpoint uses state_dict",
+      "run_id": "dagger1-rust-pilot-20261022",
+      "status": "failed",
+      "version": 1
+    },
+    {
+      "kaggle_kernel_id": "pascalcoimbra/dagger1-rust-pilot-20261022",
+      "reason": "same loader-key regression; no tournament result accepted",
+      "run_id": "dagger1-rust-pilot-20261022",
+      "status": "failed",
+      "version": 2
+    },
+    {
+      "kaggle_kernel_id": "pascalcoimbra/dagger1-rust-pilot-20261022",
+      "reason": "corrected loader; 16 games per matchup, pilot only; result included above",
+      "run_id": "dagger1-rust-pilot-20261022",
+      "status": "success",
+      "version": 3
+    }
+  ],
+  "format": "circuit-ai-search-campaign-manifest/1",
+  "interpretation": "The decisive 12x12 comparisons each contain 256 new seeds and 512 games with alternating seats. 8x8 and 16x16 robustness runs contain 64 seeds (128 games) per opponent and are exploratory only. All workloads were CPU-only, internet-disabled Kaggle tournaments.",
+  "policy": {
+    "gpu_training_started": false,
+    "mode": "EXPERIMENTAL",
+    "official_registry_modified": false,
+    "open_space_used_for_selection": false,
+    "other_worktrees_modified": false,
+    "reserved_final_sets_used": false
+  },
+  "runs": [
+    {
+      "board": {
+        "height": 12,
+        "width": 12
+      },
+      "hardware_policy": {
+        "device": "Kaggle CPU",
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "workers": 4
+      },
+      "kaggle_kernel_id": "pascalcoimbra/dagger1-rust-pilot-20261022",
+      "kaggle_kernel_version": 3,
+      "kaggle_status": "success",
+      "note": "development pilot; prior v1 and v2 failed during loader debugging",
+      "opponent_checkpoint": "dagger1-selected-20261021",
+      "output": {
+        "manifest_sha256": "f6752c3b92d8233e900a0176a9a8c12c419621e1420a8fbbb171c68e09e71565",
+        "path": "dagger1-rust-pilot-20261022/version-3",
+        "report_sha256": "760823c61dbd63992910aa15b3ac94ffd8e344906b04cf5c567f604245ed0346",
+        "runtime": {
+          "cpu_count": 4,
+          "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+          "cpu_process_seconds": 59.148,
+          "gpu_enabled": false,
+          "host_os": "Ubuntu 24.04.5 LTS",
+          "internet_enabled": false,
+          "kaggle_kernel_run_type": "Batch",
+          "native_fixed_depth": true,
+          "native_territory": false,
+          "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+          "python": "3.13.15",
+          "spatial_policy_checkpoint": "dagger1-selected-20261021",
+          "torch_cuda_build": null,
+          "torch_version": "2.11.0+cpu",
+          "wall_seconds": 20.943,
+          "workers": 4
+        },
+        "source_manifest_sha256": "04ef6df63ff03d57584b5c065dc86ae737d14cdcffebb6cf1eb0086f27b8282b",
+        "status": "complete"
+      },
+      "run_id": "dagger1-rust-pilot-20261022",
+      "search": {
+        "edge_budget": 56,
+        "max_depth": 3,
+        "seat_alternation": "both seat assignments per seed"
+      },
+      "seeds": {
+        "count": 8,
+        "first": 8100000000000001,
+        "last": 8100000000000008,
+        "sha256_canonical_json": "759eadf7522805e3bc44820f11d93465835154b50ea01030748f5b0e43b678e3"
+      }
+    },
+    {
+      "board": {
+        "height": 12,
+        "width": 12
+      },
+      "hardware_policy": {
+        "device": "Kaggle CPU",
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "workers": 4
+      },
+      "kaggle_kernel_id": "pascalcoimbra/dagger1-rust-decisive-20261022",
+      "kaggle_kernel_version": 1,
+      "kaggle_status": "success",
+      "note": "decisive 12x12 checkpoint comparison",
+      "opponent_checkpoint": "dagger1-selected-20261021",
+      "output": {
+        "manifest_sha256": "1bcfacb6ce83a04b74d47c345856d6e56be7836f1b82fc023ad20775855a1f49",
+        "path": "dagger1-rust-decisive-20261022/version-1",
+        "report_sha256": "28e2774e0cb444f195545c44b045ca3ccdd8f0531df47d16771dc27a396b586b",
+        "runtime": {
+          "cpu_count": 4,
+          "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+          "cpu_process_seconds": 80.348,
+          "gpu_enabled": false,
+          "host_os": "Ubuntu 24.04.5 LTS",
+          "internet_enabled": false,
+          "kaggle_kernel_run_type": "Batch",
+          "native_fixed_depth": true,
+          "native_territory": false,
+          "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+          "python": "3.13.15",
+          "spatial_policy_checkpoint": "dagger1-selected-20261021",
+          "torch_cuda_build": null,
+          "torch_version": "2.11.0+cpu",
+          "wall_seconds": 27.733,
+          "workers": 4
+        },
+        "source_manifest_sha256": "994ce8a82f18c35384ca49592ccd656c7abd86fd605e078b59dfea3c83cef396",
+        "status": "complete"
+      },
+      "run_id": "dagger1-rust-decisive-20261022",
+      "search": {
+        "edge_budget": 56,
+        "max_depth": 3,
+        "seat_alternation": "both seat assignments per seed"
+      },
+      "seeds": {
+        "count": 256,
+        "first": 8200000000000001,
+        "last": 8200000000000256,
+        "sha256_canonical_json": "74cf76e4ee6a91ae5126c208ffce99bc2cd5adea066531701d6e3a1a90015e54"
+      }
+    },
+    {
+      "board": {
+        "height": 12,
+        "width": 12
+      },
+      "hardware_policy": {
+        "device": "Kaggle CPU",
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "workers": 4
+      },
+      "kaggle_kernel_id": "pascalcoimbra/spatial-e10-rust-decisive-20261022",
+      "kaggle_kernel_version": 1,
+      "kaggle_status": "success",
+      "note": "decisive 12x12 prior spatial checkpoint comparison",
+      "opponent_checkpoint": "spatial-e10-selected-20261021",
+      "output": {
+        "manifest_sha256": "c7295a538b2458b3736d273ae610a3d1aa733422e77e01c3986e79cf59216819",
+        "path": "spatial-e10-rust-decisive-20261022/version-1",
+        "report_sha256": "9fa693bbcf3113895c9f7feeb84d214981d7262795fb09e1ffcbd15de7e645be",
+        "runtime": {
+          "cpu_count": 4,
+          "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+          "cpu_process_seconds": 82.392,
+          "gpu_enabled": false,
+          "host_os": "Ubuntu 24.04.5 LTS",
+          "internet_enabled": false,
+          "kaggle_kernel_run_type": "Batch",
+          "native_fixed_depth": true,
+          "native_territory": false,
+          "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+          "python": "3.13.15",
+          "spatial_policy_checkpoint": "spatial-e10-selected-20261021",
+          "torch_cuda_build": null,
+          "torch_version": "2.11.0+cpu",
+          "wall_seconds": 27.701,
+          "workers": 4
+        },
+        "source_manifest_sha256": "049f65f2e42362f974c47bcfd28c472a058326d2c1c499d4fe5953689e5f4dac",
+        "status": "complete"
+      },
+      "run_id": "spatial-e10-rust-decisive-20261022",
+      "search": {
+        "edge_budget": 56,
+        "max_depth": 3,
+        "seat_alternation": "both seat assignments per seed"
+      },
+      "seeds": {
+        "count": 256,
+        "first": 8300000000000001,
+        "last": 8300000000000256,
+        "sha256_canonical_json": "3b0e87d892f10a3492e11e26d2522312c83c52d6ddd4c54e342ec6c3b6864a3a"
+      }
+    },
+    {
+      "board": {
+        "height": 8,
+        "width": 8
+      },
+      "hardware_policy": {
+        "device": "Kaggle CPU",
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "workers": 4
+      },
+      "kaggle_kernel_id": "pascalcoimbra/rust-robustness-8x8-20261022",
+      "kaggle_kernel_version": 1,
+      "kaggle_status": "success",
+      "note": "8x8 development robustness against three heuristics",
+      "opponent_checkpoint": null,
+      "output": {
+        "manifest_sha256": "919c11ec8d78960e2c8b50e7f9fdecb32c4b864154a750f4cc200aca35f82a52",
+        "path": "rust-robustness-8x8-20261022/version-1",
+        "report_sha256": "b37f5f106762e332928ddf23d5ab36f1a0d240a4dd61007d2f298aa115f7ccf9",
+        "runtime": {
+          "cpu_count": 4,
+          "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+          "cpu_process_seconds": 5.569,
+          "gpu_enabled": false,
+          "internet_enabled": false,
+          "native_fixed_depth": true,
+          "native_territory": false,
+          "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+          "python": "3.13.15",
+          "wall_seconds": 1.751,
+          "workers": 4
+        },
+        "source_manifest_sha256": "a4963e133a0e2076e237b0d3584b792e86d27c018819aa05a58e9038edeb32d8",
+        "status": "complete"
+      },
+      "run_id": "rust-robustness-8x8-20261022",
+      "search": {
+        "edge_budget": 56,
+        "max_depth": 3,
+        "seat_alternation": "both seat assignments per seed"
+      },
+      "seeds": {
+        "count": 64,
+        "first": 8400000000000001,
+        "last": 8400000000000064,
+        "sha256_canonical_json": "be1313d4e70d358c578dc2db7f991236ba0a7360a5932cdd68d477e81fbab78b"
+      }
+    },
+    {
+      "board": {
+        "height": 16,
+        "width": 16
+      },
+      "hardware_policy": {
+        "device": "Kaggle CPU",
+        "gpu_enabled": false,
+        "internet_enabled": false,
+        "workers": 4
+      },
+      "kaggle_kernel_id": "pascalcoimbra/rust-robustness-16x16-20261022",
+      "kaggle_kernel_version": 1,
+      "kaggle_status": "success",
+      "note": "16x16 development robustness against three heuristics",
+      "opponent_checkpoint": null,
+      "output": {
+        "manifest_sha256": "8b3124c844430e141f369b19efdfe9b902db68d21d1bac021f5daa860c7c7d52",
+        "path": "rust-robustness-16x16-20261022/version-1",
+        "report_sha256": "9bda4324eefa21799ad26aaca6976719593d02732eb55704b28ba04e5a5e3c81",
+        "runtime": {
+          "cpu_count": 4,
+          "cpu_name": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+          "cpu_process_seconds": 47.071,
+          "gpu_enabled": false,
+          "internet_enabled": false,
+          "native_fixed_depth": true,
+          "native_territory": false,
+          "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+          "python": "3.13.15",
+          "wall_seconds": 14.035,
+          "workers": 4
+        },
+        "source_manifest_sha256": "2f5a6dca7c594f6920a8385f096ca8a3685e2ecf28c0bf7d5d75c95b0fe726c4",
+        "status": "complete"
+      },
+      "run_id": "rust-robustness-16x16-20261022",
+      "search": {
+        "edge_budget": 56,
+        "max_depth": 3,
+        "seat_alternation": "both seat assignments per seed"
+      },
+      "seeds": {
+        "count": 64,
+        "first": 8600000000000001,
+        "last": 8600000000000064,
+        "sha256_canonical_json": "1c153608b1f520cfaddcc9709a6cc6907175a3db886ba546873c118c9edbe9bb"
+      }
+    }
+  ]
+}
